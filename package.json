@@ -1,0 +1,55 @@
+{
+  "name": "salonbook-az",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "tsx watch worker/index.ts",
+    "worker:start": "tsx worker/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:constraints": "tsx scripts/apply-sql.ts prisma/constraints.sql",
+    "db:rls": "tsx scripts/apply-sql.ts prisma/security/rls.sql",
+    "db:setup": "prisma migrate deploy && pnpm db:constraints",
+    "db:seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.11.1"
+    }
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.9.0",
+    "@prisma/client": "^6.2.0",
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.2",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.5",
+    "@types/react-dom": "^19.0.3",
+    "embedded-postgres": "18.4.0-beta.17",
+    "prisma": "^6.2.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

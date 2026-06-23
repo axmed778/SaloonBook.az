@@ -1,0 +1,358 @@
+// SalonBook.az — data model
+// Conventions:
+//   * Money is stored as integer minor units (qəpik). Never floats.
+//   * Time-of-day fields are minutes from local midnight (Asia/Baku).
+//   * Instant fields (startsAt/endsAt/...) are timestamptz, always written as UTC.
+//   * salonId is the tenant discriminator on operational tables (RLS keys on it).
+//   * Account is the paying business; in MVP it owns exactly one Salon.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & tenancy
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String       @id @default(uuid())
+  clerkId         String       @unique
+  email           String?
+  phone           String?
+  fullName        String?
+  isPlatformAdmin Boolean      @default(false)
+  memberships     Membership[]
+  createdAt       DateTime     @default(now())
+}
+
+model Account {
+  id           String        @id @default(uuid())
+  name         String
+  status       AccountStatus @default(ACTIVE)
+  subscription Subscription?
+  salons       Salon[]
+  memberships  Membership[]
+  createdAt    DateTime      @default(now())
+}
+
+model Membership {
+  id         String    @id @default(uuid())
+  userId     String
+  accountId  String
+  role       Role
+  salonId    String? // which salon/branch a STAFF member works at
+  employeeId String?   @unique // links a STAFF membership to its Employee record
+  user       User      @relation(fields: [userId], references: [id])
+  account    Account   @relation(fields: [accountId], references: [id])
+  salon      Salon?    @relation(fields: [salonId], references: [id])
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  @@unique([userId, accountId])
+  @@index([accountId])
+  @@index([salonId])
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// ---------------------------------------------------------------------------
+// Salon (a location / future branch)
+// ---------------------------------------------------------------------------
+
+model Salon {
+  id           String        @id @default(uuid())
+  accountId    String
+  slug         String        @unique // book link: {APP_URL}/{slug}
+  name         String
+  description  String?
+  logoUrl      String?
+  address      String?
+  phone        String?
+  timezone     String        @default("Asia/Baku")
+  currency     String        @default("AZN")
+  status       SalonStatus   @default(ACTIVE)
+  account      Account       @relation(fields: [accountId], references: [id])
+  employees    Employee[]
+  services     Service[]
+  customers    Customer[]
+  appointments Appointment[]
+  memberships  Membership[]
+  createdAt    DateTime      @default(now())
+
+  @@index([accountId])
+  @@index([slug])
+}
+
+enum SalonStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+// ---------------------------------------------------------------------------
+// Catalog: employees, services, availability
+// ---------------------------------------------------------------------------
+
+model Employee {
+  id           String            @id @default(uuid())
+  salonId      String
+  name         String
+  phone        String?
+  position     String?
+  avatarUrl    String?
+  isActive     Boolean           @default(true)
+  salon        Salon             @relation(fields: [salonId], references: [id])
+  workingHours WorkingHour[]
+  timeOff      TimeOff[]
+  services     ServiceEmployee[]
+  appointments Appointment[]
+  membership   Membership?
+  createdAt    DateTime          @default(now())
+
+  @@index([salonId])
+}
+
+model Service {
+  id           String            @id @default(uuid())
+  salonId      String
+  name         String
+  description  String?
+  priceMinor   Int // qəpik
+  durationMin  Int // service length, minutes
+  bufferMin    Int               @default(0) // turnover/cleanup after, minutes
+  isActive     Boolean           @default(true)
+  salon        Salon             @relation(fields: [salonId], references: [id])
+  employees    ServiceEmployee[]
+  appointments Appointment[]
+  createdAt    DateTime          @default(now())
+
+  @@index([salonId])
+}
+
+// Which staff can perform which service.
+model ServiceEmployee {
+  serviceId  String
+  employeeId String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, employeeId])
+  @@index([employeeId])
+}
+
+// Recurring weekly availability per employee.
+model WorkingHour {
+  id         String   @id @default(uuid())
+  employeeId String
+  weekday    Int // 0=Sunday .. 6=Saturday (Asia/Baku)
+  startMin   Int // minutes from local midnight
+  endMin     Int
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, weekday])
+}
+
+// One-off blocks: vacation, breaks, sick days.
+model TimeOff {
+  id         String   @id @default(uuid())
+  employeeId String
+  startsAt   DateTime @db.Timestamptz(6)
+  endsAt     DateTime @db.Timestamptz(6)
+  reason     String?
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, startsAt])
+}
+
+// ---------------------------------------------------------------------------
+// Customers & bookings
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id           String        @id @default(uuid())
+  salonId      String
+  name         String
+  phone        String // E.164, +994...
+  notes        String?
+  waOptIn      Boolean       @default(false)
+  totalVisits  Int           @default(0)
+  lastVisitAt  DateTime?     @db.Timestamptz(6)
+  salon        Salon         @relation(fields: [salonId], references: [id])
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([salonId, phone])
+  @@index([salonId])
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  salonId       String
+  employeeId    String
+  serviceId     String
+  customerId    String
+  startsAt      DateTime          @db.Timestamptz(6)
+  endsAt        DateTime          @db.Timestamptz(6) // startsAt + duration + buffer
+  status        AppointmentStatus @default(CONFIRMED)
+  priceMinor    Int // snapshot at booking time
+  source        BookingSource     @default(PUBLIC)
+  notes         String?
+  salon         Salon             @relation(fields: [salonId], references: [id])
+  employee      Employee          @relation(fields: [employeeId], references: [id])
+  service       Service           @relation(fields: [serviceId], references: [id])
+  customer      Customer          @relation(fields: [customerId], references: [id])
+  notifications Notification[]
+  createdAt     DateTime          @default(now())
+
+  // The no-overlap exclusion constraint is added in prisma/constraints.sql
+  // (Prisma can't express EXCLUDE USING gist).
+  @@index([employeeId, startsAt, endsAt])
+  @@index([salonId, startsAt])
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum BookingSource {
+  PUBLIC
+  DASHBOARD
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (WhatsApp). Persisted for audit + delivery status.
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id            String       @id @default(uuid())
+  salonId       String
+  appointmentId String?
+  channel       String       @default("whatsapp")
+  template      String // e.g. "booking_confirmation_az"
+  toPhone       String
+  status        NotifStatus  @default(QUEUED)
+  providerMsgId String? // WhatsApp wamid
+  payload       Json
+  sendAfter     DateTime     @default(now()) @db.Timestamptz(6)
+  attempts      Int          @default(0)
+  lastError     String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@index([status, sendAfter])
+  @@index([salonId])
+}
+
+enum NotifStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Billing (manual activation in MVP; tables ready for a future PSP)
+// ---------------------------------------------------------------------------
+
+model Subscription {
+  id                 String    @id @default(uuid())
+  accountId          String    @unique
+  plan               Plan      @default(FREE)
+  status             SubStatus @default(TRIALING)
+  trialEndsAt        DateTime? @db.Timestamptz(6)
+  currentPeriodEnd   DateTime? @db.Timestamptz(6)
+  providerCustomerId String? // reserved for future payment provider
+  providerSubId      String?
+  account            Account   @relation(fields: [accountId], references: [id])
+  payments           Payment[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([status, trialEndsAt])
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+}
+
+enum SubStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  FREE_DOWNGRADED
+}
+
+model Payment {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  amountMinor    Int
+  currency       String       @default("AZN")
+  method         String       @default("manual") // manual | cash | card_to_card | (future) psp
+  recordedBy     String? // admin user id; null once automated
+  periodMonths   Int          @default(1)
+  paidAt         DateTime     @default(now()) @db.Timestamptz(6)
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+}
+
+// Materialized monthly booking counts for fast Free-plan limit checks.
+model UsageCounter {
+  salonId  String
+  periodYm String // "2026-06"
+  bookings Int    @default(0)
+
+  @@id([salonId, periodYm])
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding (invite-gated trials)
+// ---------------------------------------------------------------------------
+
+model Invite {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  grantsTrial Boolean   @default(true) // redeem => 3-month Basic trial
+  maxUses     Int       @default(1)
+  usedCount   Int       @default(0)
+  redeemedBy  String[]  @default([]) // account ids
+  note        String?
+  createdBy   String // admin user id
+  expiresAt   DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Audit (sensitive ops: plan changes, suspensions, cancellations)
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  accountId   String?
+  actorUserId String?
+  action      String // e.g. "subscription.activate", "account.suspend"
+  target      String?
+  meta        Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([accountId, createdAt])
+}

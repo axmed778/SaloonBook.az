@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($node = \\(Get-Command node -ErrorAction SilentlyContinue\\); if \\($node\\) { node -v } else { \"node: NOT FOUND\" }; $npm = \\(Get-Command npm -ErrorAction SilentlyContinue\\); if \\($npm\\) { \"npm $\\(npm -v\\)\" } else { \"npm: NOT FOUND\" }; $pnpm = \\(Get-Command pnpm -ErrorAction SilentlyContinue\\); if \\($pnpm\\) { \"pnpm $\\(pnpm -v\\)\" } else { \"pnpm: NOT FOUND\" }; $git = \\(Get-Command git -ErrorAction SilentlyContinue\\); if \\($git\\) { git --version } else { \"git: NOT FOUND\" })",
+      "PowerShell(pnpm install)",
+      "PowerShell($env:DATABASE_URL = \"postgresql://user:pass@localhost:5432/salonbook?schema=public\"; $env:REDIS_URL = \"redis://localhost:6379\"; pnpm build)"
+    ]
+  }
+}

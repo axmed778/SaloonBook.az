@@ -1,0 +1,65 @@
+import type { Plan } from "@prisma/client";
+
+export interface PlanLimits {
+  /** Use Infinity for "unlimited". */
+  maxEmployees: number;
+  maxBookingsPerMonth: number;
+  maxBranches: number;
+  /** Monthly price in qəpik (minor units). */
+  priceMinor: number;
+}
+
+export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+  FREE: { maxEmployees: 2, maxBookingsPerMonth: 50, maxBranches: 1, priceMinor: 0 },
+  BASIC: { maxEmployees: 10, maxBookingsPerMonth: Infinity, maxBranches: 1, priceMinor: 1500 },
+  PRO: {
+    maxEmployees: Infinity,
+    maxBookingsPerMonth: Infinity,
+    maxBranches: Infinity,
+    priceMinor: 3000,
+  },
+};
+
+export interface PlanFeatures {
+  multiBranch: boolean;
+  advancedAnalytics: boolean;
+  staffRoles: boolean;
+  exports: boolean;
+  /** Deposits / no-show protection (future online payments). Pro only. */
+  deposits: boolean;
+}
+
+export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
+  FREE: {
+    multiBranch: false,
+    advancedAnalytics: false,
+    staffRoles: false,
+    exports: false,
+    deposits: false,
+  },
+  BASIC: {
+    multiBranch: false,
+    advancedAnalytics: false,
+    staffRoles: false,
+    exports: false,
+    deposits: false,
+  },
+  PRO: {
+    multiBranch: true,
+    advancedAnalytics: true,
+    staffRoles: true,
+    exports: true,
+    deposits: true,
+  },
+};
+
+/** Basic plan is free for this many months on invite-gated trials. */
+export const TRIAL_MONTHS = 3;
+
+export function limitsFor(plan: Plan): PlanLimits {
+  return PLAN_LIMITS[plan];
+}
+
+export function featuresFor(plan: Plan): PlanFeatures {
+  return PLAN_FEATURES[plan];
+}
