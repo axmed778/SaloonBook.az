@@ -54,6 +54,43 @@ Double-booking is prevented by a Postgres exclusion constraint
 overlap, even under a race or a logic bug. **Apply it on every environment** via
 `pnpm db:constraints`. See `src/lib/` for the availability/queue/plan helpers.
 
+## Security & tenant isolation (production)
+
+Tenant isolation has two layers:
+
+1. **Application** — every operational query is scoped by `salonId`.
+2. **Database (RLS)** — a defense-in-depth safety net so a missing
+   `where: { salonId }` becomes "zero rows" instead of a cross-tenant leak.
+
+RLS only engages when **both** conditions hold, so production must be set up for
+it:
+
+- **Connect as a non-owner role.** RLS is bypassed by the table owner and
+  superusers. Create an app role and point the prod `DATABASE_URL` at it; run
+  migrations as the owner. Example:
+
+  ```sql
+  CREATE ROLE salonbook_app LOGIN PASSWORD '...';
+  GRANT USAGE ON SCHEMA public TO salonbook_app;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salonbook_app;
+  ```
+
+- **Apply the policies:** `pnpm db:rls`.
+
+- **Set the per-transaction context.** Operational writes run through
+  `withTenantScope(salonId, fn)` (`src/lib/tenant.ts`), which sets
+  `app.current_salon` so the policies scope every query in the transaction. The
+  public salon-by-slug lookup that *resolves* the salonId necessarily runs before
+  the scope is entered.
+
+RLS is **off in local dev** (policies not applied), where `withTenantScope` is a
+harmless no-op wrapper around a normal transaction.
+
+Other production must-haves (the app refuses to boot otherwise — see
+`src/lib/env.ts`): a strong unique `WHATSAPP_VERIFY_TOKEN` (never the
+placeholder) and configured Clerk keys. `WHATSAPP_APP_SECRET` is required to
+signature-verify incoming WhatsApp webhooks.
+
 ## Deploy (Railway)
 
 Two services from this repo:

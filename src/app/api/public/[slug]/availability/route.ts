@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots } from "@/lib/availability";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
+
+// Read-only, so a looser cap than /book — just enough to stop scraping/abuse.
+const AVAIL_LIMIT = { limit: 60, windowSec: 60 } as const; // 60 req / min / IP
 
 const querySchema = z.object({
   serviceId: z.string().uuid(),
@@ -16,6 +20,16 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+
+  const ip = clientIp(req);
+  const rl = await rateLimit(`avail:ip:${ip}`, AVAIL_LIMIT.limit, AVAIL_LIMIT.windowSec);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      { status: 429, headers: { "Retry-After": String(rl.resetSec) } },
+    );
+  }
+
   const parsed = querySchema.safeParse({
     serviceId: req.nextUrl.searchParams.get("serviceId"),
     employeeId: req.nextUrl.searchParams.get("employeeId"),

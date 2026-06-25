@@ -28,6 +28,14 @@ export function bakuPeriodYm(date: Date): string {
   return bakuYmd(date).slice(0, 7);
 }
 
+/** Minutes from local Baku midnight for a UTC instant (0..1439, can exceed on
+ *  the rare day if called with a far-future instant — callers pass same-day). */
+export function bakuMinutesOfDay(date: Date): number {
+  const ymd = bakuYmd(date);
+  const midnightUtc = bakuWallClockToUtc(ymd, 0).getTime();
+  return Math.round((date.getTime() - midnightUtc) / 60_000);
+}
+
 /** Weekday for a Baku calendar date: 0=Sunday .. 6=Saturday. */
 export function bakuWeekday(dayYmd: string): number {
   const [y, m, d] = dayYmd.split("-").map(Number);

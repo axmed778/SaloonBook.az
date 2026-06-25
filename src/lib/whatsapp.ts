@@ -7,6 +7,23 @@
 
 const GRAPH_VERSION = "v21.0";
 
+/**
+ * Sanitize a client-supplied string before it becomes a WhatsApp template
+ * variable. Meta rejects template params containing newlines, tabs, or runs of
+ * 4+ spaces, and we never want raw control characters flowing into the owner's
+ * alert (or, later, the dashboard). Strips control chars, collapses whitespace,
+ * trims, and bounds length. This is defense at the boundary; render sites must
+ * still escape (React does so by default).
+ */
+export function sanitizeTemplateParam(input: string, maxLen = 120): string {
+  return input
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001F\u007F]/g, " ") // control chars -> space
+    .replace(/\s+/g, " ") // collapse whitespace (incl. newlines/tabs)
+    .trim()
+    .slice(0, maxLen);
+}
+
 export interface SendTemplateInput {
   toPhone: string; // E.164, e.g. +994501234567
   template: string; // approved template name
