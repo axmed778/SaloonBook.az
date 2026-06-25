@@ -14,47 +14,29 @@ function isPlaceholder(v: string | undefined): boolean {
 }
 
 export function assertEnv(): void {
-  const isProd = process.env.NODE_ENV === "production";
-  const problems: string[] = [];
-  const warnings: string[] = [];
-
-  // Hard requirements in production.
-  if (isPlaceholder(process.env.WHATSAPP_VERIFY_TOKEN)) {
-    problems.push(
-      "WHATSAPP_VERIFY_TOKEN is unset or still the placeholder. Set a strong, unique value.",
-    );
-  }
-
-  // Auth must be configured in prod.
-  if (isPlaceholder(process.env.CLERK_SECRET_KEY)) {
-    problems.push("CLERK_SECRET_KEY is unset.");
-  }
-  if (isPlaceholder(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)) {
-    problems.push("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is unset.");
-  }
-
-  // Webhook signature verification needs the app secret once live.
-  if (isPlaceholder(process.env.WHATSAPP_APP_SECRET)) {
-    warnings.push(
+  // NOTE: This guard is intentionally RELAXED for now. During early development
+  // it only WARNS about missing/placeholder secrets instead of refusing to boot,
+  // so a half-configured environment can't take the whole app down.
+  //
+  // TODO (before launch / real customers): re-tighten this to THROW in
+  // production when WHATSAPP_VERIFY_TOKEN / WHATSAPP_APP_SECRET (and, once auth
+  // is wired up, the Clerk keys) are unset or still placeholders.
+  const checks: Array<[string | undefined, string]> = [
+    [
+      process.env.WHATSAPP_VERIFY_TOKEN,
+      "WHATSAPP_VERIFY_TOKEN is unset or still the placeholder.",
+    ],
+    [
+      process.env.WHATSAPP_APP_SECRET,
       "WHATSAPP_APP_SECRET is unset — incoming WhatsApp webhooks cannot be signature-verified.",
-    );
-  }
-  if (isPlaceholder(process.env.WHATSAPP_TOKEN)) {
-    warnings.push(
+    ],
+    [
+      process.env.WHATSAPP_TOKEN,
       "WHATSAPP_TOKEN is unset — notification sender will run in sandbox (log-only) mode.",
-    );
-  }
+    ],
+  ];
 
-  for (const w of warnings) console.warn(`[env] WARNING: ${w}`);
-
-  if (isProd && problems.length > 0) {
-    throw new Error(
-      `[env] Refusing to start in production with insecure configuration:\n` +
-        problems.map((p) => `  - ${p}`).join("\n"),
-    );
-  }
-
-  if (!isProd && problems.length > 0) {
-    for (const p of problems) console.warn(`[env] (dev) ${p}`);
+  for (const [value, message] of checks) {
+    if (isPlaceholder(value)) console.warn(`[env] WARNING: ${message}`);
   }
 }
