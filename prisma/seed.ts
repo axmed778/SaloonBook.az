@@ -1,9 +1,69 @@
 import { PrismaClient } from "@prisma/client";
 import { TRIAL_MONTHS } from "../src/lib/plans";
+import { hashPassword } from "../src/lib/auth/password";
 
 const prisma = new PrismaClient();
 
+// Seed the two login accounts: a platform admin (the owner) and one salon owner.
+// Idempotent — skips whichever email already exists.
+async function seedAuthAccounts() {
+  const adminEmail = "almadatov22@gmail.com";
+  const salonOwnerEmail = "saloon@book.az";
+
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (existingAdmin) {
+    console.log(`seed: admin '${adminEmail}' already exists — skipping.`);
+  } else {
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        fullName: "Platform Admin",
+        isPlatformAdmin: true,
+        // NOTE: temporary password shared in chat — owner must change after first login.
+        passwordHash: hashPassword("Admin123!"),
+      },
+    });
+    console.log(`seed: created platform admin '${adminEmail}'.`);
+  }
+
+  const existingOwner = await prisma.user.findUnique({ where: { email: salonOwnerEmail } });
+  if (existingOwner) {
+    console.log(`seed: salon owner '${salonOwnerEmail}' already exists — skipping.`);
+    return;
+  }
+
+  const trialEndsAt = new Date();
+  trialEndsAt.setMonth(trialEndsAt.getMonth() + TRIAL_MONTHS);
+
+  const account = await prisma.account.create({
+    data: {
+      name: "My Salon",
+      subscription: { create: { plan: "BASIC", status: "TRIALING", trialEndsAt } },
+      salons: { create: { slug: "mysalon", name: "My Salon" } },
+    },
+    include: { salons: true },
+  });
+  const salon = account.salons[0];
+
+  const owner = await prisma.user.create({
+    data: {
+      email: salonOwnerEmail,
+      fullName: "Salon Owner",
+      // Deliberately weak test password (Clerk would reject this).
+      passwordHash: hashPassword("123456"),
+    },
+  });
+
+  await prisma.membership.create({
+    data: { userId: owner.id, accountId: account.id, role: "OWNER", salonId: salon.id },
+  });
+
+  console.log(`seed: created salon owner '${salonOwnerEmail}', salon /${salon.slug}.`);
+}
+
 async function main() {
+  await seedAuthAccounts();
+
   const existing = await prisma.salon.findUnique({ where: { slug: "demostudio" } });
   if (existing) {
     console.log("seed: 'demostudio' already exists — skipping.");

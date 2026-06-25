@@ -16,10 +16,16 @@ export default function Home() {
 
       <div className="flex flex-wrap gap-3">
         <a
-          href="/dashboard"
+          href="/register"
           className="rounded-lg bg-emerald-600 px-5 py-3 font-medium text-white transition hover:bg-emerald-700"
         >
           Başla
+        </a>
+        <a
+          href="/login"
+          className="rounded-lg border border-neutral-300 px-5 py-3 font-medium transition hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+        >
+          Daxil ol
         </a>
         <a
           href="/demostudio"

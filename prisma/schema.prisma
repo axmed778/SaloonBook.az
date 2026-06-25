@@ -21,8 +21,9 @@ datasource db {
 
 model User {
   id              String       @id @default(uuid())
-  clerkId         String       @unique
-  email           String?
+  clerkId         String?      @unique // optional — local email/password auth is primary; reserved for future SSO
+  email           String       @unique // login identifier
+  passwordHash    String? // scrypt hash (see src/lib/auth/password.ts); null for any future SSO user
   phone           String?
   fullName        String?
   isPlatformAdmin Boolean      @default(false)
