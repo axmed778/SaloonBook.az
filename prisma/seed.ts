@@ -20,7 +20,7 @@ async function seedAuthAccounts() {
         fullName: "Platform Admin",
         isPlatformAdmin: true,
         // NOTE: temporary password shared in chat — owner must change after first login.
-        passwordHash: hashPassword("Admin123!"),
+        passwordHash: hashPassword("Axmed123!"),
       },
     });
     console.log(`seed: created platform admin '${adminEmail}'.`);

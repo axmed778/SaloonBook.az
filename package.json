@@ -13,6 +13,7 @@
     "start": "next start",
     "worker": "tsx watch worker/index.ts",
     "worker:start": "tsx worker/index.ts",
+    "db:up": "tsx scripts/embedded-pg.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
