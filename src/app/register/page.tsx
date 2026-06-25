@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -101,20 +102,29 @@ export default function RegisterPage() {
 
         <label className="flex flex-col gap-1 text-sm">
           Şifrə
-          <input
-            type="password"
-            required
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 pr-16 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-2 my-auto h-fit text-xs font-medium text-emerald-600 hover:underline"
+            >
+              {showPassword ? "Gizlət" : "Göstər"}
+            </button>
+          </div>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
           Şifrəni təsdiqləyin
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             autoComplete="new-password"
             value={confirmPassword}
