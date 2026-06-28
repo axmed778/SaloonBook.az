@@ -1,19 +1,156 @@
 @import "tailwindcss";
 
+/*
+  SalonBook.az theme tokens.
+
+  Two themes share one set of semantic tokens — components only ever reference
+  `background`, `foreground`, `card`, `border`, `muted-foreground`, `accent`,
+  `secondary`, etc. Flip the values below to retheme; nothing in the components
+  needs to change.
+
+  - Dark (default): zinc-950 surfaces, violet-500 accent.
+  - Light (.light):  warm white #FFFFFC main + dusty rose #DEBBC9 secondary,
+                     with a deeper rose #B0496E for legible primary actions.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
+  color-scheme: dark;
+
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #18181b;
+  --muted: #0e0e11;
+  --muted-foreground: #a1a1aa;
+  --faint-foreground: #71717a;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --hover: #27272a; /* interactive fill — lighter than card in dark */
+  --secondary: #27272a;
+  --secondary-foreground: #e4e4e7;
+
+  --accent: #8b5cf6; /* violet-500 */
+  --accent-hover: #a78bfa; /* violet-400 */
+  --accent-foreground: #fafafa;
+
+  --success: #34d399; /* emerald-400 */
+
+  /* Flourishes */
+  --glow: #8b5cf6;
+  --grid-line: rgba(255, 255, 255, 0.05);
+  --scrollbar: #3f3f46;
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-frame: 0 24px 50px -12px rgba(0, 0, 0, 0.7);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root.light {
+  color-scheme: light;
+
+  --background: #fffffc; /* rgb(255,255,252) — warm near-white */
+  --foreground: #231c21; /* warm near-black, never pure */
+  --card: #ffffff;
+  --muted: #f7eef2; /* soft rose tint */
+  --muted-foreground: #76616c;
+  --faint-foreground: #9a8a93;
+  --border: #ece0e6;
+  --border-strong: #dcc9d3;
+  --hover: #f4e9ee; /* soft rose tint — slightly off the white card */
+  --secondary: #debbc9; /* rgb(222,187,201) — dusty rose */
+  --secondary-foreground: #5c2e42;
+
+  --accent: #b0496e; /* deeper rose, legible on white */
+  --accent-hover: #9c3f61;
+  --accent-foreground: #fffffc;
+
+  --success: #047857; /* emerald-700 */
+
+  --glow: #debbc9; /* airy dusty-rose bloom */
+  --grid-line: rgba(60, 22, 38, 0.05);
+  --scrollbar: #e3d3db;
+  --shadow-soft: 0 1px 2px 0 rgba(40, 16, 28, 0.04), 0 1px 3px 0 rgba(40, 16, 28, 0.06);
+  --shadow-frame: 0 24px 50px -16px rgba(80, 30, 55, 0.18), 0 8px 20px -8px rgba(80, 30, 55, 0.1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-hover: var(--hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+@layer base {
+  /* Pin the default border color so a bare `border` reads as a themed hairline. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Ease the backdrop on theme swap; content swaps instantly. */
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--accent) 24%, transparent);
+    color: var(--foreground);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* ---- Background flourishes (sit behind hero / CTA sections) -------------- */
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.mask-radial-faded {
+  -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 25%, transparent 78%);
+}
+
+.glow-accent {
+  background: radial-gradient(
+    48% 48% at 50% 0%,
+    color-mix(in oklab, var(--glow) 22%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+/* ---- Theme-aware shadows ------------------------------------------------- */
+
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+.shadow-frame {
+  box-shadow: var(--shadow-frame);
 }
