@@ -1,10 +1,16 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import {
   bakuWallClockToUtc,
   bakuWeekday,
   bakuDayBoundsUtc,
+  bakuYmd,
+  bakuMinutesOfDay,
   minutesToHHMM,
 } from "./time";
+
+/** A Prisma client or an interactive-transaction client. */
+type Db = typeof prisma | Prisma.TransactionClient;
 
 export interface Slot {
   /** UTC instant of the slot start, ISO string. */
@@ -29,6 +35,96 @@ interface Interval {
 
 function overlaps(aStart: number, aEnd: number, b: Interval): boolean {
   return aStart < b.end && aEnd > b.start;
+}
+
+/**
+ * The single source of truth for "is [start, end) a valid slot?", shared by the
+ * read path (getAvailableSlots) and the write path (isSlotBookable): the slot
+ * must be in the future, fit entirely inside one working window, and not collide
+ * with any busy interval (time-off or confirmed appointment).
+ */
+function slotPasses(opts: {
+  startMs: number;
+  endMs: number;
+  startMin: number;
+  endMin: number;
+  windows: Array<{ startMin: number; endMin: number }>;
+  busy: Interval[];
+  now: number;
+}): boolean {
+  if (opts.startMs <= opts.now) return false;
+  const fitsWindow = opts.windows.some(
+    (w) => opts.startMin >= w.startMin && opts.endMin <= w.endMin,
+  );
+  if (!fitsWindow) return false;
+  if (opts.busy.some((b) => overlaps(opts.startMs, opts.endMs, b))) return false;
+  return true;
+}
+
+export type SlotRejectReason = "service" | "past" | "hours" | "timeoff" | "overlap";
+
+export type SlotBookable =
+  | { ok: true; endUtc: Date }
+  | { ok: false; reason: SlotRejectReason };
+
+/**
+ * Authoritative server-side check that a specific requested startUtc is bookable
+ * for (employee, service). Use the SAME rules the availability read path shows,
+ * so calling /book directly cannot smuggle in a past / out-of-hours / time-off
+ * slot. Pass a transaction client (`tx`) to make the check part of the booking
+ * transaction. The DB exclusion constraint remains the final guarantee against
+ * concurrent overlaps; the "overlap" reason here just yields a cleaner error.
+ */
+export async function isSlotBookable(
+  db: Db,
+  args: { employeeId: string; serviceId: string; startUtc: Date; now?: number },
+): Promise<SlotBookable> {
+  const now = args.now ?? Date.now();
+
+  const service = await db.service.findFirst({
+    where: { id: args.serviceId, isActive: true },
+    select: { durationMin: true, bufferMin: true },
+  });
+  if (!service) return { ok: false, reason: "service" };
+
+  const blockMin = service.durationMin + service.bufferMin;
+  const startMs = args.startUtc.getTime();
+  const endMs = startMs + blockMin * 60_000;
+  const endUtc = new Date(endMs);
+
+  const ymd = bakuYmd(args.startUtc);
+  const weekday = bakuWeekday(ymd);
+  const startMin = bakuMinutesOfDay(args.startUtc);
+  const endMin = startMin + blockMin;
+
+  const [windows, timeOff, appts] = await Promise.all([
+    db.workingHour.findMany({
+      where: { employeeId: args.employeeId, weekday },
+      select: { startMin: true, endMin: true },
+    }),
+    db.timeOff.findMany({
+      where: { employeeId: args.employeeId, startsAt: { lt: endUtc }, endsAt: { gt: args.startUtc } },
+      select: { startsAt: true, endsAt: true },
+    }),
+    db.appointment.findMany({
+      where: {
+        employeeId: args.employeeId,
+        status: "CONFIRMED",
+        startsAt: { lt: endUtc },
+        endsAt: { gt: args.startUtc },
+      },
+      select: { startsAt: true, endsAt: true },
+    }),
+  ]);
+
+  // Distinguish reasons for a clean caller-facing error.
+  if (startMs <= now) return { ok: false, reason: "past" };
+  const fitsWindow = windows.some((w) => startMin >= w.startMin && endMin <= w.endMin);
+  if (!fitsWindow) return { ok: false, reason: "hours" };
+  if (timeOff.length > 0) return { ok: false, reason: "timeoff" };
+  if (appts.length > 0) return { ok: false, reason: "overlap" };
+
+  return { ok: true, endUtc };
 }
 
 /**
@@ -93,8 +189,16 @@ export async function getAvailableSlots(q: AvailabilityQuery): Promise<Slot[]> {
       const startMs = slotStart.getTime();
       const endMs = startMs + blockMin * 60_000;
 
-      if (startMs <= now) continue;
-      if (busy.some((b) => overlaps(startMs, endMs, b))) continue;
+      const ok = slotPasses({
+        startMs,
+        endMs,
+        startMin: m,
+        endMin: m + blockMin,
+        windows: workingHours,
+        busy,
+        now,
+      });
+      if (!ok) continue;
 
       slots.push({ startUtc: slotStart.toISOString(), time: minutesToHHMM(m) });
     }

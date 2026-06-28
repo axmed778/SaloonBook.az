@@ -179,7 +179,7 @@ function PricingCard({ plan }: { plan: (typeof PLANS)[number] }) {
       </div>
 
       <ButtonLink
-        href="/dashboard"
+        href="/register"
         variant={plan.highlight ? "primary" : "secondary"}
         className="mt-6 w-full"
       >
@@ -257,7 +257,7 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <ButtonLink href="/dashboard" variant="primary" size="lg">
+                <ButtonLink href="/register" variant="primary" size="lg">
                   Pulsuz başla
                   <ArrowRight className="h-4 w-4" strokeWidth={2} />
                 </ButtonLink>
@@ -384,7 +384,7 @@ export default function Home() {
               özü-özünə gəlməsini izləyin.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <ButtonLink href="/dashboard" variant="primary" size="lg">
+              <ButtonLink href="/register" variant="primary" size="lg">
                 Pulsuz başla
                 <ArrowRight className="h-4 w-4" strokeWidth={2} />
               </ButtonLink>

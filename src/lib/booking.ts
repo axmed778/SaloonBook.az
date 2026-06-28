@@ -1,13 +1,24 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "./prisma";
 import { enqueueNotification } from "./queue";
 import { limitsFor } from "./plans";
 import { bakuPeriodYm } from "./time";
+import { withTenantScope } from "./tenant";
+import { isSlotBookable, type SlotRejectReason } from "./availability";
+import { sanitizeTemplateParam } from "./whatsapp";
 
 export class SlotTakenError extends Error {
   constructor() {
     super("That time was just booked. Please pick another slot.");
     this.name = "SlotTakenError";
+  }
+}
+
+/** The requested slot is not bookable per the availability rules (past, outside
+ *  working hours, during time-off, or the service no longer exists). */
+export class SlotUnavailableError extends Error {
+  constructor(public readonly reason: SlotRejectReason) {
+    super("That time isn't available for booking. Please pick another slot.");
+    this.name = "SlotUnavailableError";
   }
 }
 
@@ -54,7 +65,11 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const source = input.source ?? "PUBLIC";
   const periodYm = bakuPeriodYm(new Date());
 
-  const result = await prisma.$transaction(async (tx) => {
+  // Sanitize the client-supplied name once: it is stored and later flows into
+  // the owner's WhatsApp alert (and, eventually, the dashboard).
+  const safeName = sanitizeTemplateParam(input.customer.name);
+
+  const result = await withTenantScope(input.salonId, async (tx) => {
     const salon = await tx.salon.findUnique({
       where: { id: input.salonId },
       select: { id: true, name: true, phone: true, account: { select: { subscription: true } } },
@@ -67,37 +82,60 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     });
     if (!service) throw new Error("Service not found");
 
+    // --- Re-validate the requested slot on the write side (parity with the
+    // availability read path). The overlap exclusion constraint only blocks
+    // collisions with other CONFIRMED appointments; this also rejects past,
+    // out-of-working-hours, and time-off slots that a direct /book call could
+    // otherwise smuggle in. ---
+    const check = await isSlotBookable(tx, {
+      employeeId: input.employeeId,
+      serviceId: service.id,
+      startUtc: input.startUtc,
+    });
+    if (!check.ok) {
+      if (check.reason === "overlap") throw new SlotTakenError();
+      throw new SlotUnavailableError(check.reason);
+    }
+    const endUtc = check.endUtc;
+
     // --- Plan booking-limit enforcement (Free = 50/month) ---
+    // Atomic guard: increment first, then validate. The row lock on
+    // UsageCounter serializes concurrent bookings, so the post-increment value
+    // is unique per transaction and an over-limit attempt rolls back its own
+    // increment when it throws — closing the check-then-increment race.
     const plan = salon.account.subscription?.plan ?? "FREE";
     const maxBookings = limitsFor(plan).maxBookingsPerMonth;
-    if (Number.isFinite(maxBookings)) {
-      const usage = await tx.usageCounter.findUnique({
-        where: { salonId_periodYm: { salonId: input.salonId, periodYm } },
-        select: { bookings: true },
-      });
-      if ((usage?.bookings ?? 0) >= maxBookings) {
-        throw new PlanLimitError(
-          `Monthly booking limit reached for the ${plan} plan (${maxBookings}).`,
-        );
-      }
+    const usage = await tx.usageCounter.upsert({
+      where: { salonId_periodYm: { salonId: input.salonId, periodYm } },
+      create: { salonId: input.salonId, periodYm, bookings: 1 },
+      update: { bookings: { increment: 1 } },
+      select: { bookings: true },
+    });
+    if (Number.isFinite(maxBookings) && usage.bookings > maxBookings) {
+      throw new PlanLimitError(
+        `Monthly booking limit reached for the ${plan} plan (${maxBookings}).`,
+      );
     }
 
-    const endUtc = new Date(
-      input.startUtc.getTime() + (service.durationMin + service.bufferMin) * 60_000,
-    );
-
+    // Public bookings are unauthenticated: never let a booking with someone
+    // else's phone rewrite their existing customer record. Create only when
+    // absent; otherwise reuse the existing row untouched. Dashboard bookings
+    // (staff-entered) keep the prior upsert-overwrite behavior.
+    const isPublic = source === "PUBLIC";
     const customer = await tx.customer.upsert({
       where: { salonId_phone: { salonId: input.salonId, phone: input.customer.phone } },
       create: {
         salonId: input.salonId,
-        name: input.customer.name,
+        name: safeName,
         phone: input.customer.phone,
         waOptIn: input.customer.waOptIn ?? false,
       },
-      update: {
-        name: input.customer.name,
-        ...(input.customer.waOptIn !== undefined ? { waOptIn: input.customer.waOptIn } : {}),
-      },
+      update: isPublic
+        ? {}
+        : {
+            name: safeName,
+            ...(input.customer.waOptIn !== undefined ? { waOptIn: input.customer.waOptIn } : {}),
+          },
       select: { id: true },
     });
 
@@ -121,12 +159,6 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       if (isOverlapError(e)) throw new SlotTakenError();
       throw e;
     }
-
-    await tx.usageCounter.upsert({
-      where: { salonId_periodYm: { salonId: input.salonId, periodYm } },
-      create: { salonId: input.salonId, periodYm, bookings: 1 },
-      update: { bookings: { increment: 1 } },
-    });
 
     // Persist the WhatsApp notifications (worker sends them).
     const confirmation = await tx.notification.create({
@@ -169,7 +201,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           template: "new_booking_alert",
           toPhone: salon.phone,
           payload: {
-            customer: input.customer.name,
+            customer: safeName,
             service: service.name,
             startsAt: appointment.startsAt.toISOString(),
           } satisfies Prisma.InputJsonValue,

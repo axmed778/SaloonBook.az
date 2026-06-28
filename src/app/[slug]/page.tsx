@@ -57,7 +57,7 @@ export default async function BookingPage({
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <ButtonLink href="/dashboard" variant="ghost" size="sm">
+            <ButtonLink href="/register" variant="ghost" size="sm">
               Öz salonunu yarat
             </ButtonLink>
           </div>

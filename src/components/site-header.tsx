@@ -46,10 +46,10 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <ButtonLink href="/dashboard" variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <ButtonLink href="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
             Daxil ol
           </ButtonLink>
-          <ButtonLink href="/dashboard" variant="primary" size="sm">
+          <ButtonLink href="/register" variant="primary" size="sm">
             Başla
           </ButtonLink>
         </div>

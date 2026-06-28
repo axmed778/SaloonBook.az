@@ -1,9 +1,42 @@
 import type { NextConfig } from "next";
 
+// Content-Security-Policy. Kept compatible with Next (which injects inline
+// bootstrap scripts/styles) and Clerk + Cloudflare Turnstile.
+//   - 'unsafe-inline' on script/style is a pragmatic relaxation; tightening to a
+//     per-request nonce (via middleware) is a follow-up once middleware exists.
+//   - frame-ancestors 'none' (plus X-Frame-Options) blocks clickjacking.
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "img-src 'self' data: blob: https://img.clerk.com",
+  "font-src 'self' data:",
+  "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "connect-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+  "worker-src 'self' blob:",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  // HSTS only takes effect over HTTPS; harmless on local http.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Keep server-only packages out of the client bundle.
   serverExternalPackages: ["@prisma/client", "bullmq", "ioredis"],
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
 };
 
 export default nextConfig;
