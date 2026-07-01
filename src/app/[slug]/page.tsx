@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Clock, Info, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   parseBusinessHours,
@@ -7,9 +7,12 @@ import {
   WEEKDAY_LABEL,
   minToHHMM,
 } from "@/lib/business-hours";
+import type { Audience } from "@/lib/audience";
+import { bakuToday, shiftYmd } from "@/lib/time";
 import { ButtonLink, Eyebrow } from "@/components/ui";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BookingWidget } from "./booking-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -40,14 +43,21 @@ export default async function BookingPage({
       description: true,
       status: true,
       businessHours: true,
+      audience: true,
       services: {
         where: { isActive: true },
-        select: { id: true, name: true, priceMinor: true, durationMin: true },
+        select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
         orderBy: { name: "asc" },
       },
       employees: {
         where: { isActive: true },
-        select: { id: true, name: true, position: true },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          audience: true,
+          services: { select: { serviceId: true } },
+        },
         orderBy: { name: "asc" },
       },
     },
@@ -56,6 +66,35 @@ export default async function BookingPage({
   if (!salon || salon.status !== "ACTIVE") notFound();
 
   const businessHours = parseBusinessHours(salon.businessHours);
+
+  // Next 14 Baku days for the booking date picker (availability is validated
+  // server-side, so past/closed days simply return no slots).
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const ymd = shiftYmd(bakuToday(), i);
+    const [y, m, d] = ymd.split("-").map(Number);
+    const label = new Intl.DateTimeFormat("az-AZ", {
+      timeZone: "Asia/Baku",
+      day: "numeric",
+      month: "short",
+      weekday: "short",
+    }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+    return { ymd, label };
+  });
+
+  const bookingServices = salon.services.map((s) => ({
+    id: s.id,
+    name: s.name,
+    priceMinor: s.priceMinor,
+    durationMin: s.durationMin,
+    audience: s.audience as Audience,
+  }));
+  const bookingEmployees = salon.employees.map((e) => ({
+    id: e.id,
+    name: e.name,
+    position: e.position,
+    audience: e.audience as Audience,
+    serviceIds: e.services.map((se) => se.serviceId),
+  }));
 
   return (
     <div className="relative min-h-screen">
@@ -179,26 +218,14 @@ export default async function BookingPage({
           </section>
         )}
 
-        {/* Booking flow placeholder */}
-        <div className="mt-12 rounded-xl border border-border bg-card p-5 shadow-soft">
-          <div className="flex gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-accent">
-              <Info className="h-[18px] w-[18px]" strokeWidth={1.75} />
-            </span>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Qeydiyyat axını tezliklə
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Xidmət → mütəxəssis → tarix → vaxt → təsdiq axını növbəti addımda
-                qurulacaq. Mövcud vaxtlar üçün API hazırdır:
-              </p>
-              <code className="mt-2 inline-block rounded-md border border-border bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
-                /api/public/{slug}/availability
-              </code>
-            </div>
-          </div>
-        </div>
+        {/* Booking flow */}
+        <BookingWidget
+          slug={slug}
+          salonAudience={salon.audience as Audience}
+          services={bookingServices}
+          employees={bookingEmployees}
+          days={days}
+        />
 
         <p className="mt-10 flex items-center justify-center gap-1.5 text-center text-sm text-faint-foreground">
           <MapPin className="h-3.5 w-3.5" strokeWidth={2} />
