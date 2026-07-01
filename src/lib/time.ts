@@ -50,6 +50,24 @@ export function bakuDayBoundsUtc(dayYmd: string): { startUtc: Date; endUtc: Date
   };
 }
 
+/** Shift a Baku calendar date "YYYY-MM-DD" by whole days. */
+export function shiftYmd(dayYmd: string, deltaDays: number): string {
+  const [y, m, d] = dayYmd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + deltaDays)).toISOString().slice(0, 10);
+}
+
+/** Human date label for a Baku calendar date, e.g. "1 iyul 2026, çərşənbə axşamı". */
+export function formatBakuDate(dayYmd: string): string {
+  const [y, m, d] = dayYmd.split("-").map(Number);
+  return new Intl.DateTimeFormat("az-AZ", {
+    timeZone: BAKU_TZ,
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    weekday: "long",
+  }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+
 export function minutesToHHMM(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

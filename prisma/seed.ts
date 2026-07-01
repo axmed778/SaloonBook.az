@@ -1,8 +1,42 @@
 import { PrismaClient } from "@prisma/client";
 import { TRIAL_MONTHS } from "../src/lib/plans";
 import { hashPassword } from "../src/lib/auth/password";
+import { bakuToday, bakuWallClockToUtc } from "../src/lib/time";
 
 const prisma = new PrismaClient();
+
+// Create one appointment on a given Baku day/time. endsAt = start + duration + buffer
+// (the same window the booking engine blocks). Non-overlapping per employee so the
+// no-double-booking EXCLUDE constraint is satisfied.
+async function seedAppointment(opts: {
+  salonId: string;
+  employeeId: string;
+  serviceId: string;
+  customerId: string;
+  day: string;
+  startMin: number;
+  durationMin: number;
+  bufferMin: number;
+  priceMinor: number;
+}) {
+  const startsAt = bakuWallClockToUtc(opts.day, opts.startMin);
+  const endsAt = new Date(
+    startsAt.getTime() + (opts.durationMin + opts.bufferMin) * 60_000,
+  );
+  await prisma.appointment.create({
+    data: {
+      salonId: opts.salonId,
+      employeeId: opts.employeeId,
+      serviceId: opts.serviceId,
+      customerId: opts.customerId,
+      startsAt,
+      endsAt,
+      status: "CONFIRMED",
+      priceMinor: opts.priceMinor,
+      source: "DASHBOARD",
+    },
+  });
+}
 
 // Seed the two login accounts: a platform admin (the owner) and one salon owner.
 // Idempotent — skips whichever email already exists.
@@ -58,7 +92,58 @@ async function seedAuthAccounts() {
     data: { userId: owner.id, accountId: account.id, role: "OWNER", salonId: salon.id },
   });
 
-  console.log(`seed: created salon owner '${salonOwnerEmail}', salon /${salon.slug}.`);
+  // Populate the owner's salon so the calendar has real data on first login.
+  const [nigar, resad] = await Promise.all([
+    prisma.employee.create({
+      data: { salonId: salon.id, name: "Nigar", position: "Bərbər" },
+    }),
+    prisma.employee.create({
+      data: { salonId: salon.id, name: "Rəşad", position: "Bərbər" },
+    }),
+  ]);
+
+  const haircut = await prisma.service.create({
+    data: { salonId: salon.id, name: "Saç kəsimi", priceMinor: 2000, durationMin: 45, bufferMin: 10 },
+  });
+  const beard = await prisma.service.create({
+    data: { salonId: salon.id, name: "Saqqal düzəltmə", priceMinor: 1500, durationMin: 30, bufferMin: 5 },
+  });
+
+  // Both barbers can do both services.
+  await prisma.serviceEmployee.createMany({
+    data: [
+      { serviceId: haircut.id, employeeId: nigar.id },
+      { serviceId: beard.id, employeeId: nigar.id },
+      { serviceId: haircut.id, employeeId: resad.id },
+      { serviceId: beard.id, employeeId: resad.id },
+    ],
+  });
+
+  // Working hours: Mon–Sat (1..6), 10:00–19:00.
+  await prisma.workingHour.createMany({
+    data: [nigar.id, resad.id].flatMap((employeeId) =>
+      [1, 2, 3, 4, 5, 6].map((weekday) => ({ employeeId, weekday, startMin: 600, endMin: 1140 })),
+    ),
+  });
+
+  const customerNames = ["Elvin", "Murad", "Kənan", "Tural", "Anar"];
+  const customers = await Promise.all(
+    customerNames.map((name, i) =>
+      prisma.customer.create({
+        data: { salonId: salon.id, name, phone: `+9945000001${String(i).padStart(2, "0")}` },
+      }),
+    ),
+  );
+
+  // A handful of appointments on today's Baku date so the calendar looks live.
+  const today = bakuToday();
+  await seedAppointment({ salonId: salon.id, employeeId: nigar.id, serviceId: haircut.id, customerId: customers[0].id, day: today, startMin: 600, durationMin: 45, bufferMin: 10, priceMinor: 2000 });
+  await seedAppointment({ salonId: salon.id, employeeId: nigar.id, serviceId: beard.id, customerId: customers[1].id, day: today, startMin: 750, durationMin: 30, bufferMin: 5, priceMinor: 1500 });
+  await seedAppointment({ salonId: salon.id, employeeId: nigar.id, serviceId: haircut.id, customerId: customers[2].id, day: today, startMin: 900, durationMin: 45, bufferMin: 10, priceMinor: 2000 });
+  await seedAppointment({ salonId: salon.id, employeeId: resad.id, serviceId: haircut.id, customerId: customers[3].id, day: today, startMin: 660, durationMin: 45, bufferMin: 10, priceMinor: 2000 });
+  await seedAppointment({ salonId: salon.id, employeeId: resad.id, serviceId: beard.id, customerId: customers[4].id, day: today, startMin: 810, durationMin: 30, bufferMin: 5, priceMinor: 1500 });
+
+  console.log(`seed: created salon owner '${salonOwnerEmail}', salon /${salon.slug} with 2 barbers, 2 services, 5 appointments today.`);
 }
 
 async function main() {
