@@ -7,12 +7,12 @@ import {
   shiftYmd,
   formatBakuDate,
 } from "@/lib/time";
+import { Calendar } from "./_components/calendar";
 import {
-  Calendar,
   DAY_START_MIN,
   DAY_END_MIN,
   type CalendarBlock,
-} from "./_components/calendar";
+} from "./_components/calendar-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +66,10 @@ export default async function DashboardPage({
         startsAt: true,
         endsAt: true,
         status: true,
+        priceMinor: true,
+        source: true,
         service: { select: { name: true } },
-        customer: { select: { name: true } },
+        customer: { select: { name: true, phone: true } },
       },
     }),
   ]);
@@ -86,6 +88,9 @@ export default async function DashboardPage({
         title: a.service.name,
         subtitle: a.customer.name,
         status: a.status as CalendarBlock["status"],
+        priceMinor: a.priceMinor,
+        customerPhone: a.customer.phone,
+        source: a.source,
       };
     })
     .filter((b) => b.endMin > b.startMin);
