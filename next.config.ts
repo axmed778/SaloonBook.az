@@ -5,6 +5,13 @@ import type { NextConfig } from "next";
 //   - 'unsafe-inline' on script/style is a pragmatic relaxation; tightening to a
 //     per-request nonce (via middleware) is a follow-up once middleware exists.
 //   - frame-ancestors 'none' (plus X-Frame-Options) blocks clickjacking.
+// Next.js dev (React Fast Refresh / webpack HMR) evaluates code via eval() and
+// talks to the dev server over a websocket. A production-strict CSP without
+// 'unsafe-eval' / ws: blocks that, so the page never hydrates and every client
+// interaction (login, buttons) silently breaks — but only in `next dev`.
+// Production builds don't use eval, so we keep the strict policy there.
+const isDev = process.env.NODE_ENV !== "production";
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -13,9 +20,9 @@ const csp = [
   "form-action 'self'",
   "img-src 'self' data: blob: https://img.clerk.com",
   "font-src 'self' data:",
-  "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://*.clerk.accounts.dev https://challenges.cloudflare.com`,
   "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
   "worker-src 'self' blob:",
 ].join("; ");
