@@ -15,6 +15,13 @@ const rl = new IORedis(redisUrl, {
   connectTimeout: 1000,
   commandTimeout: 1000,
   maxRetriesPerRequest: 1,
+  // The key one: when the client isn't connected, reject commands immediately
+  // instead of buffering them in an offline queue that waits (indefinitely) for
+  // a connection. Without this, commandTimeout doesn't help — a command that is
+  // never sent is never timed out — which is why an unreachable Redis still
+  // added ~8s per request. The connection is still (re)attempted in the
+  // background, so rate limiting resumes automatically once Redis is reachable.
+  enableOfflineQueue: false,
   retryStrategy: (times) => Math.min(times * 200, 2000),
 });
 // Swallow connection errors here; rateLimit() fails open and logs per-call, so
