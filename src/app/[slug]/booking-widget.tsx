@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { matchesClientGender, type Audience } from "@/lib/audience";
 
 type Service = {
@@ -55,8 +55,9 @@ export function BookingWidget({
     "time",
     "contact",
   ];
+  const idx = (k: string) => stepKeys.indexOf(k);
 
-  const [stepIdx, setStepIdx] = useState(0);
+  const [current, setCurrent] = useState(0);
   const [gender, setGender] = useState<Gender | null>(
     needGender ? null : (salonAudience as Gender),
   );
@@ -73,7 +74,6 @@ export function BookingWidget({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ time: string; dayLabel: string } | null>(null);
 
-  const step = stepKeys[stepIdx];
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
   const selectedEmployee = employees.find((e) => e.id === employeeId) ?? null;
   const selectedDay = days.find((d) => d.ymd === day) ?? null;
@@ -89,18 +89,53 @@ export function BookingWidget({
       matchesClientGender(e.audience, gender),
   );
 
-  function next() {
+  const activeKey = stepKeys[current];
+
+  // Editing an earlier step resets every choice after it (handled in the pick*
+  // functions below); tapping a completed summary just re-opens that step.
+  function editStep(i: number) {
     setError(null);
-    setStepIdx((i) => Math.min(i + 1, stepKeys.length - 1));
+    setCurrent(i);
   }
-  function back() {
+  function pickGender(g: Gender) {
+    setGender(g);
+    setServiceId(null);
+    setEmployeeId(null);
+    setDay(null);
+    setSlot(null);
     setError(null);
-    setStepIdx((i) => Math.max(i - 1, 0));
+    setCurrent(idx("service"));
+  }
+  function pickService(id: string) {
+    setServiceId(id);
+    setEmployeeId(null);
+    setDay(null);
+    setSlot(null);
+    setError(null);
+    setCurrent(idx("employee"));
+  }
+  function pickEmployee(id: string) {
+    setEmployeeId(id);
+    setDay(null);
+    setSlot(null);
+    setError(null);
+    setCurrent(idx("date"));
+  }
+  function pickDate(d: string) {
+    setDay(d);
+    setSlot(null);
+    setError(null);
+    setCurrent(idx("time"));
+  }
+  function pickTime(s: Slot) {
+    setSlot(s);
+    setError(null);
+    setCurrent(idx("contact"));
   }
 
-  // Load slots when the time step becomes active.
+  // Load slots when the time step is the active one.
   useEffect(() => {
-    if (step !== "time" || !serviceId || !employeeId || !day) return;
+    if (activeKey !== "time" || !serviceId || !employeeId || !day) return;
     let cancelled = false;
     setSlotsLoading(true);
     setSlots(null);
@@ -118,7 +153,7 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [step, serviceId, employeeId, day, slug]);
+  }, [activeKey, serviceId, employeeId, day, slug]);
 
   async function submit() {
     setError(null);
@@ -156,7 +191,7 @@ export function BookingWidget({
   // --- Success ---
   if (done) {
     return (
-      <section className="mt-10">
+      <section className="mt-8">
         <div className="rounded-xl border border-success/30 bg-success/10 p-6 text-center shadow-soft">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/20 text-success">
             <Check className="h-6 w-6" strokeWidth={2.5} />
@@ -184,211 +219,210 @@ export function BookingWidget({
     contact: "Əlaqə məlumatları",
   };
 
+  // Compact summary text for a completed step.
+  function summaryValue(key: string): string {
+    switch (key) {
+      case "gender":
+        return gender === "MALE" ? "Kişi" : "Qadın";
+      case "service":
+        return selectedService
+          ? `${selectedService.name} · ${azn(selectedService.priceMinor)} ₼`
+          : "";
+      case "employee":
+        return selectedEmployee?.name ?? "";
+      case "date":
+        return selectedDay?.label ?? "";
+      case "time":
+        return slot?.time ?? "";
+      default:
+        return "";
+    }
+  }
+
+  function Summary({ i, keyName }: { i: number; keyName: string }) {
+    return (
+      <button
+        onClick={() => editStep(i)}
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-soft transition hover:border-border-strong"
+      >
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{stepTitle[keyName]}</p>
+          <p className="truncate font-medium text-foreground">{summaryValue(keyName)}</p>
+        </div>
+        <span className="shrink-0 text-xs font-medium text-accent">Dəyiş</span>
+      </button>
+    );
+  }
+
   return (
-    <section className="mt-10">
+    <section className="mt-8">
       <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
         <span className="h-1 w-1 rounded-full bg-accent" />
         Onlayn qeydiyyat
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-4 shadow-soft sm:p-5">
-        {/* Header: back + title */}
-        <div className="mb-4 flex items-center gap-2">
-          {stepIdx > 0 && (
-            <button
-              onClick={back}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
-              aria-label="Geri"
-            >
-              <ChevronLeft className="h-4 w-4" strokeWidth={2} />
-            </button>
-          )}
-          <h3 className="text-base font-semibold text-foreground">{stepTitle[step]}</h3>
-          <span className="ml-auto text-xs text-faint-foreground">
-            {stepIdx + 1} / {stepKeys.length}
-          </span>
-        </div>
+      <div className="space-y-2">
+        {stepKeys.map((key, i) => {
+          if (i > current) return null;
+          if (i < current) return <Summary key={key} i={i} keyName={key} />;
 
-        {/* Gender */}
-        {step === "gender" && (
-          <div className="grid grid-cols-2 gap-3">
-            {(["MALE", "FEMALE"] as Gender[]).map((g) => (
-              <button
-                key={g}
-                onClick={() => {
-                  setGender(g);
-                  setServiceId(null);
-                  setEmployeeId(null);
-                  next();
-                }}
-                className={optionCls(gender === g)}
-              >
-                <span className="font-medium text-foreground">{g === "MALE" ? "Kişi" : "Qadın"}</span>
-              </button>
-            ))}
-          </div>
-        )}
+          // Active step
+          return (
+            <div key={key} className="rounded-xl border border-border bg-card p-4 shadow-soft sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-foreground">{stepTitle[key]}</h3>
+                <span className="text-xs text-faint-foreground">
+                  {current + 1} / {stepKeys.length}
+                </span>
+              </div>
 
-        {/* Service */}
-        {step === "service" && (
-          <div className="space-y-2">
-            {visibleServices.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">Uyğun xidmət yoxdur.</p>
-            )}
-            {visibleServices.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => {
-                  setServiceId(s.id);
-                  setEmployeeId(null);
-                  next();
-                }}
-                className={optionCls(serviceId === s.id)}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-foreground">{s.name}</p>
-                    <p className="text-sm text-muted-foreground">{s.durationMin} dəq</p>
-                  </div>
-                  <span className="shrink-0 font-medium text-foreground">{azn(s.priceMinor)} ₼</span>
+              {key === "gender" && (
+                <div className="grid grid-cols-2 gap-3">
+                  {(["MALE", "FEMALE"] as Gender[]).map((g) => (
+                    <button key={g} onClick={() => pickGender(g)} className={optionCls(gender === g)}>
+                      <span className="font-medium text-foreground">
+                        {g === "MALE" ? "Kişi" : "Qadın"}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+              )}
 
-        {/* Employee */}
-        {step === "employee" && (
-          <div className="space-y-2">
-            {visibleEmployees.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                Bu xidmət üçün mütəxəssis yoxdur.
-              </p>
-            )}
-            {visibleEmployees.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => {
-                  setEmployeeId(e.id);
-                  next();
-                }}
-                className={optionCls(employeeId === e.id)}
-              >
-                <p className="font-medium text-foreground">{e.name}</p>
-                {e.position && <p className="text-sm text-muted-foreground">{e.position}</p>}
-              </button>
-            ))}
-          </div>
-        )}
+              {key === "service" && (
+                <div className="space-y-2">
+                  {visibleServices.length === 0 && (
+                    <p className="py-4 text-center text-sm text-muted-foreground">Uyğun xidmət yoxdur.</p>
+                  )}
+                  {visibleServices.map((s) => (
+                    <button key={s.id} onClick={() => pickService(s.id)} className={optionCls(serviceId === s.id)}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-foreground">{s.name}</p>
+                          <p className="text-sm text-muted-foreground">{s.durationMin} dəq</p>
+                        </div>
+                        <span className="shrink-0 font-medium text-foreground">{azn(s.priceMinor)} ₼</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-        {/* Date */}
-        {step === "date" && (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {days.map((d) => (
-              <button
-                key={d.ymd}
-                onClick={() => {
-                  setDay(d.ymd);
-                  setSlot(null);
-                  next();
-                }}
-                className={
-                  "rounded-lg border px-2 py-3 text-center text-sm transition " +
-                  (day === d.ymd
-                    ? "border-accent bg-accent/10 text-foreground"
-                    : "border-border bg-muted text-muted-foreground hover:border-border-strong")
-                }
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        )}
+              {key === "employee" && (
+                <div className="space-y-2">
+                  {visibleEmployees.length === 0 && (
+                    <p className="py-4 text-center text-sm text-muted-foreground">
+                      Bu xidmət üçün mütəxəssis yoxdur.
+                    </p>
+                  )}
+                  {visibleEmployees.map((e) => (
+                    <button key={e.id} onClick={() => pickEmployee(e.id)} className={optionCls(employeeId === e.id)}>
+                      <p className="font-medium text-foreground">{e.name}</p>
+                      {e.position && <p className="text-sm text-muted-foreground">{e.position}</p>}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-        {/* Time */}
-        {step === "time" && (
-          <div>
-            {slotsLoading && (
-              <p className="py-4 text-center text-sm text-muted-foreground">Yüklənir…</p>
-            )}
-            {!slotsLoading && slots && slots.length === 0 && (
-              <div className="py-4 text-center">
-                <p className="text-sm text-muted-foreground">Bu gün üçün boş vaxt yoxdur.</p>
-                <button onClick={back} className="mt-2 text-sm font-medium text-accent hover:underline">
-                  Başqa gün seçin
-                </button>
-              </div>
-            )}
-            {!slotsLoading && slots && slots.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {slots.map((s) => (
+              {key === "date" && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {days.map((d) => (
+                    <button
+                      key={d.ymd}
+                      onClick={() => pickDate(d.ymd)}
+                      className={
+                        "rounded-lg border px-2 py-3 text-center text-sm transition " +
+                        (day === d.ymd
+                          ? "border-accent bg-accent/10 text-foreground"
+                          : "border-border bg-muted text-muted-foreground hover:border-border-strong")
+                      }
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {key === "time" && (
+                <div>
+                  {slotsLoading && (
+                    <p className="py-4 text-center text-sm text-muted-foreground">Yüklənir…</p>
+                  )}
+                  {!slotsLoading && slots && slots.length === 0 && (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-muted-foreground">Bu gün üçün boş vaxt yoxdur.</p>
+                      <button
+                        onClick={() => editStep(idx("date"))}
+                        className="mt-2 text-sm font-medium text-accent hover:underline"
+                      >
+                        Başqa gün seçin
+                      </button>
+                    </div>
+                  )}
+                  {!slotsLoading && slots && slots.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {slots.map((s) => (
+                        <button
+                          key={s.startUtc}
+                          onClick={() => pickTime(s)}
+                          className="rounded-lg border border-border bg-muted py-2 text-center text-sm text-muted-foreground transition hover:border-accent hover:text-foreground"
+                        >
+                          {s.time}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {key === "contact" && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm">
+                    <p className="font-medium text-foreground">{selectedService?.name}</p>
+                    <p className="text-muted-foreground">
+                      {selectedEmployee?.name} · {selectedDay?.label} · {slot?.time} ·{" "}
+                      {selectedService ? azn(selectedService.priceMinor) : ""} ₼
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Adınız</label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ad Soyad"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Telefon</label>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">+994</span>
+                      <input
+                        value={phoneDigits}
+                        onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                        inputMode="numeric"
+                        placeholder="501234567"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {error && <p className="text-sm text-rose-500">{error}</p>}
+
                   <button
-                    key={s.startUtc}
-                    onClick={() => {
-                      setSlot(s);
-                      next();
-                    }}
-                    className={
-                      "rounded-lg border py-2 text-center text-sm transition " +
-                      (slot?.startUtc === s.startUtc
-                        ? "border-accent bg-accent text-accent-foreground"
-                        : "border-border bg-muted text-muted-foreground hover:border-border-strong")
-                    }
+                    onClick={submit}
+                    disabled={submitting}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground shadow-sm shadow-accent/20 transition hover:bg-accent-hover disabled:opacity-60"
                   >
-                    {s.time}
+                    {submitting ? "Təsdiqlənir…" : "Qeydiyyatı təsdiqlə"}
+                    {!submitting && <ChevronRight className="h-4 w-4" strokeWidth={2} />}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              )}
 
-        {/* Contact */}
-        {step === "contact" && (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm">
-              <p className="font-medium text-foreground">{selectedService?.name}</p>
-              <p className="text-muted-foreground">
-                {selectedEmployee?.name} · {selectedDay?.label} · {slot?.time} ·{" "}
-                {selectedService ? azn(selectedService.priceMinor) : ""} ₼
-              </p>
+              {key !== "contact" && error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Adınız</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ad Soyad"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Telefon</label>
-              <div className="flex items-center gap-2">
-                <span className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">+994</span>
-                <input
-                  value={phoneDigits}
-                  onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                  inputMode="numeric"
-                  placeholder="501234567"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {error && <p className="text-sm text-rose-500">{error}</p>}
-
-            <button
-              onClick={submit}
-              disabled={submitting}
-              className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground shadow-sm shadow-accent/20 transition hover:bg-accent-hover disabled:opacity-60"
-            >
-              {submitting ? "Təsdiqlənir…" : "Qeydiyyatı təsdiqlə"}
-            </button>
-          </div>
-        )}
-
-        {error && step !== "contact" && <p className="mt-3 text-sm text-rose-500">{error}</p>}
+          );
+        })}
       </div>
     </section>
   );
