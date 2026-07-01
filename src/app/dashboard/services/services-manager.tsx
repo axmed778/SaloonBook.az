@@ -8,6 +8,8 @@ import {
   setServiceActive,
   deleteService,
 } from "./actions";
+import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
+import { AudienceSelect } from "../_components/audience-select";
 
 export type ServiceRow = {
   id: string;
@@ -16,6 +18,7 @@ export type ServiceRow = {
   durationMin: number;
   bufferMin: number;
   isActive: boolean;
+  audience: Audience;
 };
 
 const inputCls =
@@ -27,7 +30,13 @@ const aznLabel = (minor: number) => {
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 };
 
-const emptyForm = { name: "", price: "", duration: "45", buffer: "10" };
+const emptyForm = {
+  name: "",
+  price: "",
+  duration: "45",
+  buffer: "10",
+  audience: "ALL" as Audience,
+};
 
 export function ServicesManager({ services }: { services: ServiceRow[] }) {
   const router = useRouter();
@@ -51,6 +60,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       price: aznLabel(s.priceMinor),
       duration: String(s.durationMin),
       buffer: String(s.bufferMin),
+      audience: s.audience,
     });
     setError(null);
     setOpen(true);
@@ -68,6 +78,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       priceAzn: parseFloat(form.price),
       durationMin: parseInt(form.duration, 10),
       bufferMin: parseInt(form.buffer || "0", 10),
+      audience: form.audience,
     };
     if (!payload.name) return setError("Ad tələb olunur.");
     if (!Number.isFinite(payload.priceAzn) || payload.priceAzn < 0)
@@ -177,6 +188,13 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             </div>
           </div>
 
+          <div className="mt-4">
+            <AudienceSelect
+              value={form.audience}
+              onChange={(a) => setForm({ ...form, audience: a })}
+            />
+          </div>
+
           {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
@@ -216,6 +234,9 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-medium text-zinc-100">{s.name}</p>
+                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                    {AUDIENCE_LABEL[s.audience]}
+                  </span>
                   {!s.isActive && (
                     <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
                       Deaktiv

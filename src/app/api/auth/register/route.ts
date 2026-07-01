@@ -16,6 +16,7 @@ const bodySchema = z
     password: z.string().min(1).max(200),
     confirmPassword: z.string().min(1).max(200),
     salonName: z.string().min(2).max(120),
+    audience: z.enum(["MALE", "FEMALE", "ALL"]).default("ALL"),
     fullName: z.string().max(120).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { email, password, salonName, fullName } = parsed.data;
+  const { email, password, salonName, audience, fullName } = parsed.data;
 
   // Enforce password policy server-side (the client also shows the rules).
   const issues = passwordIssues(password);
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
         data: {
           name: salonName,
           subscription: { create: { plan: "FREE", status: "TRIALING" } },
-          salons: { create: { slug, name: salonName } },
+          salons: { create: { slug, name: salonName, audience } },
         },
         include: { salons: true },
       });

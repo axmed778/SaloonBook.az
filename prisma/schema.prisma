@@ -87,6 +87,8 @@ model Salon {
   // [{ weekday: 0..6 (0=Sun), openMin, closeMin }] in Baku-local minutes.
   // Availability is still driven by per-employee WorkingHour, not this.
   businessHours Json?
+  // Who the salon serves. MALE/FEMALE for gendered salons, ALL for unisex.
+  audience     Audience      @default(ALL)
   status       SalonStatus   @default(ACTIVE)
   account      Account       @relation(fields: [accountId], references: [id])
   employees    Employee[]
@@ -106,6 +108,14 @@ enum SalonStatus {
   DELETED
 }
 
+// Gender audience for salons, employees and services. A person (client) is
+// MALE or FEMALE; ALL means "serves/applies to anyone" (unisex).
+enum Audience {
+  MALE
+  FEMALE
+  ALL
+}
+
 // ---------------------------------------------------------------------------
 // Catalog: employees, services, availability
 // ---------------------------------------------------------------------------
@@ -118,6 +128,8 @@ model Employee {
   position     String?
   avatarUrl    String?
   isActive     Boolean           @default(true)
+  // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
+  audience     Audience          @default(ALL)
   salon        Salon             @relation(fields: [salonId], references: [id])
   workingHours WorkingHour[]
   timeOff      TimeOff[]
@@ -138,6 +150,8 @@ model Service {
   durationMin  Int // service length, minutes
   bufferMin    Int               @default(0) // turnover/cleanup after, minutes
   isActive     Boolean           @default(true)
+  // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
+  audience     Audience          @default(ALL)
   salon        Salon             @relation(fields: [salonId], references: [id])
   employees    ServiceEmployee[]
   appointments Appointment[]

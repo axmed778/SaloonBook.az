@@ -22,6 +22,7 @@ const serviceInput = z.object({
   priceAzn: z.number().nonnegative("Qiymət mənfi ola bilməz.").max(100_000),
   durationMin: z.number().int().positive("Müddət 0-dan böyük olmalıdır.").max(1440),
   bufferMin: z.number().int().min(0).max(1440),
+  audience: z.enum(["MALE", "FEMALE", "ALL"]),
 });
 
 function toMinor(priceAzn: number): number {
@@ -34,9 +35,9 @@ export async function createService(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
   }
-  const { name, priceAzn, durationMin, bufferMin } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
   await prisma.service.create({
-    data: { salonId, name, priceMinor: toMinor(priceAzn), durationMin, bufferMin },
+    data: { salonId, name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience },
   });
   revalidatePath("/dashboard/services");
   return { ok: true };
@@ -48,10 +49,10 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
   }
-  const { name, priceAzn, durationMin, bufferMin } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
   const res = await prisma.service.updateMany({
     where: { id, salonId }, // salonId in the filter = tenant guard
-    data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin },
+    data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience },
   });
   if (res.count === 0) return { ok: false, error: "Xidmət tapılmadı." };
   revalidatePath("/dashboard/services");

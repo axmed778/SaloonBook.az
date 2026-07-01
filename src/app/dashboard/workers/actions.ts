@@ -36,6 +36,7 @@ const employeeSchema = z
     position: z.string().trim().max(120).nullish(),
     phone: z.string().trim().max(32).nullish(),
     isActive: z.boolean(),
+    audience: z.enum(["MALE", "FEMALE", "ALL"]),
     serviceIds: z.array(z.string().uuid()).max(200),
     hours: z.array(hourSchema).max(28),
   })
@@ -92,6 +93,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
             position: d.position || null,
             phone: d.phone || null,
             isActive: d.isActive,
+            audience: d.audience,
           },
         });
         if (res.count === 0) throw new Error("İşçi tapılmadı.");
@@ -104,6 +106,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
             position: d.position || null,
             phone: d.phone || null,
             isActive: d.isActive,
+            audience: d.audience,
           },
           select: { id: true },
         });

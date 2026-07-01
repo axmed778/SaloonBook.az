@@ -24,6 +24,7 @@ export default async function ServicesPage() {
       durationMin: true,
       bufferMin: true,
       isActive: true,
+      audience: true,
     },
   });
 

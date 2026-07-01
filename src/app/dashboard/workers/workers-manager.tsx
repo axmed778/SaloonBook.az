@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveEmployee, setEmployeeActive, deleteEmployee } from "./actions";
+import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
+import { AudienceSelect } from "../_components/audience-select";
 
 type Svc = { id: string; name: string; isActive: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
@@ -12,6 +14,7 @@ export type EmployeeRow = {
   position: string | null;
   phone: string | null;
   isActive: boolean;
+  audience: Audience;
   serviceIds: string[];
   hours: HourRow[];
 };
@@ -68,6 +71,7 @@ const emptyForm = {
   position: "",
   phone: "",
   isActive: true,
+  audience: "ALL" as Audience,
 };
 
 export function WorkersManager({
@@ -103,6 +107,7 @@ export function WorkersManager({
       position: e.position ?? "",
       phone: e.phone ?? "",
       isActive: e.isActive,
+      audience: e.audience,
     });
     setServiceIds(e.serviceIds);
     setHours(buildHours(e.hours));
@@ -154,6 +159,7 @@ export function WorkersManager({
         position: form.position.trim() || null,
         phone: form.phone.trim() || null,
         isActive: form.isActive,
+        audience: form.audience,
         serviceIds,
         hours: hoursPayload,
       });
@@ -240,6 +246,14 @@ export function WorkersManager({
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="mt-5">
+            <AudienceSelect
+              value={form.audience}
+              onChange={(a) => setForm({ ...form, audience: a })}
+              label="Kimlərlə işləyir"
+            />
           </div>
 
           {/* Services */}
@@ -371,6 +385,9 @@ export function WorkersManager({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate font-medium text-zinc-100">{e.name}</p>
+                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                      {AUDIENCE_LABEL[e.audience]}
+                    </span>
                     {!e.isActive && (
                       <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
                         Deaktiv

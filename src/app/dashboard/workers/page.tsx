@@ -21,6 +21,7 @@ export default async function WorkersPage() {
         position: true,
         phone: true,
         isActive: true,
+        audience: true,
         services: { select: { serviceId: true } },
         workingHours: { select: { weekday: true, startMin: true, endMin: true } },
       },
@@ -38,6 +39,7 @@ export default async function WorkersPage() {
     position: e.position,
     phone: e.phone,
     isActive: e.isActive,
+    audience: e.audience,
     serviceIds: e.services.map((s) => s.serviceId),
     hours: e.workingHours.map((h) => ({
       weekday: h.weekday,

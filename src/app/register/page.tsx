@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AUDIENCE_OPTIONS, type Audience } from "@/lib/audience";
 
 const PASSWORD_RULES = [
   "Ən az 8 simvol",
@@ -14,6 +15,7 @@ const PASSWORD_RULES = [
 export default function RegisterPage() {
   const router = useRouter();
   const [salonName, setSalonName] = useState("");
+  const [audience, setAudience] = useState<Audience>("ALL");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ salonName, fullName, email, password, confirmPassword }),
+        body: JSON.stringify({ salonName, audience, fullName, email, password, confirmPassword }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -77,6 +79,27 @@ export default function RegisterPage() {
             className="rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
           />
         </label>
+
+        <div className="flex flex-col gap-1 text-sm">
+          Salon kimin üçün?
+          <div className="mt-1 inline-flex rounded-lg border border-neutral-300 p-0.5 dark:border-neutral-700">
+            {AUDIENCE_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setAudience(o.value)}
+                className={
+                  "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition " +
+                  (audience === o.value
+                    ? "bg-emerald-600 text-white"
+                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100")
+                }
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           Adınız (istəyə bağlı)
