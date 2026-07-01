@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import { Clock, Info, MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import {
+  parseBusinessHours,
+  WEEKDAYS_ORDER,
+  WEEKDAY_LABEL,
+  minToHHMM,
+} from "@/lib/business-hours";
 import { ButtonLink, Eyebrow } from "@/components/ui";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -33,6 +39,7 @@ export default async function BookingPage({
       name: true,
       description: true,
       status: true,
+      businessHours: true,
       services: {
         where: { isActive: true },
         select: { id: true, name: true, priceMinor: true, durationMin: true },
@@ -47,6 +54,8 @@ export default async function BookingPage({
   });
 
   if (!salon || salon.status !== "ACTIVE") notFound();
+
+  const businessHours = parseBusinessHours(salon.businessHours);
 
   return (
     <div className="relative min-h-screen">
@@ -145,6 +154,30 @@ export default async function BookingPage({
             </p>
           )}
         </section>
+
+        {/* Business hours */}
+        {businessHours.length > 0 && (
+          <section className="mt-10">
+            <Eyebrow>İş saatları</Eyebrow>
+            <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+              {WEEKDAYS_ORDER.map((weekday) => {
+                const h = businessHours.find((b) => b.weekday === weekday);
+                return (
+                  <li key={weekday} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <span className="text-muted-foreground">{WEEKDAY_LABEL[weekday]}</span>
+                    {h ? (
+                      <span className="font-medium text-foreground">
+                        {minToHHMM(h.openMin)} – {minToHHMM(h.closeMin)}
+                      </span>
+                    ) : (
+                      <span className="text-faint-foreground">Bağlı</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
 
         {/* Booking flow placeholder */}
         <div className="mt-12 rounded-xl border border-border bg-card p-5 shadow-soft">

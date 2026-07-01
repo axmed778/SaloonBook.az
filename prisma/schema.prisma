@@ -83,6 +83,10 @@ model Salon {
   phone        String?
   timezone     String        @default("Asia/Baku")
   currency     String        @default("AZN")
+  // Weekly opening hours for display (and future staff-attendance checks):
+  // [{ weekday: 0..6 (0=Sun), openMin, closeMin }] in Baku-local minutes.
+  // Availability is still driven by per-employee WorkingHour, not this.
+  businessHours Json?
   status       SalonStatus   @default(ACTIVE)
   account      Account       @relation(fields: [accountId], references: [id])
   employees    Employee[]
