@@ -220,21 +220,28 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     };
   });
 
-  // --- After commit: push to the queue. The booking already succeeded, so a
-  // queue/Redis outage must NOT fail the request. The Notification rows are
-  // persisted (status QUEUED) and can be swept later, so we enqueue
-  // best-effort and swallow errors here. ---
+  // --- After commit: push to the queue, best-effort AND time-bounded. The
+  // booking already succeeded, so a slow/unreachable Redis must neither fail nor
+  // DELAY the response. The Notification rows are persisted (status QUEUED) and
+  // can be swept later, so we race the enqueue against a short timeout. ---
   try {
-    await enqueueNotification(result.confirmationId);
-    if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
+    await Promise.race([
+      (async () => {
+        await enqueueNotification(result.confirmationId);
+        if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
 
-    const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
-    if (reminderDelay > 0) {
-      await enqueueNotification(result.reminderId, reminderDelay);
-    }
+        const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
+        if (reminderDelay > 0) {
+          await enqueueNotification(result.reminderId, reminderDelay);
+        }
+      })(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("enqueue timed out")), 2000),
+      ),
+    ]);
   } catch (e) {
     console.error(
-      "[booking] enqueue failed (booking committed; relying on persisted QUEUED rows)",
+      "[booking] enqueue failed/timed out (booking committed; relying on persisted QUEUED rows)",
       e,
     );
   }

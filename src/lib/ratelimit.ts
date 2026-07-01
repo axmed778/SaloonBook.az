@@ -5,7 +5,18 @@ import { redisUrl } from "./redis";
 // from the BullMQ `connection` (which uses maxRetriesPerRequest: null) so app
 // commands and the queue don't share request semantics. Still ioredis — no new
 // dependency.
-const rl = new IORedis(redisUrl, { lazyConnect: true });
+// Rate limiting is best-effort and fails open, so every wait must be bounded:
+// without these timeouts an unreachable/slow Redis (e.g. a misconfigured prod
+// URL) makes ioredis retry for 8–30s, adding that delay to every /availability
+// and /book request. These caps keep a Redis outage to well under a second while
+// still using it normally when it's healthy (internal Redis answers in ~ms).
+const rl = new IORedis(redisUrl, {
+  lazyConnect: true,
+  connectTimeout: 1000,
+  commandTimeout: 1000,
+  maxRetriesPerRequest: 1,
+  retryStrategy: (times) => Math.min(times * 200, 2000),
+});
 // Swallow connection errors here; rateLimit() fails open and logs per-call, so
 // we don't want unhandled 'error' events tearing down the process.
 rl.on("error", () => {});
