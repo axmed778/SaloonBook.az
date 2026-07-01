@@ -37,3 +37,6 @@ Thumbs.db
 
 # misc
 *.tsbuildinfo
+
+# design mockups / exports (visual reference, not source)
+/*.html
