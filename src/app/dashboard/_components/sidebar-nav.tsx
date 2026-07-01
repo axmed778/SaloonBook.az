@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // Sidebar navigation. Only "Təqvim" (Calendar) is wired for now; the rest route
-// to placeholder pages until their screens are built. Keeping them here makes the
-// full app shape visible and gives each future screen a stable URL.
+// to placeholder pages until their screens are built. Supports a collapsed
+// (icon-only) mode and an onNavigate callback (used to close the mobile drawer).
 type NavItem = {
   href: string;
   label: string;
@@ -76,7 +76,13 @@ const items: NavItem[] = [
   },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -90,15 +96,19 @@ export function SidebarNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
+            title={collapsed ? item.label : undefined}
             className={
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition " +
+              "flex items-center rounded-lg text-sm font-medium transition " +
+              (collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2") +
+              " " +
               (active
                 ? "bg-rose-500/10 text-rose-400"
                 : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100")
             }
           >
             {item.icon}
-            {item.label}
+            {!collapsed && item.label}
           </Link>
         );
       })}
