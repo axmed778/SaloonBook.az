@@ -220,13 +220,23 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     };
   });
 
-  // --- After commit: push to the queue. Booking already succeeded. ---
-  await enqueueNotification(result.confirmationId);
-  if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
+  // --- After commit: push to the queue. The booking already succeeded, so a
+  // queue/Redis outage must NOT fail the request. The Notification rows are
+  // persisted (status QUEUED) and can be swept later, so we enqueue
+  // best-effort and swallow errors here. ---
+  try {
+    await enqueueNotification(result.confirmationId);
+    if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
 
-  const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
-  if (reminderDelay > 0) {
-    await enqueueNotification(result.reminderId, reminderDelay);
+    const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
+    if (reminderDelay > 0) {
+      await enqueueNotification(result.reminderId, reminderDelay);
+    }
+  } catch (e) {
+    console.error(
+      "[booking] enqueue failed (booking committed; relying on persisted QUEUED rows)",
+      e,
+    );
   }
 
   return {
