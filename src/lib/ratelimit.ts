@@ -23,6 +23,8 @@ const rl = new IORedis(redisUrl, {
   // background, so rate limiting resumes automatically once Redis is reachable.
   enableOfflineQueue: false,
   retryStrategy: (times) => Math.min(times * 200, 2000),
+  // Railway private network is IPv6-only — see note in src/lib/redis.ts.
+  family: 0,
 });
 // Swallow connection errors here; rateLimit() fails open and logs per-call, so
 // we don't want unhandled 'error' events tearing down the process.

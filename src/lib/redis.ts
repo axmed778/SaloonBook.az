@@ -13,6 +13,10 @@ export const connection = new IORedis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   lazyConnect: true,
+  // Railway's private network (*.railway.internal) is IPv6-only; family: 0 lets
+  // Node's DNS return IPv6 so the internal Redis host resolves. Harmless
+  // elsewhere.
+  family: 0,
 });
 
 // Without an 'error' listener ioredis re-throws connection errors as unhandled,
