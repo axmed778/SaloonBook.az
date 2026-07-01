@@ -30,6 +30,29 @@ const rl = new IORedis(redisUrl, {
 // we don't want unhandled 'error' events tearing down the process.
 rl.on("error", () => {});
 
+/**
+ * Lightweight Redis connectivity check for /api/health. Ensures a connection is
+ * being attempted (lazyConnect + offlineQueue:false would otherwise just fail
+ * the first command fast), waits briefly for readiness, then PINGs. Never throws.
+ */
+export async function redisPing(): Promise<boolean> {
+  try {
+    if (rl.status === "wait" || rl.status === "end") rl.connect().catch(() => {});
+    const start = Date.now();
+    while (rl.status !== "ready" && Date.now() - start < 1500) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    if (rl.status !== "ready") return false;
+    const res = await Promise.race([
+      rl.ping(),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error("timeout")), 1000)),
+    ]);
+    return res === "PONG";
+  } catch {
+    return false;
+  }
+}
+
 export interface RateLimitResult {
   allowed: boolean;
   /** Remaining permits in the current window (>= 0). */
