@@ -31,8 +31,15 @@ export function withTenantScope<T>(
   salonId: string,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
-  return prisma.$transaction(async (tx) => {
-    await setSalonContext(tx, salonId);
-    return fn(tx);
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      await setSalonContext(tx, salonId);
+      return fn(tx);
+    },
+    // A booking runs ~10 sequential queries. Prisma's default 5s interactive-
+    // transaction timeout is too tight when the DB is a round-trip away (e.g.
+    // app and DB in different regions). Give ample headroom so it can't abort
+    // mid-write. The real fix for latency is colocating app + DB.
+    { timeout: 20_000, maxWait: 8_000 },
+  );
 }
