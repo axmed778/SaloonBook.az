@@ -153,11 +153,6 @@ export async function POST(
       return NextResponse.json({ error: e.message, code: "PLAN_LIMIT" }, { status: 402 });
     }
     console.error("[book] error", e);
-    // TEMP DEBUG: surface the underlying error so a prod-only failure can be
-    // diagnosed without server-log access. Revert after fixing.
-    return NextResponse.json(
-      { error: "Could not create booking", detail: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Could not create booking" }, { status: 500 });
   }
 }
