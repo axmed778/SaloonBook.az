@@ -1,0 +1,167 @@
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+import { getAvailableSlots, type Slot } from "@/lib/availability";
+import {
+  createBooking,
+  SlotTakenError,
+  SlotUnavailableError,
+  PlanLimitError,
+} from "@/lib/booking";
+
+// Server actions backing the dashboard calendar: staff-entered ("manual")
+// bookings and appointment status changes. Every action re-derives the caller's
+// salon from the session and scopes writes to it — the tenant guard is `salonId`
+// in the where-filter, exactly like the other dashboard actions.
+
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+async function requireSalonId(): Promise<string> {
+  const session = await getSession();
+  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
+  return session.salonId;
+}
+
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// AZ copy for the slot-rejection reasons surfaced by the availability check.
+const SLOT_REASON_AZ: Record<string, string> = {
+  service: "Xidmət tapılmadı.",
+  past: "Bu vaxt keçmişdə qalıb.",
+  hours: "İşçi bu vaxt işləmir.",
+  timeoff: "İşçi bu vaxt məzuniyyətdədir.",
+  overlap: "Bu vaxt artıq tutulub.",
+};
+
+/** The (employee, service) pair must belong to this salon and be linked/active. */
+async function assertServiceLink(
+  salonId: string,
+  serviceId: string,
+  employeeId: string,
+): Promise<boolean> {
+  const link = await prisma.serviceEmployee.findFirst({
+    where: {
+      serviceId,
+      employeeId,
+      service: { salonId, isActive: true },
+      employee: { salonId, isActive: true },
+    },
+    select: { serviceId: true },
+  });
+  return Boolean(link);
+}
+
+// --- Available slots for the manual-booking form ---------------------------
+
+const slotsSchema = z.object({
+  employeeId: z.string().uuid(),
+  serviceId: z.string().uuid(),
+  day: z.string().regex(YMD_RE),
+});
+
+export type SlotsResult =
+  | { ok: true; slots: Slot[] }
+  | { ok: false; error: string };
+
+export async function availableSlots(input: unknown): Promise<SlotsResult> {
+  const salonId = await requireSalonId();
+  const parsed = slotsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  const { employeeId, serviceId, day } = parsed.data;
+
+  // Never expose availability for a pair that isn't this tenant's.
+  if (!(await assertServiceLink(salonId, serviceId, employeeId))) {
+    return { ok: false, error: "Bu işçi bu xidməti göstərmir." };
+  }
+
+  const slots = await getAvailableSlots({ employeeId, serviceId, dayYmd: day });
+  return { ok: true, slots };
+}
+
+// --- Create a manual (dashboard) booking ------------------------------------
+
+const bookingSchema = z.object({
+  employeeId: z.string().uuid(),
+  serviceId: z.string().uuid(),
+  startUtc: z.string().datetime(), // ISO instant from the availableSlots response
+  name: z
+    .string()
+    .trim()
+    .min(1, "Müştəri adı tələb olunur.")
+    .max(120)
+    .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
+  phone: z
+    .string()
+    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+});
+
+export async function createManualBooking(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const parsed = bookingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+  }
+  const d = parsed.data;
+
+  if (!(await assertServiceLink(salonId, d.serviceId, d.employeeId))) {
+    return { ok: false, error: "Bu işçi bu xidməti göstərmir." };
+  }
+
+  try {
+    // Reuse the same write path as public bookings: slot re-validation, plan
+    // limit, overlap constraint and WhatsApp notifications all apply. source
+    // DASHBOARD keeps the existing customer record's name/opt-in untouched only
+    // for public bookings — a staff entry may correct them.
+    await createBooking({
+      salonId,
+      serviceId: d.serviceId,
+      employeeId: d.employeeId,
+      startUtc: new Date(d.startUtc),
+      customer: { name: d.name, phone: d.phone },
+      source: "DASHBOARD",
+    });
+  } catch (e) {
+    if (e instanceof SlotTakenError) {
+      return { ok: false, error: "Bu vaxt artıq tutulub. Başqa vaxt seçin." };
+    }
+    if (e instanceof SlotUnavailableError) {
+      return { ok: false, error: SLOT_REASON_AZ[e.reason] ?? "Bu vaxt uyğun deyil." };
+    }
+    if (e instanceof PlanLimitError) {
+      return { ok: false, error: "Aylıq qeydiyyat limitinə çatmısınız." };
+    }
+    console.error("[manual-booking] error", e);
+    return { ok: false, error: "Görüş yaradıla bilmədi. Yenidən cəhd edin." };
+  }
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Change an appointment's status -----------------------------------------
+
+const statusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["COMPLETED", "NO_SHOW", "CANCELLED"]),
+});
+
+export async function setAppointmentStatus(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const parsed = statusSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  const { id, status } = parsed.data;
+
+  // salonId in the filter is the tenant guard; only CONFIRMED/COMPLETED/NO_SHOW
+  // appointments are shown, so any of them is a valid transition target.
+  const res = await prisma.appointment.updateMany({
+    where: { id, salonId },
+    data: { status },
+  });
+  if (res.count === 0) return { ok: false, error: "Görüş tapılmadı." };
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
