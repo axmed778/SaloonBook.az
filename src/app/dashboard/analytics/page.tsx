@@ -7,7 +7,7 @@ import {
   bakuDayBoundsUtc,
   formatBakuDate,
 } from "@/lib/time";
-import { PLAN_LIMITS, TRIAL_MONTHS } from "@/lib/plans";
+import { PLAN_LIMITS } from "@/lib/plans";
 import { azn } from "@/app/dashboard/_components/calendar-shared";
 import { HeroValue } from "./_components/HeroValue";
 import { TrialNudge } from "./_components/TrialNudge";
@@ -203,7 +203,6 @@ export default async function AnalyticsPage() {
   // --- Hero ---
   const heroCount = heroAgg._count._all;
   const heroValueMinor = heroAgg._sum.priceMinor ?? 0;
-  const basicPriceMinor = PLAN_LIMITS.BASIC.priceMinor;
   const slug = salonRow?.slug ?? null;
   const bookingHref = slug ? `/${slug}` : "/dashboard/settings";
 
@@ -225,12 +224,6 @@ export default async function AnalyticsPage() {
   const periodEndLabel = sub?.currentPeriodEnd
     ? formatBakuDate(bakuYmd(sub.currentPeriodEnd))
     : null;
-  // Consumed share of the trial (assumes a ~TRIAL_MONTHS*30-day trial length).
-  const trialTotalDays = TRIAL_MONTHS * 30;
-  const consumedPct =
-    daysLeft === null
-      ? 0
-      : Math.min(100, Math.max(0, Math.round(((trialTotalDays - daysLeft) / trialTotalDays) * 100)));
 
   // --- Realized revenue + MoM delta ---
   const revCurMinor = revCur._sum.priceMinor ?? 0;
@@ -279,7 +272,6 @@ export default async function AnalyticsPage() {
         monthLabel={monthLabel}
         count={heroCount}
         valueMinor={heroValueMinor}
-        basicPriceMinor={basicPriceMinor}
         bookingHref={bookingHref}
       />
 
@@ -287,11 +279,8 @@ export default async function AnalyticsPage() {
         status={sub?.status ?? null}
         daysLeft={daysLeft}
         planPriceMinor={planPriceMinor}
-        heroCount={heroCount}
-        heroValueMinor={heroValueMinor}
         planLabel={planLabel}
         periodEndLabel={periodEndLabel}
-        consumedPct={consumedPct}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
