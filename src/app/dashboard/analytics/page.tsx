@@ -14,6 +14,7 @@ import { TrialNudge } from "./_components/TrialNudge";
 import { StatCard, type Delta } from "./_components/StatCard";
 import { OnlineShareCard } from "./_components/OnlineShareCard";
 import { TopServices, type TopServiceRow } from "./_components/TopServices";
+import { CustomerSourceCard } from "./_components/CustomerSourceCard";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,8 @@ export default async function AnalyticsPage() {
     waTotal,
     topRows,
     salonRow,
+    everOnlineGroup,
+    firstSourceRows,
   ] = await Promise.all([
     // HERO — self-service (PUBLIC) bookings this month; excludes CANCELLED/NO_SHOW.
     prisma.appointment.aggregate({
@@ -175,6 +178,20 @@ export default async function AnalyticsPage() {
       where: { id: salonId },
       select: { slug: true, account: { select: { subscription: true } } },
     }),
+    // All-time: distinct customers who have EVER booked online (source=PUBLIC),
+    // i.e. who use the self-service online booking at all.
+    prisma.appointment.groupBy({
+      by: ["customerId"],
+      where: { salonId, source: "PUBLIC" },
+    }),
+    // All-time: each customer's FIRST-ever booking source (acquisition channel).
+    // DISTINCT ON keeps one row per customer, the earliest by createdAt.
+    prisma.$queryRaw<{ source: string }[]>`
+      SELECT DISTINCT ON ("customerId") "source"
+      FROM "Appointment"
+      WHERE "salonId" = ${salonId}
+      ORDER BY "customerId", "createdAt" ASC
+    `,
   ]);
 
   // Dependent follow-ups: returning customers need the this-month id set; top
@@ -266,6 +283,11 @@ export default async function AnalyticsPage() {
     };
   });
 
+  // --- Customer online adoption (all-time, whole client base) ---
+  const totalCustomers = firstSourceRows.length;
+  const everOnlineCustomers = everOnlineGroup.length;
+  const acquiredOnlineCustomers = firstSourceRows.filter((r) => r.source === "PUBLIC").length;
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 px-4 py-6">
       <HeroValue
@@ -321,6 +343,12 @@ export default async function AnalyticsPage() {
 
         <TopServices rows={topServiceRows} />
       </div>
+
+      <CustomerSourceCard
+        total={totalCustomers}
+        everOnline={everOnlineCustomers}
+        acquiredOnline={acquiredOnlineCustomers}
+      />
     </div>
   );
 }
