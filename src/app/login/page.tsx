@@ -85,6 +85,13 @@ export default function LoginPage() {
         >
           {submitting ? "Daxil olunur…" : "Daxil ol"}
         </button>
+
+        <a
+          href="/forgot-password"
+          className="text-sm font-medium text-emerald-600 hover:underline"
+        >
+          Şifrəni unutmusunuz?
+        </a>
       </form>
 
       <p className="text-sm text-neutral-500">

@@ -44,9 +44,25 @@ function buildComponents(template: string, payload: Prisma.JsonValue): unknown {
 export async function processNotification(job: Job<NotificationJob>): Promise<void> {
   const { notificationId } = job.data;
 
-  const n = await prisma.notification.findUnique({ where: { id: notificationId } });
+  const n = await prisma.notification.findUnique({
+    where: { id: notificationId },
+    include: { appointment: { select: { status: true } } },
+  });
   if (!n) return;
   if (DONE.has(n.status)) return; // idempotent: already sent
+  if (n.status === "CANCELLED") return; // cancelled while queued (e.g. by setAppointmentStatus)
+
+  // Re-check the appointment at send time: a reminder queued at booking time
+  // must never fire for an appointment that was since cancelled or no-showed.
+  // (Delayed BullMQ jobs can't be reliably removed, so the guard lives here.)
+  const apptStatus = n.appointment?.status;
+  if (apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") {
+    await prisma.notification.update({
+      where: { id: n.id },
+      data: { status: "CANCELLED" },
+    });
+    return;
+  }
 
   try {
     const res = await sendWhatsAppTemplate({

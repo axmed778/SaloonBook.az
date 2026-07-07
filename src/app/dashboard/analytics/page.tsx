@@ -15,6 +15,7 @@ import { StatCard, type Delta } from "./_components/StatCard";
 import { OnlineShareCard } from "./_components/OnlineShareCard";
 import { TopServices, type TopServiceRow } from "./_components/TopServices";
 import { CustomerSourceCard } from "./_components/CustomerSourceCard";
+import { RankedBars, type RankRow } from "./_components/RankedBars";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,8 @@ export default async function AnalyticsPage() {
     salonRow,
     everOnlineGroup,
     firstSourceRows,
+    topCustomerGroup,
+    topMasterGroup,
   ] = await Promise.all([
     // HERO — self-service (PUBLIC) bookings this month; excludes CANCELLED/NO_SHOW.
     prisma.appointment.aggregate({
@@ -192,12 +195,29 @@ export default async function AnalyticsPage() {
       WHERE "salonId" = ${salonId}
       ORDER BY "customerId", "createdAt" ASC
     `,
+    // All-time top customers by appointment count. Customer.totalVisits is a
+    // dead counter (never written), so aggregate from appointments instead.
+    prisma.appointment.groupBy({
+      by: ["customerId"],
+      where: { salonId, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      _count: { _all: true },
+      orderBy: { _count: { customerId: "desc" } },
+      take: 5,
+    }),
+    // All-time most-booked masters.
+    prisma.appointment.groupBy({
+      by: ["employeeId"],
+      where: { salonId, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      _count: { _all: true },
+      orderBy: { _count: { employeeId: "desc" } },
+      take: 5,
+    }),
   ]);
 
   // Dependent follow-ups: returning customers need the this-month id set; top
   // service names need the grouped service ids.
   const thisMonthIds = returnThisMonth.map((r) => r.customerId);
-  const [prior, serviceNames] = await Promise.all([
+  const [prior, serviceNames, topCustomerNames, topMasterNames] = await Promise.all([
     thisMonthIds.length
       ? prisma.appointment.groupBy({
           by: ["customerId"],
@@ -212,6 +232,18 @@ export default async function AnalyticsPage() {
     topRows.length
       ? prisma.service.findMany({
           where: { id: { in: topRows.map((r) => r.serviceId) } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([] as { id: string; name: string }[]),
+    topCustomerGroup.length
+      ? prisma.customer.findMany({
+          where: { id: { in: topCustomerGroup.map((r) => r.customerId) } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([] as { id: string; name: string }[]),
+    topMasterGroup.length
+      ? prisma.employee.findMany({
+          where: { id: { in: topMasterGroup.map((r) => r.employeeId) } },
           select: { id: true, name: true },
         })
       : Promise.resolve([] as { id: string; name: string }[]),
@@ -288,6 +320,32 @@ export default async function AnalyticsPage() {
   const everOnlineCustomers = everOnlineGroup.length;
   const acquiredOnlineCustomers = firstSourceRows.filter((r) => r.source === "PUBLIC").length;
 
+  // --- All-time leaderboards ---
+  const toRankRows = (
+    rows: { id: string; count: number }[],
+    names: { id: string; name: string }[],
+    fallback: string,
+  ): RankRow[] => {
+    const nameById = new Map(names.map((n) => [n.id, n.name]));
+    const max = rows[0]?.count ?? 0;
+    return rows.map((r) => ({
+      key: r.id,
+      label: nameById.get(r.id) ?? fallback,
+      value: `${r.count} görüş`,
+      pct: max > 0 ? Math.round((r.count / max) * 100) : 0,
+    }));
+  };
+  const topCustomerRank = toRankRows(
+    topCustomerGroup.map((r) => ({ id: r.customerId, count: r._count._all })),
+    topCustomerNames,
+    "Müştəri",
+  );
+  const topMasterRank = toRankRows(
+    topMasterGroup.map((r) => ({ id: r.employeeId, count: r._count._all })),
+    topMasterNames,
+    "Usta",
+  );
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 px-4 py-6">
       <HeroValue
@@ -349,6 +407,19 @@ export default async function AnalyticsPage() {
         everOnline={everOnlineCustomers}
         acquiredOnline={acquiredOnlineCustomers}
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <RankedBars
+          title="Ən sadiq müştərilər"
+          rows={topCustomerRank}
+          empty="Hələ məlumat yoxdur"
+        />
+        <RankedBars
+          title="Ən çox görüş alan ustalar"
+          rows={topMasterRank}
+          empty="Hələ məlumat yoxdur"
+        />
+      </div>
     </div>
   );
 }

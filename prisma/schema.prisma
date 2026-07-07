@@ -20,15 +20,30 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id              String       @id @default(uuid())
-  clerkId         String?      @unique // optional — local email/password auth is primary; reserved for future SSO
-  email           String       @unique // login identifier
+  id              String               @id @default(uuid())
+  clerkId         String?              @unique // optional — local email/password auth is primary; reserved for future SSO
+  email           String               @unique // login identifier
   passwordHash    String? // scrypt hash (see src/lib/auth/password.ts); null for any future SSO user
   phone           String?
   fullName        String?
-  isPlatformAdmin Boolean      @default(false)
+  isPlatformAdmin Boolean              @default(false)
   memberships     Membership[]
-  createdAt       DateTime     @default(now())
+  resetTokens     PasswordResetToken[]
+  createdAt       DateTime             @default(now())
+}
+
+// Single-use, expiring password-reset tokens. Only the SHA-256 of the raw token
+// is stored — a DB leak can't be replayed as reset links.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Account {
@@ -96,6 +111,8 @@ model Salon {
   customers    Customer[]
   appointments Appointment[]
   memberships  Membership[]
+  payouts      Payout[]
+  customerNotes CustomerNote[]
   createdAt    DateTime      @default(now())
 
   @@index([accountId])
@@ -130,15 +147,39 @@ model Employee {
   isActive     Boolean           @default(true)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
   audience     Audience          @default(ALL)
+  // Compensation (PRO payroll). Two fields express all three models: fixed
+  // salary (pct=0), pure commission (salary=0), or hybrid (both). Commission
+  // applies to the employee's COMPLETED appointment revenue for the month.
+  baseSalaryMinor Int            @default(0) // monthly, in qəpik
+  commissionPct   Int            @default(0) // 0..100
   salon        Salon             @relation(fields: [salonId], references: [id])
   workingHours WorkingHour[]
   timeOff      TimeOff[]
   services     ServiceEmployee[]
   appointments Appointment[]
   membership   Membership?
+  payouts      Payout[]
   createdAt    DateTime          @default(now())
 
   @@index([salonId])
+}
+
+// PRO payroll: money actually handed to an employee for a given Baku month.
+// "Earned" is always derived live (salary + commission on COMPLETED revenue);
+// payouts record what was paid against it.
+model Payout {
+  id          String   @id @default(uuid())
+  salonId     String
+  employeeId  String
+  periodYm    String // Baku month it covers, "2026-07"
+  amountMinor Int
+  note        String?
+  paidAt      DateTime @default(now()) @db.Timestamptz(6)
+  salon       Salon    @relation(fields: [salonId], references: [id])
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([salonId, periodYm])
+  @@index([employeeId, periodYm])
 }
 
 model Service {
@@ -200,19 +241,37 @@ model TimeOff {
 // ---------------------------------------------------------------------------
 
 model Customer {
-  id           String        @id @default(uuid())
+  id           String         @id @default(uuid())
   salonId      String
   name         String
   phone        String // E.164, +994...
-  notes        String?
-  waOptIn      Boolean       @default(false)
-  totalVisits  Int           @default(0)
-  lastVisitAt  DateTime?     @db.Timestamptz(6)
-  salon        Salon         @relation(fields: [salonId], references: [id])
+  notes        String? // legacy single-note field; the CRM uses CustomerNote
+  waOptIn      Boolean        @default(false)
+  totalVisits  Int            @default(0)
+  lastVisitAt  DateTime?      @db.Timestamptz(6)
+  salon        Salon          @relation(fields: [salonId], references: [id])
   appointments Appointment[]
-  createdAt    DateTime      @default(now())
+  crmNotes     CustomerNote[]
+  createdAt    DateTime       @default(now())
 
   @@unique([salonId, phone])
+  @@index([salonId])
+}
+
+// Private, timestamped CRM notes about a customer ("VIP", "usually late", …).
+// Owner-only — never exposed on any public surface. A separate table (rather
+// than one text column) so future CRM layers (tags, reminders, AI insights)
+// can attach to the same timeline.
+model CustomerNote {
+  id         String   @id @default(uuid())
+  salonId    String
+  customerId String
+  body       String
+  salon      Salon    @relation(fields: [salonId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
   @@index([salonId])
 }
 
@@ -283,6 +342,7 @@ enum NotifStatus {
   DELIVERED
   READ
   FAILED
+  CANCELLED // appointment was cancelled/no-showed before the send fired
 }
 
 // ---------------------------------------------------------------------------

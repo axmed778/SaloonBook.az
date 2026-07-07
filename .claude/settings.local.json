@@ -3,7 +3,30 @@
     "allow": [
       "PowerShell($node = \\(Get-Command node -ErrorAction SilentlyContinue\\); if \\($node\\) { node -v } else { \"node: NOT FOUND\" }; $npm = \\(Get-Command npm -ErrorAction SilentlyContinue\\); if \\($npm\\) { \"npm $\\(npm -v\\)\" } else { \"npm: NOT FOUND\" }; $pnpm = \\(Get-Command pnpm -ErrorAction SilentlyContinue\\); if \\($pnpm\\) { \"pnpm $\\(pnpm -v\\)\" } else { \"pnpm: NOT FOUND\" }; $git = \\(Get-Command git -ErrorAction SilentlyContinue\\); if \\($git\\) { git --version } else { \"git: NOT FOUND\" })",
       "PowerShell(pnpm install)",
-      "PowerShell($env:DATABASE_URL = \"postgresql://user:pass@localhost:5432/salonbook?schema=public\"; $env:REDIS_URL = \"redis://localhost:6379\"; pnpm build)"
+      "PowerShell($env:DATABASE_URL = \"postgresql://user:pass@localhost:5432/salonbook?schema=public\"; $env:REDIS_URL = \"redis://localhost:6379\"; pnpm build)",
+      "Bash(winget upgrade:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(node --version:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(node_modules/.bin/next build)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nHarden public booking flow and tenant isolation\n\nSecurity audit-and-fix pass on the public booking surface:\n\n- Add Redis-backed rate limiting \\(IP/phone/salon\\) plus a per-phone\n  outbound-notification cap on /book, lighter limiting on /availability,\n  and a Cloudflare Turnstile verification hook \\(src/lib/ratelimit.ts,\n  src/lib/turnstile.ts\\).\n- Re-validate the requested slot server-side inside createBooking via a\n  shared isSlotBookable helper, rejecting past / out-of-hours / time-off\n  slots that a direct /book call could otherwise smuggle in.\n- Verify the WhatsApp webhook X-Hub-Signature-256 HMAC over the raw body\n  with WHATSAPP_APP_SECRET before processing.\n- Fail fast on placeholder/missing secrets in production via instrumentation\n  \\(src/lib/env.ts\\).\n- Stop public bookings from overwriting an existing customer''s record.\n- Add withTenantScope so RLS engages on operational writes; document the\n  prod non-owner role + db:rls requirements.\n- Add CSP/HSTS/X-Frame-Options/nosniff/Referrer-Policy headers.\n- Sanitize client-supplied name before it becomes a WhatsApp template var.\n- Close the plan-limit check-then-increment race with an atomic guard.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRelax startup env guard to warn instead of crash\n\nThe production startup check was throwing on missing/placeholder secrets,\nwhich took the entire app down \\(including the static homepage\\) on a\nhalf-configured environment. Downgrade to warnings for now; re-tighten to\nthrow-in-production before launch \\(TODO noted in src/lib/env.ts\\).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(node_modules/.bin/prisma generate:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd local email/password auth and basic dashboard\n\nReplace unused Clerk wiring with self-built email/password auth backed by\nnode:crypto \\(scrypt hashing + HMAC-signed session cookie\\), keeping all\ncredentials in our own database. Adds login/register/logout API routes,\nlogin/register pages, and a session-guarded dashboard. Seeds a platform\nadmin and a salon owner account.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(node_modules/.bin/tsx:*)",
+      "Bash(node_modules/.bin/prisma migrate deploy:*)",
+      "Bash(git commit:*)",
+      "Bash(powershell:*)",
+      "WebFetch(domain:saloonbookaz-production.up.railway.app)",
+      "Bash(git -C \"C:/Users/User/Desktop/SaloonBook.az\" status --short)",
+      "Bash(git -C \"C:/Users/User/Desktop/SaloonBook.az\" log --oneline -5)",
+      "Bash(head -50 src/lib/subscription.ts)",
+      "Bash(ls -R src/app/api/auth/forgot src/app/api/auth/reset)",
+      "Bash(ls -R src/app/dashboard/payroll)",
+      "Bash(ls src/app/privacy src/app/terms)",
+      "Bash(head -20 src/lib/email.ts)"
     ]
   }
 }

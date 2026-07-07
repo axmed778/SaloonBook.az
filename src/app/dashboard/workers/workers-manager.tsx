@@ -174,7 +174,8 @@ export function WorkersManager({
 
   function toggleActive(e: EmployeeRow) {
     startTransition(async () => {
-      await setEmployeeActive(e.id, !e.isActive);
+      const res = await setEmployeeActive(e.id, !e.isActive);
+      if (!res.ok) alert(res.error); // e.g. plan seat limit on re-activation
       router.refresh();
     });
   }

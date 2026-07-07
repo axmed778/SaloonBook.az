@@ -120,6 +120,11 @@ export default async function BillingPage() {
         : { text: "Sınaq müddəti bitib — planı aktivləşdirin.", tone: "rose" };
   } else if (sub?.status === "PAST_DUE") {
     statusLine = { text: "Ödəniş gözlənilir — planı aktivləşdirin.", tone: "rose" };
+  } else if (sub?.status === "FREE_DOWNGRADED") {
+    statusLine = {
+      text: "Sınaq müddəti bitib — hesab pulsuz plana keçirilib. Planı aktivləşdirin.",
+      tone: "rose",
+    };
   }
 
   const statusToneCls: Record<"emerald" | "amber" | "rose", string> = {

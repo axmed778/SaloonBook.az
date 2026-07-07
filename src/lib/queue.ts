@@ -3,6 +3,7 @@ import { connection } from "./redis";
 
 export const QUEUE_NAMES = {
   notifications: "notifications",
+  subscriptions: "subscriptions",
 } as const;
 
 export interface NotificationJob {

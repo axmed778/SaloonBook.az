@@ -3,11 +3,12 @@ import { CalendarCheck } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+// Rooted (/#…) so the nav also works from non-landing pages (/privacy, /terms).
 const NAV = [
-  { label: "İmkanlar", href: "#features" },
-  { label: "Necə işləyir", href: "#how" },
-  { label: "Qiymətlər", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "İmkanlar", href: "/#features" },
+  { label: "Necə işləyir", href: "/#how" },
+  { label: "Qiymətlər", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export function Logo({ className }: { className?: string }) {

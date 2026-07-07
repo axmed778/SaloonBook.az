@@ -1,0 +1,140 @@
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+// Server actions for the Clients CRM. Same tenancy rules as every dashboard
+// action: salonId is re-derived from the session and used as a write guard in
+// each where-filter, so a crafted id can never touch another salon's customer.
+
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+async function requireSalonId(): Promise<string> {
+  const session = await getSession();
+  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
+  return session.salonId;
+}
+
+function revalidateClients(customerId?: string) {
+  revalidatePath("/dashboard/clients");
+  if (customerId) revalidatePath(`/dashboard/clients/${customerId}`);
+}
+
+// --- Edit customer -----------------------------------------------------------
+
+const customerSchema = z.object({
+  id: z.string().uuid(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Ad tələb olunur.")
+    .max(120)
+    .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
+  phone: z
+    .string()
+    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+});
+
+export async function updateCustomer(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const parsed = customerSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+  }
+  const d = parsed.data;
+
+  try {
+    const res = await prisma.customer.updateMany({
+      where: { id: d.id, salonId },
+      data: { name: d.name, phone: d.phone },
+    });
+    if (res.count === 0) return { ok: false, error: "Müştəri tapılmadı." };
+  } catch (e) {
+    // @@unique([salonId, phone]) — the number already belongs to another customer.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: "Bu nömrə başqa müştəridə qeydiyyatdadır." };
+    }
+    console.error("[clients] updateCustomer error", e);
+    return { ok: false, error: "Yadda saxlanmadı." };
+  }
+
+  revalidateClients(d.id);
+  return { ok: true };
+}
+
+// --- Notes --------------------------------------------------------------------
+
+const noteSchema = z.object({
+  customerId: z.string().uuid(),
+  body: z.string().trim().min(1, "Qeyd boş ola bilməz.").max(1000),
+});
+
+export async function addCustomerNote(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const parsed = noteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+  }
+  const d = parsed.data;
+
+  // Tenant guard: the customer must belong to this salon.
+  const customer = await prisma.customer.findFirst({
+    where: { id: d.customerId, salonId },
+    select: { id: true },
+  });
+  if (!customer) return { ok: false, error: "Müştəri tapılmadı." };
+
+  await prisma.customerNote.create({
+    data: { salonId, customerId: d.customerId, body: d.body },
+  });
+
+  revalidateClients(d.customerId);
+  return { ok: true };
+}
+
+export async function deleteCustomerNote(id: string): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+
+  const res = await prisma.customerNote.deleteMany({ where: { id, salonId } });
+  if (res.count === 0) return { ok: false, error: "Qeyd tapılmadı." };
+
+  revalidateClients();
+  return { ok: true };
+}
+
+// --- Delete customer -----------------------------------------------------------
+
+/**
+ * Deletes the customer AND their entire history (appointments, their queued
+ * notifications, CRM notes) in one transaction. The profile UI shows exactly
+ * what will be removed and requires explicit confirmation — this is the
+ * owner's data to destroy. Analytics derived from appointments will no longer
+ * include this customer afterwards.
+ */
+export async function deleteCustomer(id: string): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+
+  const customer = await prisma.customer.findFirst({
+    where: { id, salonId },
+    select: { id: true },
+  });
+  if (!customer) return { ok: false, error: "Müştəri tapılmadı." };
+
+  await prisma.$transaction([
+    prisma.notification.deleteMany({
+      where: { salonId, appointment: { customerId: id } },
+    }),
+    prisma.appointment.deleteMany({ where: { salonId, customerId: id } }),
+    prisma.customerNote.deleteMany({ where: { salonId, customerId: id } }),
+    prisma.customer.deleteMany({ where: { salonId, id } }),
+  ]);
+
+  revalidateClients();
+  revalidatePath("/dashboard"); // calendar may have shown their appointments
+  return { ok: true };
+}

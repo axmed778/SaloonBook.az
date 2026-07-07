@@ -4,8 +4,18 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { TRIAL_MONTHS } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
+
+// Registration creates a whole tenant (User+Account+Salon), so throttle it
+// harder than login: a short burst cap plus an hourly cap per IP. Redis-backed,
+// fail-open (same policy as the public booking routes).
+const LIMITS = {
+  burst: { limit: 3, windowSec: 60 },
+  hourly: { limit: 10, windowSec: 3600 },
+};
 
 // Self-serve salon signup. Creates the whole tenant in one transaction:
 // User (hashed) + Account + Subscription + Salon + OWNER Membership. Platform
@@ -49,6 +59,19 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req);
+  const [burst, hourly] = await Promise.all([
+    rateLimit(`register:ip:${ip}`, LIMITS.burst.limit, LIMITS.burst.windowSec),
+    rateLimit(`register:ip:1h:${ip}`, LIMITS.hourly.limit, LIMITS.hourly.windowSec),
+  ]);
+  if (!burst.allowed || !hourly.allowed) {
+    const resetSec = Math.max(burst.resetSec, hourly.resetSec);
+    return NextResponse.json(
+      { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+      { status: 429, headers: { "Retry-After": String(resetSec) } },
+    );
+  }
+
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
@@ -77,13 +100,18 @@ export async function POST(req: NextRequest) {
   const slug = await uniqueSlug(slugify(salonName));
   const passwordHash = hashPassword(password);
 
+  // Every self-serve signup gets the full Basic trial with a real end date —
+  // effectivePlan() downgrades to FREE limits the moment it lapses.
+  const trialEndsAt = new Date();
+  trialEndsAt.setMonth(trialEndsAt.getMonth() + TRIAL_MONTHS);
+
   let userId: string;
   try {
     userId = await prisma.$transaction(async (tx) => {
       const account = await tx.account.create({
         data: {
           name: salonName,
-          subscription: { create: { plan: "FREE", status: "TRIALING" } },
+          subscription: { create: { plan: "BASIC", status: "TRIALING", trialEndsAt } },
           salons: { create: { slug, name: salonName, audience } },
         },
         include: { salons: true },

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { enqueueNotification } from "./queue";
 import { limitsFor } from "./plans";
+import { effectivePlan } from "./subscription";
 import { bakuPeriodYm } from "./time";
 import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
@@ -103,7 +104,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     // UsageCounter serializes concurrent bookings, so the post-increment value
     // is unique per transaction and an over-limit attempt rolls back its own
     // increment when it throws — closing the check-then-increment race.
-    const plan = salon.account.subscription?.plan ?? "FREE";
+    const plan = effectivePlan(salon.account.subscription);
     const maxBookings = limitsFor(plan).maxBookingsPerMonth;
     const usage = await tx.usageCounter.upsert({
       where: { salonId_periodYm: { salonId: input.salonId, periodYm } },

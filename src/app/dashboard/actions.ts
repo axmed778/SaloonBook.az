@@ -162,6 +162,16 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
   });
   if (res.count === 0) return { ok: false, error: "Görüş tapılmadı." };
 
+  // A cancelled/no-showed appointment must not message the customer: cancel any
+  // still-queued notifications (e.g. the T-24h reminder). The worker re-checks
+  // the appointment status too, so this is belt-and-braces for races.
+  if (status === "CANCELLED" || status === "NO_SHOW") {
+    await prisma.notification.updateMany({
+      where: { appointmentId: id, salonId, status: "QUEUED" },
+      data: { status: "CANCELLED" },
+    });
+  }
+
   revalidatePath("/dashboard");
   return { ok: true };
 }

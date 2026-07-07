@@ -43,8 +43,12 @@ export function TrialNudge({
     );
   }
 
-  // Expired trial or unpaid subscription.
-  if ((status === "TRIALING" && daysLeft === 0) || status === "PAST_DUE") {
+  // Expired trial (live or already swept to FREE_DOWNGRADED) or unpaid subscription.
+  if (
+    (status === "TRIALING" && daysLeft === 0) ||
+    status === "PAST_DUE" ||
+    status === "FREE_DOWNGRADED"
+  ) {
     return (
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3">
         <p className="text-sm text-rose-200">Sınaq müddəti bitib — planı aktivləşdirin.</p>

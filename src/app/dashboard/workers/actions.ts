@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { assertEmployeeSeatAvailable } from "@/lib/subscription";
 
 // Server actions for the Workers (İşçilər) screen. Every action re-derives the
 // caller's salon from the session and scopes writes to it. In MVP an account has
@@ -84,6 +85,12 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Plan seat limit: only ACTIVE employees consume seats, so creating an
+      // active one or re-activating an existing one must pass the check.
+      if (d.isActive) {
+        await assertEmployeeSeatAvailable(tx, salonId, d.id);
+      }
+
       let employeeId: string;
       if (d.id) {
         const res = await tx.employee.updateMany({
@@ -145,7 +152,15 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
 
 export async function setEmployeeActive(id: string, isActive: boolean): Promise<ActionResult> {
   const salonId = await requireSalonId();
-  await prisma.employee.updateMany({ where: { id, salonId }, data: { isActive } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Re-activating consumes a plan seat — same check as saveEmployee.
+      if (isActive) await assertEmployeeSeatAvailable(tx, salonId, id);
+      await tx.employee.updateMany({ where: { id, salonId }, data: { isActive } });
+    });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Yadda saxlanmadı." };
+  }
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");
   return { ok: true };

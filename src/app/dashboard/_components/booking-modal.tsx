@@ -20,19 +20,24 @@ export function BookingModal({
   defaultDay,
   today,
   onClose,
+  initialName = "",
+  initialPhoneDigits = "",
 }: {
   catalog: CatalogEmployee[];
   defaultDay: string;
   today: string;
   onClose: () => void;
+  /** Prefill for the customer fields (used by the Clients CRM profile). */
+  initialName?: string;
+  initialPhoneDigits?: string;
 }) {
   const router = useRouter();
   const [employeeId, setEmployeeId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [day, setDay] = useState(defaultDay);
   const [slot, setSlot] = useState<Slot | null>(null);
-  const [name, setName] = useState("");
-  const [phoneDigits, setPhoneDigits] = useState("");
+  const [name, setName] = useState(initialName);
+  const [phoneDigits, setPhoneDigits] = useState(initialPhoneDigits);
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);

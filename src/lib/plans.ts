@@ -27,6 +27,8 @@ export interface PlanFeatures {
   exports: boolean;
   /** Deposits / no-show protection (future online payments). Pro only. */
   deposits: boolean;
+  /** Employee salary/commission payroll (/dashboard/payroll). Pro only. */
+  payroll: boolean;
 }
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
@@ -36,6 +38,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     staffRoles: false,
     exports: false,
     deposits: false,
+    payroll: false,
   },
   BASIC: {
     multiBranch: false,
@@ -43,6 +46,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     staffRoles: false,
     exports: false,
     deposits: false,
+    payroll: false,
   },
   PRO: {
     multiBranch: true,
@@ -50,6 +54,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     staffRoles: true,
     exports: true,
     deposits: true,
+    payroll: true,
   },
 };
 

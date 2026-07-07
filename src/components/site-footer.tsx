@@ -1,22 +1,22 @@
 import { Logo } from "@/components/site-header";
 
+// Anchor links are rooted (/#…) so they also work from /privacy and /terms.
 const COLUMNS = [
   {
     title: "Məhsul",
     links: [
-      { label: "İmkanlar", href: "#features" },
-      { label: "Qiymətlər", href: "#pricing" },
+      { label: "İmkanlar", href: "/#features" },
+      { label: "Qiymətlər", href: "/#pricing" },
       { label: "Nümunə səhifə", href: "/demostudio" },
-      { label: "FAQ", href: "#faq" },
+      { label: "FAQ", href: "/#faq" },
     ],
   },
   {
     title: "Şirkət",
     links: [
-      { label: "Haqqımızda", href: "#" },
-      { label: "Əlaqə", href: "#" },
-      { label: "Gizlilik", href: "#" },
-      { label: "Şərtlər", href: "#" },
+      { label: "Əlaqə", href: "https://wa.me/994502990440" },
+      { label: "Məxfilik Siyasəti", href: "/privacy" },
+      { label: "İstifadə Şərtləri", href: "/terms" },
     ],
   },
 ];
