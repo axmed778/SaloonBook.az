@@ -33,6 +33,7 @@
   --accent-foreground: #fafafa;
 
   --success: #34d399; /* emerald-400 */
+  --danger: #f43f5e; /* rose-500 */
 
   /* Flourishes */
   --glow: #8b5cf6;
@@ -62,6 +63,7 @@
   --accent-foreground: #fffffc;
 
   --success: #047857; /* emerald-700 */
+  --danger: #be123c; /* rose-700, legible on white */
 
   --glow: #debbc9; /* airy dusty-rose bloom */
   --grid-line: rgba(60, 22, 38, 0.05);
@@ -86,6 +88,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
+  --color-danger: var(--danger);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;

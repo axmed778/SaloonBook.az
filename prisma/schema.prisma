@@ -287,6 +287,9 @@ model Appointment {
   priceMinor    Int // snapshot at booking time
   source        BookingSource     @default(PUBLIC)
   notes         String?
+  // Unguessable capability token for the public self-service page (/a/{token}):
+  // whoever holds the link can view, cancel or reschedule this appointment.
+  manageToken   String            @unique @default(uuid())
   salon         Salon             @relation(fields: [salonId], references: [id])
   employee      Employee          @relation(fields: [employeeId], references: [id])
   service       Service           @relation(fields: [serviceId], references: [id])

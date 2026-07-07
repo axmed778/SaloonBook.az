@@ -22,10 +22,12 @@ function buildComponents(template: string, payload: Prisma.JsonValue): unknown {
     // To customer — {{1}} salon, {{2}} service, {{3}} when
     case "booking_confirmation":
     case "appointment_reminder":
+    case "booking_cancelled": // salon cancelled the customer's appointment
       params = [String(p.salon ?? ""), String(p.service ?? ""), when];
       break;
     // To owner — {{1}} customer, {{2}} service, {{3}} when
     case "new_booking_alert":
+    case "booking_cancelled_alert": // customer cancelled via the manage link
       params = [String(p.customer ?? ""), String(p.service ?? ""), when];
       break;
     default:
@@ -55,8 +57,12 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   // Re-check the appointment at send time: a reminder queued at booking time
   // must never fire for an appointment that was since cancelled or no-showed.
   // (Delayed BullMQ jobs can't be reliably removed, so the guard lives here.)
+  // Cancellation NOTICES are exempt — they exist precisely because the
+  // appointment is cancelled.
+  const isCancellationNotice =
+    n.template === "booking_cancelled" || n.template === "booking_cancelled_alert";
   const apptStatus = n.appointment?.status;
-  if (apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") {
+  if ((apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") && !isCancellationNotice) {
     await prisma.notification.update({
       where: { id: n.id },
       data: { status: "CANCELLED" },

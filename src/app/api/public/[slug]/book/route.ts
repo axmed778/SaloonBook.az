@@ -137,10 +137,13 @@ export async function POST(
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: parsed.data.waOptIn },
       source: "PUBLIC",
     });
+    const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
     return NextResponse.json({
       ok: true,
       appointmentId: result.appointmentId,
       startUtc: result.startUtc.toISOString(),
+      // Self-service page: view / cancel / reschedule this appointment.
+      manageUrl: `${appUrl}/a/${result.manageToken}`,
     });
   } catch (e) {
     if (e instanceof SlotTakenError) {

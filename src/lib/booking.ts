@@ -41,13 +41,15 @@ export interface CreateBookingInput {
 
 export interface CreateBookingResult {
   appointmentId: string;
+  manageToken: string;
   startUtc: Date;
   endUtc: Date;
 }
 
 // A Postgres exclusion_violation (23P01) from the appointment_no_overlap
 // constraint surfaces through Prisma as a raw error; detect it by signature.
-function isOverlapError(e: unknown): boolean {
+// Exported for the reschedule path, which updates startsAt/endsAt directly.
+export function isOverlapError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
   return (
     msg.includes("appointment_no_overlap") ||
@@ -154,7 +156,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           priceMinor: service.priceMinor,
           source,
         },
-        select: { id: true, startsAt: true, endsAt: true },
+        select: { id: true, manageToken: true, startsAt: true, endsAt: true },
       });
     } catch (e) {
       if (isOverlapError(e)) throw new SlotTakenError();
@@ -249,6 +251,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
   return {
     appointmentId: result.appointment.id,
+    manageToken: result.appointment.manageToken,
     startUtc: result.appointment.startsAt,
     endUtc: result.appointment.endsAt,
   };

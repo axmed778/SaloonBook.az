@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, type Slot } from "@/lib/availability";
 import {
   createBooking,
@@ -154,6 +155,19 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
   if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
   const { id, status } = parsed.data;
 
+  // Pre-read for the cancellation notice below (previous status, phone, names).
+  const appt = await prisma.appointment.findFirst({
+    where: { id, salonId },
+    select: {
+      status: true,
+      startsAt: true,
+      customer: { select: { phone: true } },
+      service: { select: { name: true } },
+      salon: { select: { name: true } },
+    },
+  });
+  if (!appt) return { ok: false, error: "Görüş tapılmadı." };
+
   // salonId in the filter is the tenant guard; only CONFIRMED/COMPLETED/NO_SHOW
   // appointments are shown, so any of them is a valid transition target.
   const res = await prisma.appointment.updateMany({
@@ -170,6 +184,32 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       where: { appointmentId: id, salonId, status: "QUEUED" },
       data: { status: "CANCELLED" },
     });
+  }
+
+  // Salon cancelled an upcoming confirmed appointment → tell the customer so
+  // they don't show up. Created AFTER the sweep above so it stays QUEUED; the
+  // worker exempts cancellation notices from the cancelled-appointment guard.
+  if (status === "CANCELLED" && appt.status === "CONFIRMED" && appt.startsAt > new Date()) {
+    const notice = await prisma.notification.create({
+      data: {
+        salonId,
+        appointmentId: id,
+        template: "booking_cancelled",
+        toPhone: appt.customer.phone,
+        payload: {
+          salon: appt.salon.name,
+          service: appt.service.name,
+          startsAt: appt.startsAt.toISOString(),
+        },
+      },
+      select: { id: true },
+    });
+    // Best-effort: the row is persisted QUEUED either way.
+    try {
+      await enqueueNotification(notice.id);
+    } catch (e) {
+      console.error("[status] cancel-notice enqueue failed (row persisted)", e);
+    }
   }
 
   revalidatePath("/dashboard");

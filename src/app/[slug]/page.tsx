@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,50 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BookingWidget } from "./booking-widget";
 
 export const dynamic = "force-dynamic";
+
+// Per-salon Open Graph metadata: a shared booking link is the salon's growth
+// loop, so the preview must show THEIR salon, not generic boilerplate. The OG
+// image itself is rendered per-salon in ./opengraph-image.tsx.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const salon = await prisma.salon.findUnique({
+    where: { slug },
+    select: { name: true, description: true, address: true, status: true },
+  });
+  if (!salon || salon.status !== "ACTIVE") {
+    return { title: "Salon tapılmadı — SalonBook.az", robots: { index: false } };
+  }
+
+  const title = `${salon.name} — Onlayn qeydiyyat`;
+  const description =
+    salon.description?.trim() ||
+    `${salon.name}${salon.address ? ` · ${salon.address}` : ""} — vaxtınızı onlayn ayırın, 24/7. SalonBook.az ilə.`;
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+
+  return {
+    title: `${title} | SalonBook.az`,
+    description,
+    metadataBase: new URL(appUrl),
+    alternates: { canonical: `/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/${slug}`,
+      siteName: "SalonBook.az",
+      locale: "az_AZ",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 const initials = (name: string) =>
   name

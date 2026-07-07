@@ -72,7 +72,12 @@ export function BookingWidget({
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ time: string; dayLabel: string } | null>(null);
+  const [done, setDone] = useState<{
+    time: string;
+    dayLabel: string;
+    manageUrl: string | null;
+  } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
   const selectedEmployee = employees.find((e) => e.id === employeeId) ?? null;
@@ -180,7 +185,11 @@ export function BookingWidget({
         setError(data.error ?? "Qeydiyyat alınmadı. Yenidən cəhd edin.");
         return;
       }
-      setDone({ time: slot.time, dayLabel: selectedDay?.label ?? day ?? "" });
+      setDone({
+        time: slot.time,
+        dayLabel: selectedDay?.label ?? day ?? "",
+        manageUrl: typeof data.manageUrl === "string" ? data.manageUrl : null,
+      });
     } catch {
       setError("Şəbəkə xətası. Yenidən cəhd edin.");
     } finally {
@@ -205,6 +214,40 @@ export function BookingWidget({
           <p className="mt-4 text-xs text-faint-foreground">
             Görüşdən əvvəl sizə xatırlatma göndəriləcək.
           </p>
+
+          {done.manageUrl && (
+            <div className="mt-5 rounded-lg border border-border bg-card p-4 text-left">
+              <p className="text-sm font-medium text-foreground">
+                Görüşü dəyişmək və ya ləğv etmək lazım olsa:
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <a
+                  href={done.manageUrl}
+                  className="min-w-0 flex-1 truncate rounded-lg border border-border bg-muted px-3 py-2 text-sm text-accent hover:underline"
+                >
+                  {done.manageUrl}
+                </a>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(done.manageUrl!);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 1500);
+                    } catch {
+                      /* the link is visible and selectable either way */
+                    }
+                  }}
+                  className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground transition hover:border-border-strong hover:text-foreground"
+                >
+                  {linkCopied ? "Kopyalandı ✓" : "Kopyala"}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-faint-foreground">
+                Bu linki saxlayın — görüşünüzü onlayn idarə etmək üçündür.
+              </p>
+            </div>
+          )}
         </div>
       </section>
     );

@@ -26,6 +26,11 @@ export interface AvailabilityQuery {
   dayYmd: string;
   /** Slot granularity in minutes. */
   stepMin?: number;
+  /**
+   * Ignore this appointment's own interval (reschedule flows: the slot being
+   * moved must not block itself, and its current time should read as free).
+   */
+  excludeAppointmentId?: string;
 }
 
 interface Interval {
@@ -77,7 +82,14 @@ export type SlotBookable =
  */
 export async function isSlotBookable(
   db: Db,
-  args: { employeeId: string; serviceId: string; startUtc: Date; now?: number },
+  args: {
+    employeeId: string;
+    serviceId: string;
+    startUtc: Date;
+    now?: number;
+    /** See AvailabilityQuery.excludeAppointmentId (reschedule flows). */
+    excludeAppointmentId?: string;
+  },
 ): Promise<SlotBookable> {
   const now = args.now ?? Date.now();
 
@@ -112,6 +124,7 @@ export async function isSlotBookable(
         status: "CONFIRMED",
         startsAt: { lt: endUtc },
         endsAt: { gt: args.startUtc },
+        ...(args.excludeAppointmentId ? { id: { not: args.excludeAppointmentId } } : {}),
       },
       select: { startsAt: true, endsAt: true },
     }),
@@ -170,6 +183,7 @@ export async function getAvailableSlots(q: AvailabilityQuery): Promise<Slot[]> {
         status: "CONFIRMED",
         startsAt: { lt: endUtc },
         endsAt: { gt: startUtc },
+        ...(q.excludeAppointmentId ? { id: { not: q.excludeAppointmentId } } : {}),
       },
       select: { startsAt: true, endsAt: true },
     }),
