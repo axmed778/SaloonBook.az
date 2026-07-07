@@ -19,8 +19,8 @@ export function assertEnv(): void {
   // so a half-configured environment can't take the whole app down.
   //
   // TODO (before launch / real customers): re-tighten this to THROW in
-  // production when WHATSAPP_VERIFY_TOKEN / WHATSAPP_APP_SECRET (and, once auth
-  // is wired up, the Clerk keys) are unset or still placeholders.
+  // production when WHATSAPP_VERIFY_TOKEN / WHATSAPP_APP_SECRET are unset or
+  // still placeholders.
   const checks: Array<[string | undefined, string]> = [
     [
       process.env.WHATSAPP_VERIFY_TOKEN,

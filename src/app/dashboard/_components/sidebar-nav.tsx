@@ -87,18 +87,35 @@ const items: NavItem[] = [
   },
 ];
 
+// Platform admins manage accounts, not a salon — the salon nav is useless for
+// them, so they get their own minimal item set.
+const adminItems: NavItem[] = [
+  {
+    href: "/dashboard/admin",
+    label: "Salonlar",
+    icon: (
+      <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4" />
+      </svg>
+    ),
+  },
+];
+
 export function SidebarNav({
   collapsed = false,
   onNavigate,
+  isAdmin = false,
 }: {
   collapsed?: boolean;
   onNavigate?: () => void;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
+  const navItems = isAdmin ? adminItems : items;
 
   return (
     <nav className="flex flex-col gap-1">
-      {items.map((item) => {
+      {navItems.map((item) => {
         const active =
           item.href === "/dashboard"
             ? pathname === "/dashboard"

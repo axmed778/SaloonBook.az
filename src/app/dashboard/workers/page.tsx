@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { bakuYmd, formatBakuDate, shiftYmd } from "@/lib/time";
 import { WorkersManager } from "./workers-manager";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,12 @@ export default async function WorkersPage() {
         audience: true,
         services: { select: { serviceId: true } },
         workingHours: { select: { weekday: true, startMin: true, endMin: true } },
+        // Current + upcoming time off (past entries don't matter for planning).
+        timeOff: {
+          where: { endsAt: { gt: new Date() } },
+          orderBy: { startsAt: "asc" },
+          select: { id: true, startsAt: true, endsAt: true, reason: true },
+        },
       },
     }),
     prisma.service.findMany({
@@ -46,6 +53,19 @@ export default async function WorkersPage() {
       startMin: h.startMin,
       endMin: h.endMin,
     })),
+    timeOff: e.timeOff.map((t) => {
+      // endsAt is exclusive (start of the day after the last day off).
+      const fromYmd = bakuYmd(t.startsAt);
+      const toYmd = shiftYmd(bakuYmd(t.endsAt), -1);
+      return {
+        id: t.id,
+        label:
+          fromYmd === toYmd
+            ? formatBakuDate(fromYmd)
+            : `${formatBakuDate(fromYmd)} – ${formatBakuDate(toYmd)}`,
+        reason: t.reason,
+      };
+    }),
   }));
 
   return <WorkersManager employees={employeeRows} services={services} />;

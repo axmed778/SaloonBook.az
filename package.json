@@ -15,6 +15,8 @@
     "worker:start": "tsx worker/index.ts",
     "db:up": "tsx scripts/embedded-pg.ts",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -33,7 +35,6 @@
     }
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.9.0",
     "@prisma/client": "^6.2.0",
     "bullmq": "^5.34.0",
     "geist": "^1.7.2",
@@ -53,6 +54,7 @@
     "embedded-postgres": "18.4.0-beta.17",
     "prisma": "^6.2.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -12,9 +12,11 @@ const STORAGE_KEY = "sb_sidebar_collapsed";
 // remembered in localStorage) and an off-canvas drawer on mobile (hamburger).
 export function DashboardShell({
   user,
+  isAdmin = false,
   children,
 }: {
   user: User;
+  isAdmin?: boolean;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -50,7 +52,12 @@ export function DashboardShell({
           (collapsed ? "w-[76px]" : "w-64")
         }
       >
-        <SidebarContent user={user} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
+        <SidebarContent
+          user={user}
+          isAdmin={isAdmin}
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapse}
+        />
       </aside>
 
       {/* Mobile drawer + backdrop */}
@@ -70,6 +77,7 @@ export function DashboardShell({
         >
           <SidebarContent
             user={user}
+            isAdmin={isAdmin}
             collapsed={false}
             onNavigate={() => setMobileOpen(false)}
             onClose={() => setMobileOpen(false)}
@@ -100,12 +108,14 @@ export function DashboardShell({
 
 function SidebarContent({
   user,
+  isAdmin,
   collapsed,
   onToggleCollapse,
   onNavigate,
   onClose,
 }: {
   user: User;
+  isAdmin: boolean;
   collapsed: boolean;
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
@@ -155,7 +165,7 @@ function SidebarContent({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2">
-        <SidebarNav collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarNav collapsed={collapsed} onNavigate={onNavigate} isAdmin={isAdmin} />
       </div>
 
       <div className="border-t border-zinc-800 p-3">

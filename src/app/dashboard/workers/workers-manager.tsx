@@ -2,12 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveEmployee, setEmployeeActive, deleteEmployee } from "./actions";
+import {
+  saveEmployee,
+  setEmployeeActive,
+  deleteEmployee,
+  addTimeOff,
+  deleteTimeOff,
+} from "./actions";
 import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
 
 type Svc = { id: string; name: string; isActive: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
+export type TimeOffRow = { id: string; label: string; reason: string | null };
 export type EmployeeRow = {
   id: string;
   name: string;
@@ -17,6 +24,7 @@ export type EmployeeRow = {
   audience: Audience;
   serviceIds: string[];
   hours: HourRow[];
+  timeOff: TimeOffRow[];
 };
 
 // weekday: 0=Sunday..6=Saturday (matches the schema + availability engine).
@@ -88,6 +96,7 @@ export function WorkersManager({
   const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [hours, setHours] = useState<HoursState>(defaultHours);
   const [error, setError] = useState<string | null>(null);
+  const [timeOffFor, setTimeOffFor] = useState<EmployeeRow | null>(null);
 
   const activeServices = services.filter((s) => s.isActive);
   const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "—";
@@ -407,6 +416,18 @@ export function WorkersManager({
 
               <div className="flex shrink-0 items-center gap-3">
                 <button
+                  onClick={() => setTimeOffFor(e)}
+                  disabled={pending}
+                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                >
+                  Məzuniyyət
+                  {e.timeOff.length > 0 && (
+                    <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium text-amber-300">
+                      {e.timeOff.length}
+                    </span>
+                  )}
+                </button>
+                <button
                   onClick={() => startEdit(e)}
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
@@ -432,6 +453,166 @@ export function WorkersManager({
           ))}
         </ul>
       )}
+
+      {timeOffFor && (
+        <TimeOffModal
+          // Re-resolve from props so the list inside the modal stays fresh
+          // after add/delete (router.refresh replaces `employees`).
+          employee={employees.find((x) => x.id === timeOffFor.id) ?? timeOffFor}
+          onClose={() => setTimeOffFor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// --- Time off modal -----------------------------------------------------------
+// Whole-day ranges; booked slots inside the range stay booked (the engine only
+// blocks NEW bookings), so the salon should resolve conflicts manually.
+
+function TimeOffModal({
+  employee,
+  onClose,
+}: {
+  employee: EmployeeRow;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(today);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!from || !to) return setError("Tarixləri seçin.");
+    if (to < from) return setError("Bitmə tarixi başlanğıcdan əvvəl ola bilməz.");
+    startTransition(async () => {
+      const res = await addTimeOff({
+        employeeId: employee.id,
+        from,
+        to,
+        reason: reason.trim() || null,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setReason("");
+      router.refresh();
+    });
+  }
+
+  function remove(id: string) {
+    startTransition(async () => {
+      const res = await deleteTimeOff(id);
+      if (!res.ok) alert(res.error);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d0f] p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-zinc-100">
+            Məzuniyyət — {employee.name}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Bağla"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="mt-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Başlanğıc</label>
+              <input
+                type="date"
+                className={inputCls + " w-full [color-scheme:dark]"}
+                value={from}
+                min={today}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  if (to < e.target.value) setTo(e.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Son gün (daxil)</label>
+              <input
+                type="date"
+                className={inputCls + " w-full [color-scheme:dark]"}
+                value={to}
+                min={from}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Səbəb (istəyə bağlı)</label>
+            <input
+              className={inputCls + " w-full"}
+              placeholder="məs., məzuniyyət, təlim"
+              maxLength={200}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+          >
+            {pending ? "Əlavə edilir…" : "Əlavə et"}
+          </button>
+        </form>
+
+        <div className="mt-5 border-t border-zinc-800 pt-4">
+          <p className="text-xs font-medium text-zinc-500">Cari və qarşıdakı məzuniyyətlər</p>
+          {employee.timeOff.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-500">Qeyd yoxdur.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {employee.timeOff.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-zinc-900/50 px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 truncate text-zinc-200">
+                    {t.label}
+                    {t.reason && <span className="text-zinc-500"> · {t.reason}</span>}
+                  </span>
+                  <button
+                    onClick={() => remove(t.id)}
+                    disabled={pending}
+                    className="shrink-0 text-xs text-zinc-500 transition hover:text-rose-400"
+                  >
+                    Sil
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-zinc-600">
+            Bu günlərdə onlayn qeydiyyat üçün boş vaxt göstərilmir. Artıq təsdiqlənmiş
+            görüşlər avtomatik ləğv olunmur.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { assertEmployeeSeatAvailable } from "@/lib/subscription";
+import { bakuDayBoundsUtc, bakuToday } from "@/lib/time";
 
 // Server actions for the Workers (İşçilər) screen. Every action re-derives the
 // caller's salon from the session and scopes writes to it. In MVP an account has
@@ -161,6 +162,72 @@ export async function setEmployeeActive(id: string, isActive: boolean): Promise<
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Yadda saxlanmadı." };
   }
+  revalidatePath("/dashboard/workers");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Time off ---------------------------------------------------------------
+// Whole Baku calendar days, [from..to] inclusive. The availability engine
+// already excludes TimeOff intervals from bookable slots — this is just the
+// management surface for it.
+
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const timeOffSchema = z
+  .object({
+    employeeId: z.string().uuid(),
+    from: z.string().regex(YMD_RE),
+    to: z.string().regex(YMD_RE),
+    reason: z.string().trim().max(200).nullish(),
+  })
+  .refine((d) => d.from <= d.to, { message: "Bitmə tarixi başlanğıcdan əvvəl ola bilməz." });
+
+export async function addTimeOff(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const parsed = timeOffSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+  }
+  const d = parsed.data;
+
+  if (d.to < bakuToday()) {
+    return { ok: false, error: "Keçmiş tarix üçün məzuniyyət əlavə edilə bilməz." };
+  }
+
+  // Tenant guard: the employee must belong to this salon.
+  const employee = await prisma.employee.findFirst({
+    where: { id: d.employeeId, salonId },
+    select: { id: true },
+  });
+  if (!employee) return { ok: false, error: "İşçi tapılmadı." };
+
+  const startsAt = bakuDayBoundsUtc(d.from).startUtc;
+  const endsAt = bakuDayBoundsUtc(d.to).endUtc; // exclusive: start of the day after `to`
+
+  // Cap the range so a typo (e.g. year 2062) can't block the calendar forever.
+  if (endsAt.getTime() - startsAt.getTime() > 366 * 86_400_000) {
+    return { ok: false, error: "Məzuniyyət 1 ildən uzun ola bilməz." };
+  }
+
+  await prisma.timeOff.create({
+    data: { employeeId: d.employeeId, startsAt, endsAt, reason: d.reason || null },
+  });
+
+  revalidatePath("/dashboard/workers");
+  revalidatePath("/dashboard"); // frees/blocks calendar slots
+  return { ok: true };
+}
+
+export async function deleteTimeOff(id: string): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+
+  const res = await prisma.timeOff.deleteMany({
+    where: { id, employee: { salonId } },
+  });
+  if (res.count === 0) return { ok: false, error: "Qeyd tapılmadı." };
+
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");
   return { ok: true };

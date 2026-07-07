@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      # Build/typecheck never open real connections (Prisma connects lazily,
+      # Redis/queue are lazy by design) — placeholders keep module init happy.
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      REDIS_URL: "redis://localhost:6379"
+      APP_URL: "http://localhost:3000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
@@ -99,17 +100,14 @@ export default async function DashboardPage({
   // The layout already guarantees a session (redirects otherwise).
   const session = (await getSession())!;
 
-  // Platform admins don't own a salon calendar; that panel comes later.
-  if (session.isAdmin || !session.salonId) {
+  // Platform admins manage accounts, not a salon calendar.
+  if (session.isAdmin) redirect("/dashboard/admin");
+  if (!session.salonId) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-zinc-100">
-          {session.isAdmin ? "Platforma idarəetməsi" : "Salon tapılmadı"}
-        </h1>
+        <h1 className="text-xl font-semibold text-zinc-100">Salon tapılmadı</h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          {session.isAdmin
-            ? "Admin panel (planların aktivləşdirilməsi, dəvətlər) növbəti addımlarda əlavə olunacaq."
-            : "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."}
+          Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın.
         </p>
       </div>
     );

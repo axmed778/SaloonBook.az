@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Content-Security-Policy. Kept compatible with Next (which injects inline
-// bootstrap scripts/styles) and Clerk + Cloudflare Turnstile.
+// bootstrap scripts/styles) and Cloudflare Turnstile.
 //   - 'unsafe-inline' on script/style is a pragmatic relaxation; tightening to a
 //     per-request nonce (via middleware) is a follow-up once middleware exists.
 //   - frame-ancestors 'none' (plus X-Frame-Options) blocks clickjacking.
@@ -18,12 +18,12 @@ const csp = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "img-src 'self' data: blob: https://img.clerk.com",
+  "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://challenges.cloudflare.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://*.clerk.accounts.dev https://challenges.cloudflare.com`,
-  "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://challenges.cloudflare.com`,
+  "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
 ].join("; ");
 

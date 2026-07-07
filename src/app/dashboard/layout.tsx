@@ -21,7 +21,10 @@ export default async function DashboardLayout({
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <DashboardShell user={{ name: displayName, role: roleLabel, initial }}>
+    <DashboardShell
+      user={{ name: displayName, role: roleLabel, initial }}
+      isAdmin={session.isAdmin}
+    >
       {children}
     </DashboardShell>
   );
