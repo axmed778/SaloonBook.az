@@ -1,8 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { matchesClientGender, type Audience } from "@/lib/audience";
+
+// Cloudflare Turnstile: only wired when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set
+// (paired with the server's TURNSTILE_SECRET_KEY). Loaded lazily so the script
+// is never fetched when CAPTCHA is disabled.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+type TurnstileApi = {
+  render: (el: HTMLElement, opts: Record<string, unknown>) => string;
+  reset: (id: string) => void;
+  remove: (id: string) => void;
+};
+function getTurnstile(): TurnstileApi | undefined {
+  return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+}
+function ensureTurnstileScript(onReady: () => void): void {
+  if (getTurnstile()) return onReady();
+  const existing = document.getElementById("cf-turnstile-script");
+  if (existing) {
+    existing.addEventListener("load", onReady, { once: true });
+    return;
+  }
+  const s = document.createElement("script");
+  s.id = "cf-turnstile-script";
+  s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+  s.async = true;
+  s.defer = true;
+  s.addEventListener("load", onReady, { once: true });
+  document.head.appendChild(s);
+}
 
 type Service = {
   id: string;
@@ -70,6 +99,9 @@ export function BookingWidget({
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{
@@ -160,12 +192,63 @@ export function BookingWidget({
     };
   }, [activeKey, serviceId, employeeId, day, slug]);
 
+  // Render the Turnstile widget while the contact step is active (only when a
+  // site key is configured). Tearing it down on step change keeps the token
+  // fresh — Turnstile tokens are single-use and short-lived.
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || activeKey !== "contact") return;
+    let cancelled = false;
+    const container = turnstileRef.current;
+
+    ensureTurnstileScript(() => {
+      const ts = getTurnstile();
+      if (cancelled || !ts || !container || turnstileWidgetId.current) return;
+      turnstileWidgetId.current = ts.render(container, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token: string) => setTurnstileToken(token),
+        "expired-callback": () => setTurnstileToken(null),
+        "error-callback": () => setTurnstileToken(null),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      const ts = getTurnstile();
+      if (ts && turnstileWidgetId.current) {
+        try {
+          ts.remove(turnstileWidgetId.current);
+        } catch {
+          /* widget already gone */
+        }
+      }
+      turnstileWidgetId.current = null;
+      setTurnstileToken(null);
+    };
+  }, [activeKey]);
+
+  // Turnstile tokens are consumed by the server's verify call, so any failed
+  // booking attempt needs a fresh one.
+  function resetTurnstile() {
+    const ts = getTurnstile();
+    if (ts && turnstileWidgetId.current) {
+      try {
+        ts.reset(turnstileWidgetId.current);
+      } catch {
+        /* no-op */
+      }
+    }
+    setTurnstileToken(null);
+  }
+
   async function submit() {
     setError(null);
     const digits = phoneDigits.replace(/\D/g, "");
     if (!name.trim()) return setError("Adınızı daxil edin.");
     if (digits.length !== 9) return setError("Telefon +994 və 9 rəqəmdən ibarət olmalıdır.");
     if (!slot || !serviceId || !employeeId) return setError("Məlumat natamamdır.");
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      return setError("Robot olmadığınızı təsdiqləyin.");
+    }
 
     setSubmitting(true);
     try {
@@ -178,10 +261,13 @@ export function BookingWidget({
           startUtc: slot.startUtc,
           name: name.trim(),
           phone: "+994" + digits,
+          turnstileToken: turnstileToken ?? undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // The server consumed the token during verification; get a new one.
+        resetTurnstile();
         setError(data.error ?? "Qeydiyyat alınmadı. Yenidən cəhd edin.");
         return;
       }
@@ -448,6 +534,8 @@ export function BookingWidget({
                       />
                     </div>
                   </div>
+
+                  {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="min-h-[65px]" />}
 
                   {error && <p className="text-sm text-rose-500">{error}</p>}
 

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { TRIAL_MONTHS } from "../src/lib/plans";
-import { hashPassword } from "../src/lib/auth/password";
+import { hashPassword, passwordIssues } from "../src/lib/auth/password";
 import { bakuToday, bakuWallClockToUtc } from "../src/lib/time";
 
 const prisma = new PrismaClient();
@@ -48,13 +48,25 @@ async function seedAuthAccounts() {
   if (existingAdmin) {
     console.log(`seed: admin '${adminEmail}' already exists — skipping.`);
   } else {
+    // Never commit a real admin password. It must be supplied at seed time via
+    // SEED_ADMIN_PASSWORD and satisfy the same policy as signup. On existing
+    // deployments the admin already exists, so this branch (and the env
+    // requirement) is skipped.
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+    const issues = adminPassword ? passwordIssues(adminPassword) : ["not set"];
+    if (!adminPassword || issues.length > 0) {
+      throw new Error(
+        `seed: SEED_ADMIN_PASSWORD is required to create platform admin '${adminEmail}' ` +
+          `and must satisfy the password policy (${issues.join(", ")}). ` +
+          `Set it to a strong value in the environment (do not commit it).`,
+      );
+    }
     await prisma.user.create({
       data: {
         email: adminEmail,
         fullName: "Platform Admin",
         isPlatformAdmin: true,
-        // NOTE: temporary password shared in chat — owner must change after first login.
-        passwordHash: hashPassword("Axmed123!"),
+        passwordHash: hashPassword(adminPassword),
       },
     });
     console.log(`seed: created platform admin '${adminEmail}'.`);

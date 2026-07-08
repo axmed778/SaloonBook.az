@@ -39,15 +39,28 @@ export async function GET(
     return NextResponse.json({ error: "Invalid query", issues: parsed.error.issues }, { status: 400 });
   }
 
-  // Confirm the service & employee belong to this salon (tenant safety).
+  // Confirm the service & employee belong to this salon AND that the employee
+  // can perform the service (mirrors the /book tenant check). Validating the
+  // employee alone would let a crafted request compute slots from another
+  // tenant's service duration/buffer.
   const salon = await prisma.salon.findUnique({ where: { slug }, select: { id: true } });
   if (!salon) return NextResponse.json({ error: "Salon not found" }, { status: 404 });
 
-  const employee = await prisma.employee.findFirst({
-    where: { id: parsed.data.employeeId, salonId: salon.id, isActive: true },
-    select: { id: true },
+  const link = await prisma.serviceEmployee.findFirst({
+    where: {
+      serviceId: parsed.data.serviceId,
+      employeeId: parsed.data.employeeId,
+      service: { salonId: salon.id, isActive: true },
+      employee: { salonId: salon.id, isActive: true },
+    },
+    select: { serviceId: true },
   });
-  if (!employee) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  if (!link) {
+    return NextResponse.json(
+      { error: "Invalid service or employee for this salon" },
+      { status: 404 },
+    );
+  }
 
   const slots = await getAvailableSlots({
     employeeId: parsed.data.employeeId,

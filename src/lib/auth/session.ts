@@ -20,6 +20,14 @@ const DEV_FALLBACK_SECRET = "dev-insecure-session-secret-change-me";
 function secret(): string {
   const s = process.env.SESSION_SECRET;
   if (s && s.trim() !== "") return s;
+  // Defense-in-depth: assertEnv() already refuses to boot in production without
+  // SESSION_SECRET, but never sign or verify a cookie with the public dev
+  // fallback in prod even if that guard is somehow bypassed.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[auth] SESSION_SECRET is required in production. Refusing to use the insecure dev fallback.",
+    );
+  }
   console.warn(
     "[auth] WARNING: SESSION_SECRET is unset — using an insecure dev fallback. " +
       "Set SESSION_SECRET before deploying.",
@@ -115,6 +123,7 @@ export async function getSession(): Promise<Session | null> {
       email: true,
       fullName: true,
       isPlatformAdmin: true,
+      sessionsValidFrom: true,
       memberships: {
         select: { role: true, salonId: true, accountId: true },
         take: 1,
@@ -122,6 +131,16 @@ export async function getSession(): Promise<Session | null> {
     },
   });
   if (!user) return null;
+
+  // Reject cookies minted before the account's session cutoff (bumped on
+  // password reset). Compared at second granularity to match the cookie's `iat`,
+  // so a freshly issued post-reset cookie is never falsely invalidated.
+  if (
+    user.sessionsValidFrom &&
+    payload.iat < Math.floor(user.sessionsValidFrom.getTime() / 1000)
+  ) {
+    return null;
+  }
 
   const membership = user.memberships[0] ?? null;
   return {

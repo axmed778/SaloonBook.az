@@ -30,6 +30,9 @@ model User {
   memberships     Membership[]
   resetTokens     PasswordResetToken[]
   createdAt       DateTime             @default(now())
+  // Session cutoff: cookies issued before this instant are rejected (see
+  // getSession). Bumped on password reset so a stolen session can't outlive it.
+  sessionsValidFrom DateTime?          @db.Timestamptz(6)
 }
 
 // Single-use, expiring password-reset tokens. Only the SHA-256 of the raw token

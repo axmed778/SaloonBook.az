@@ -16,12 +16,30 @@
 --     GRANT USAGE ON SCHEMA public TO salonbook_app;
 --
 --   ...and point DATABASE_URL at that role. Run migrations as the owner.
---   This is optional for local dev; enable it for staging/production.
+--
+-- CURRENT STATUS (decision, 2026-07-08) — NOT ENABLED IN PRODUCTION.
+--   The app connects as the DB owner, so these policies do not bite; tenant
+--   isolation currently relies on the salonId filter applied in every query in
+--   application code. Only the booking write path sets `app.current_salon` (via
+--   withTenantScope, src/lib/tenant.ts). DO NOT point DATABASE_URL at a non-owner
+--   role until withTenantScope (or an equivalent app.current_salon setter) wraps
+--   EVERY read/write path — otherwise the dashboard, clients, manage flow, admin,
+--   payroll, and analytics would all silently return zero rows. This file is kept
+--   complete and correct so enabling RLS later is a single, safe switch.
 
 DO $$
 DECLARE
   t text;
-  tenant_tables text[] := ARRAY['Salon', 'Employee', 'Service', 'Customer', 'Appointment'];
+  -- Every table carrying tenant data. Salon is keyed by its own id; the rest by
+  -- salonId. Keep in sync with the schema when a new salon-scoped table is added.
+  tenant_tables text[] := ARRAY[
+    'Salon', 'Employee', 'Service', 'Customer', 'Appointment',
+    'Notification', 'Payout', 'CustomerNote', 'UsageCounter'
+  ];
+  salon_id_tables text[] := ARRAY[
+    'Employee', 'Service', 'Customer', 'Appointment',
+    'Notification', 'Payout', 'CustomerNote', 'UsageCounter'
+  ];
 BEGIN
   FOREACH t IN ARRAY tenant_tables LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
@@ -36,7 +54,7 @@ BEGIN
       WITH CHECK (id = current_setting('app.current_salon', true))
   $p$;
 
-  FOREACH t IN ARRAY ARRAY['Employee', 'Service', 'Customer', 'Appointment'] LOOP
+  FOREACH t IN ARRAY salon_id_tables LOOP
     EXECUTE format(
       'CREATE POLICY tenant_isolation ON %I '
       || 'USING ("salonId" = current_setting(''app.current_salon'', true)) '

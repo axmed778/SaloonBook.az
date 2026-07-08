@@ -60,7 +60,13 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = hashPassword(parsed.data.password);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: token.userId }, data: { passwordHash } }),
+    // Bump the session cutoff so any cookie stolen before the reset stops
+    // working; the fresh cookie issued below (setSession) is minted after and
+    // survives.
+    prisma.user.update({
+      where: { id: token.userId },
+      data: { passwordHash, sessionsValidFrom: new Date() },
+    }),
     prisma.passwordResetToken.update({
       where: { id: token.id },
       data: { usedAt: new Date() },
