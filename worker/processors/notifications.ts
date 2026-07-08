@@ -22,7 +22,7 @@ function buildComponents(template: string, payload: Prisma.JsonValue): unknown {
     // To customer — {{1}} salon, {{2}} service, {{3}} when
     case "booking_confirmation":
     case "appointment_reminder":
-    case "booking_cancelled": // salon cancelled the customer's appointment
+    case "appointment_cancelled": // salon cancelled the customer's appointment
       params = [String(p.salon ?? ""), String(p.service ?? ""), when];
       break;
     // To owner — {{1}} customer, {{2}} service, {{3}} when
@@ -60,7 +60,7 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   // Cancellation NOTICES are exempt — they exist precisely because the
   // appointment is cancelled.
   const isCancellationNotice =
-    n.template === "booking_cancelled" || n.template === "booking_cancelled_alert";
+    n.template === "appointment_cancelled" || n.template === "booking_cancelled_alert";
   const apptStatus = n.appointment?.status;
   if ((apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") && !isCancellationNotice) {
     await prisma.notification.update({

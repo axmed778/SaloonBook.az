@@ -194,7 +194,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       data: {
         salonId,
         appointmentId: id,
-        template: "booking_cancelled",
+        template: "appointment_cancelled",
         toPhone: appt.customer.phone,
         payload: {
           salon: appt.salon.name,
