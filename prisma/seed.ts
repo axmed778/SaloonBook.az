@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { TRIAL_MONTHS } from "../src/lib/plans";
 import { hashPassword, passwordIssues } from "../src/lib/auth/password";
-import { bakuToday, bakuWallClockToUtc } from "../src/lib/time";
+import { addMonths, bakuToday, bakuWallClockToUtc } from "../src/lib/time";
 
 const prisma = new PrismaClient();
 
@@ -78,8 +78,7 @@ async function seedAuthAccounts() {
     return;
   }
 
-  const trialEndsAt = new Date();
-  trialEndsAt.setMonth(trialEndsAt.getMonth() + TRIAL_MONTHS);
+  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
 
   const account = await prisma.account.create({
     data: {
@@ -167,8 +166,7 @@ async function main() {
     return;
   }
 
-  const trialEndsAt = new Date();
-  trialEndsAt.setMonth(trialEndsAt.getMonth() + TRIAL_MONTHS);
+  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
 
   const account = await prisma.account.create({
     data: {

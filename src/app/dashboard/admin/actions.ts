@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { addMonths } from "@/lib/time";
 
 // Platform-admin actions: manual billing (mark a salon as paid). Guarded by
 // isPlatformAdmin — regular owners can never reach these. Every activation
@@ -50,8 +51,7 @@ export async function activateSubscription(input: unknown): Promise<ActionResult
     sub.status === "ACTIVE" && sub.currentPeriodEnd && sub.currentPeriodEnd > now
       ? sub.currentPeriodEnd
       : now;
-  const periodEnd = new Date(base);
-  periodEnd.setMonth(periodEnd.getMonth() + d.months);
+  const periodEnd = addMonths(base, d.months);
 
   const amountMinor = d.amountMinor ?? PLAN_LIMITS[d.plan].priceMinor * d.months;
 

@@ -12,6 +12,7 @@
 // paying early never loses days.
 import { PrismaClient } from "@prisma/client";
 import { PLAN_LIMITS } from "../src/lib/plans";
+import { addMonths } from "../src/lib/time";
 
 const prisma = new PrismaClient();
 
@@ -105,8 +106,7 @@ async function activate(slug: string, planArg: string, monthsArg?: string, amoun
     sub.status === "ACTIVE" && sub.currentPeriodEnd && sub.currentPeriodEnd > now
       ? sub.currentPeriodEnd
       : now;
-  const periodEnd = new Date(base);
-  periodEnd.setMonth(periodEnd.getMonth() + months);
+  const periodEnd = addMonths(base, months);
 
   await prisma.$transaction([
     prisma.subscription.update({

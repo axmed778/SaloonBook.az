@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
+import type { NotifStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+// Meta delivery status -> our NotificationStatus, with the set of prior states
+// the transition may advance FROM. A callback whose row is already in a later
+// state (e.g. "delivered" arriving after "read") matches nothing and is a no-op.
+const STATUS_MAP: Record<string, { to: NotifStatus; from: NotifStatus[] }> = {
+  delivered: { to: "DELIVERED", from: ["QUEUED", "SENT"] },
+  read: { to: "READ", from: ["QUEUED", "SENT", "DELIVERED"] },
+  failed: { to: "FAILED", from: ["QUEUED", "SENT"] },
+};
 
 /**
  * Verifies Meta's X-Hub-Signature-256 HMAC over the RAW request body using
@@ -62,19 +72,17 @@ export async function POST(req: NextRequest) {
 
     for (const s of statuses as Array<{ id?: string; status?: string }>) {
       if (!s.id || !s.status) continue;
-      const mapped =
-        s.status === "delivered"
-          ? "DELIVERED"
-          : s.status === "read"
-            ? "READ"
-            : s.status === "failed"
-              ? "FAILED"
-              : null;
-      if (!mapped) continue;
+      const target = STATUS_MAP[s.status];
+      if (!target) continue;
 
+      // Monotonic guard: Meta callbacks can arrive out of order (a late
+      // "delivered" after "read"). Only advance forward in the lifecycle
+      // QUEUED -> SENT -> DELIVERED -> READ, and never let a late "failed"
+      // undo a message already delivered/read. The status filter makes this
+      // atomic — a stale callback simply matches zero rows.
       await prisma.notification.updateMany({
-        where: { providerMsgId: s.id },
-        data: { status: mapped },
+        where: { providerMsgId: s.id, status: { in: target.from } },
+        data: { status: target.to },
       });
     }
   } catch (e) {

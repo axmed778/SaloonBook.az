@@ -7,6 +7,7 @@ import {
   bakuWeekday,
   bakuDayBoundsUtc,
   shiftYmd,
+  addMonths,
 } from "./time";
 
 // Baku is UTC+4 year-round (no DST) — every helper leans on that invariant.
@@ -71,5 +72,33 @@ describe("bakuPeriodYm", () => {
   it("uses the Baku month, not the UTC month, at the boundary", () => {
     // 2026-07-31 21:00 UTC = 2026-08-01 01:00 Baku → August period.
     expect(bakuPeriodYm(new Date("2026-07-31T21:00:00Z"))).toBe("2026-08");
+  });
+});
+
+describe("addMonths", () => {
+  // Construct + assert with LOCAL fields so the test is timezone-independent
+  // (addMonths operates on local calendar fields, matching its call sites).
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+
+  it("clamps to the last day when the target month is shorter", () => {
+    expect(ymd(addMonths(new Date(2026, 0, 31), 1))).toBe("2026-02-28"); // non-leap
+    expect(ymd(addMonths(new Date(2028, 0, 31), 1))).toBe("2028-02-29"); // leap
+    expect(ymd(addMonths(new Date(2026, 0, 31), 3))).toBe("2026-04-30"); // Jan 31 -> Apr 30
+  });
+
+  it("keeps the day when the target month is long enough", () => {
+    expect(ymd(addMonths(new Date(2026, 0, 15), 1))).toBe("2026-02-15");
+  });
+
+  it("rolls the year over and still clamps", () => {
+    expect(ymd(addMonths(new Date(2026, 10, 30), 3))).toBe("2027-02-28"); // Nov 30 -> Feb 28
+  });
+
+  it("preserves the time of day", () => {
+    const d = addMonths(new Date(2026, 0, 31, 9, 45, 12), 1);
+    expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([9, 45, 12]);
   });
 });

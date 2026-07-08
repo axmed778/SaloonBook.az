@@ -39,7 +39,7 @@ async function loadByToken(token: string) {
       serviceId: true,
       status: true,
       startsAt: true,
-      salon: { select: { name: true, phone: true } },
+      salon: { select: { name: true, phone: true, status: true } },
       service: { select: { name: true } },
       customer: { select: { name: true, phone: true } },
     },
@@ -174,6 +174,16 @@ export async function POST(
   }
 
   // --- Reschedule ---
+  // A reschedule is effectively a new booking, so it must honor the salon's
+  // status the same way the public /book route does. A SUSPENDED (or otherwise
+  // non-active) salon takes no new commitments; cancelling above stays allowed.
+  if (appt.salon.status !== "ACTIVE") {
+    return NextResponse.json(
+      { error: "Salon hazırda əlçatan deyil. Görüşü yalnız ləğv edə bilərsiniz." },
+      { status: 409 },
+    );
+  }
+
   const startUtc = new Date(parsed.data.startUtc);
   if (startUtc.getTime() > now.getTime() + MAX_AHEAD_DAYS * 86_400_000) {
     return NextResponse.json({ error: "Bu tarix çox uzaqdır." }, { status: 400 });
@@ -223,22 +233,25 @@ export async function POST(
         },
         select: { id: true },
       });
+      const toEnqueue: Array<{ id: string; delayMs?: number }> = [{ id: confirmation.id }];
+      // Skip a reminder that would already be due (new time <24h out): it would
+      // leave a QUEUED row that never enqueues and lingers forever.
       const reminderAt = new Date(startUtc.getTime() - 24 * 60 * 60_000);
-      const reminder = await tx.notification.create({
-        data: {
-          salonId: appt.salonId,
-          appointmentId: appt.id,
-          template: "appointment_reminder",
-          toPhone: appt.customer.phone,
-          sendAfter: reminderAt,
-          payload,
-        },
-        select: { id: true },
-      });
-      return [
-        { id: confirmation.id },
-        { id: reminder.id, delayMs: reminderAt.getTime() - Date.now() },
-      ];
+      if (reminderAt > new Date()) {
+        const reminder = await tx.notification.create({
+          data: {
+            salonId: appt.salonId,
+            appointmentId: appt.id,
+            template: "appointment_reminder",
+            toPhone: appt.customer.phone,
+            sendAfter: reminderAt,
+            payload,
+          },
+          select: { id: true },
+        });
+        toEnqueue.push({ id: reminder.id, delayMs: reminderAt.getTime() - Date.now() });
+      }
+      return toEnqueue;
     });
   } catch (e) {
     if (e instanceof Error && e.message === "conflict") {

@@ -6,6 +6,7 @@ import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { TRIAL_MONTHS } from "@/lib/plans";
+import { addMonths } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -102,8 +103,7 @@ export async function POST(req: NextRequest) {
 
   // Every self-serve signup gets the full Basic trial with a real end date —
   // effectivePlan() downgrades to FREE limits the moment it lapses.
-  const trialEndsAt = new Date();
-  trialEndsAt.setMonth(trialEndsAt.getMonth() + TRIAL_MONTHS);
+  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
 
   let userId: string;
   try {

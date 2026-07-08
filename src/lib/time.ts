@@ -68,6 +68,23 @@ export function formatBakuDate(dayYmd: string): string {
   }).format(new Date(Date.UTC(y, m - 1, d, 12)));
 }
 
+/**
+ * Add whole months to an instant, clamping to the last day of the target month.
+ * Plain `Date.setMonth` overflows — Jan 31 + 1 month becomes Mar 3, silently
+ * gifting/stealing days on trial and billing-period math. This lands on Feb
+ * 28/29 instead. Operates on local calendar fields to match the previous
+ * `setMonth` call sites (server runs UTC, where local == UTC).
+ */
+export function addMonths(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setDate(1); // avoid overflow while we move the month
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+}
+
 export function minutesToHHMM(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

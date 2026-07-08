@@ -106,6 +106,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     // UsageCounter serializes concurrent bookings, so the post-increment value
     // is unique per transaction and an over-limit attempt rolls back its own
     // increment when it throws — closing the check-then-increment race.
+    //
+    // INTENTIONAL: the counter is NOT decremented when a booking is later
+    // cancelled or rescheduled. The monthly quota measures booking *activity*,
+    // not live appointments — otherwise a "book, cancel, repeat" loop would let
+    // a FREE salon exceed 50/month indefinitely. A FREE salon with heavy
+    // cancellations can therefore hit the wall before 50 live bookings.
     const plan = effectivePlan(salon.account.subscription);
     const maxBookings = limitsFor(plan).maxBookingsPerMonth;
     const usage = await tx.usageCounter.upsert({
@@ -179,21 +185,29 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       select: { id: true },
     });
 
-    const reminder = await tx.notification.create({
-      data: {
-        salonId: input.salonId,
-        appointmentId: appointment.id,
-        template: "appointment_reminder",
-        toPhone: input.customer.phone,
-        sendAfter: new Date(appointment.startsAt.getTime() - 24 * 60 * 60_000),
-        payload: {
-          salon: salon.name,
-          service: service.name,
-          startsAt: appointment.startsAt.toISOString(),
-        } satisfies Prisma.InputJsonValue,
-      },
-      select: { id: true, sendAfter: true },
-    });
+    // Only persist a reminder when it's still in the future. For a booking less
+    // than 24h out the reminder is moot, and creating it would leave a QUEUED
+    // row that never enqueues (delay <= 0) and lingers forever.
+    const reminderAt = new Date(appointment.startsAt.getTime() - 24 * 60 * 60_000);
+    let reminderId: string | null = null;
+    if (reminderAt > new Date()) {
+      const reminder = await tx.notification.create({
+        data: {
+          salonId: input.salonId,
+          appointmentId: appointment.id,
+          template: "appointment_reminder",
+          toPhone: input.customer.phone,
+          sendAfter: reminderAt,
+          payload: {
+            salon: salon.name,
+            service: service.name,
+            startsAt: appointment.startsAt.toISOString(),
+          } satisfies Prisma.InputJsonValue,
+        },
+        select: { id: true },
+      });
+      reminderId = reminder.id;
+    }
 
     let ownerAlertId: string | null = null;
     if (salon.phone) {
@@ -218,8 +232,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       appointment,
       confirmationId: confirmation.id,
       ownerAlertId,
-      reminderId: reminder.id,
-      reminderSendAfter: reminder.sendAfter,
+      reminderId,
+      reminderSendAfter: reminderAt,
     };
   });
 
@@ -233,9 +247,11 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         await enqueueNotification(result.confirmationId);
         if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
 
-        const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
-        if (reminderDelay > 0) {
-          await enqueueNotification(result.reminderId, reminderDelay);
+        if (result.reminderId) {
+          const reminderDelay = result.reminderSendAfter.getTime() - Date.now();
+          if (reminderDelay > 0) {
+            await enqueueNotification(result.reminderId, reminderDelay);
+          }
         }
       })(),
       new Promise((_, reject) =>

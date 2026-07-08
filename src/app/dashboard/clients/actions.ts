@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { bakuPeriodYm } from "@/lib/time";
 
 // Server actions for the Clients CRM. Same tenancy rules as every dashboard
 // action: salonId is re-derived from the session and used as a write guard in
@@ -114,6 +115,11 @@ export async function deleteCustomerNote(id: string): Promise<ActionResult> {
  * what will be removed and requires explicit confirmation — this is the
  * owner's data to destroy. Analytics derived from appointments will no longer
  * include this customer afterwards.
+ *
+ * Guard: deletion is refused when the customer has COMPLETED appointments in a
+ * month that already has a recorded payout for that employee. Those months are
+ * financially settled — removing the appointments would retroactively lower a
+ * commission that was already paid out.
  */
 export async function deleteCustomer(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
@@ -124,6 +130,34 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
     select: { id: true },
   });
   if (!customer) return { ok: false, error: "Müştəri tapılmadı." };
+
+  // Block if any COMPLETED appointment falls in an already-settled (paid-out)
+  // employee-month.
+  const completed = await prisma.appointment.findMany({
+    where: { salonId, customerId: id, status: "COMPLETED" },
+    select: { employeeId: true, startsAt: true },
+  });
+  if (completed.length > 0) {
+    const settledKeys = new Set(
+      completed.map((a) => `${a.employeeId}|${bakuPeriodYm(a.startsAt)}`),
+    );
+    const payouts = await prisma.payout.findMany({
+      where: {
+        salonId,
+        employeeId: { in: [...new Set(completed.map((a) => a.employeeId))] },
+        periodYm: { in: [...new Set(completed.map((a) => bakuPeriodYm(a.startsAt)))] },
+      },
+      select: { employeeId: true, periodYm: true },
+    });
+    const isSettled = payouts.some((p) => settledKeys.has(`${p.employeeId}|${p.periodYm}`));
+    if (isSettled) {
+      return {
+        ok: false,
+        error:
+          "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur).",
+      };
+    }
+  }
 
   await prisma.$transaction([
     prisma.notification.deleteMany({
