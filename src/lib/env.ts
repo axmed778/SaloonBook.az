@@ -67,6 +67,20 @@ export function assertEnv(): void {
       else console.warn(`[env] WARNING: ${message}`);
     }
   }
+
+  // APP_URL is baked into every link that leaves the server: the salon's
+  // public link in Settings, the manage link on the booking success screen,
+  // and password-reset emails. Unset it falls back to http://localhost:3000,
+  // which shipped localhost links to real users once — so in production it is
+  // boot-critical. (localhost is fine in dev, hence no warning there.)
+  const appUrl = process.env.APP_URL?.trim() ?? "";
+  if (isProd && (appUrl === "" || /localhost|127\.0\.0\.1/i.test(appUrl))) {
+    failures.push(
+      `APP_URL is ${appUrl === "" ? "unset" : `"${appUrl}"`} — customer-facing links ` +
+        "(booking manage links, password-reset emails, the salon link in Settings) " +
+        "would point at localhost. Set it to the public origin, e.g. https://saloonbook.az",
+    );
+  }
   for (const [value, message] of warnings) {
     if (isPlaceholder(value)) console.warn(`[env] WARNING: ${message}`);
   }
