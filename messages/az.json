@@ -31,5 +31,151 @@
   },
   "LanguageSwitcher": {
     "label": "Dil"
+  },
+  "Landing": {
+    "badgeNew": "Yeni",
+    "badgePromo": "EARLYBIRD ilə 3 ay pulsuz",
+    "heroTitle": "Müştərilər özləri qeydiyyatdan keçsin — 24/7.",
+    "heroSubtitle": "Instagram və WhatsApp-da qeydiyyat mesajlarına cavab verməyi dayandırın. Salonunuz üçün şəxsi link yaradın, paylaşın — qalanını biz edirik.",
+    "ctaStartFree": "Pulsuz başla",
+    "ctaViewDemo": "Nümunə səhifəyə bax",
+    "heroChecks": {
+      "noCard": "Kart tələb olunmur",
+      "quickSetup": "Dəqiqələrə quraşdır",
+      "cancelAnytime": "İstənilən vaxt ləğv et"
+    },
+    "heroImageAlt": "SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi",
+    "features": {
+      "eyebrow": "İmkanlar",
+      "title": "Qeydiyyat üçün lazım olan hər şey",
+      "subtitle": "Mesajlaşmanı dayandıran, masanı dolduran və komandanı sinxron saxlayan sadə alətlər.",
+      "items": {
+        "booking": {
+          "title": "24/7 onlayn qeydiyyat",
+          "body": "Müştərilər gecə-gündüz, sizdən asılı olmadan özləri boş vaxt seçib yer ayırır."
+        },
+        "whatsapp": {
+          "title": "WhatsApp xatırlatmaları",
+          "body": "Avtomatik təsdiq və xatırlatma mesajları — gəlməyənlərin (no-show) sayı azalır."
+        },
+        "overlap": {
+          "title": "İkiqat rezervasiya qoruması",
+          "body": "Eyni usta üçün üst-üstə düşən görüş mümkün deyil — verilənlər bazası səviyyəsində."
+        },
+        "team": {
+          "title": "Komanda və xidmətlər",
+          "body": "Hər usta üçün ayrıca iş saatları, xidmət müddəti və aralarındakı bufer vaxtı."
+        },
+        "slots": {
+          "title": "Ağıllı boş vaxtlar",
+          "body": "Mövcud slotlar müddət və bufer əsasında real vaxtda, dəqiq hesablanır."
+        },
+        "roi": {
+          "title": "ROI analitika",
+          "body": "Onlayn qeydiyyatın qazandırdığı gəlir, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda."
+        }
+      }
+    },
+    "steps": {
+      "eyebrow": "Necə işləyir",
+      "title": "Üç addımda işə başla",
+      "subtitle": "Quraşdırma dəqiqələr çəkir. Texniki bilik tələb olunmur.",
+      "items": {
+        "profile": {
+          "title": "Profilini qur",
+          "body": "Xidmətləri, ustaları və iş saatlarını əlavə et — bir neçə dəqiqəyə."
+        },
+        "share": {
+          "title": "Linkini paylaş",
+          "body": "Şəxsi qeydiyyat linkini Instagram bio və ya WhatsApp-da yerləşdir."
+        },
+        "accept": {
+          "title": "Rezervasiyaları qəbul et",
+          "body": "Təqvim avtomatik dolur, xatırlatmalar özü gedir. Sən işinə fokuslan."
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Qiymətlər",
+      "title": "Sadə, şəffaf qiymət",
+      "subtitle": "Pulsuz başla, böyüdükcə yüksəl. Gizli ödəniş yoxdur.",
+      "perMonth": "/ay",
+      "unlimited": "Limitsiz",
+      "footnote": "Bütün qiymətlər AZN-dədir. Ödənişlər hazırda manual aktivləşdirilir.",
+      "rows": {
+        "employees": "İşçi",
+        "monthlyBookings": "Aylıq rezervasiya",
+        "branches": "Filial",
+        "onlineBooking": "24/7 onlayn qeydiyyat",
+        "whatsappReminders": "WhatsApp xatırlatmaları",
+        "overlapProtection": "İkiqat rezervasiya qoruması",
+        "roiPanel": "ROI analitika paneli",
+        "payroll": "Əməkhaqqı modulu (maaş + komissiya)",
+        "roles": "Rol idarəetməsi (tezliklə)",
+        "exports": "Məlumat eksportu (tezliklə)",
+        "deposits": "Depozit / no-show qoruması (tezliklə)"
+      },
+      "plans": {
+        "free": {
+          "name": "Pulsuz",
+          "tagline": "Başlamaq üçün",
+          "cta": "Pulsuz başla",
+          "note": "Kart tələb olunmur"
+        },
+        "basic": {
+          "name": "Basic",
+          "tagline": "Aktiv salonlar üçün",
+          "cta": "Basic seç",
+          "note": "EARLYBIRD ilə ilk 3 ay pulsuz",
+          "badge": "Populyar"
+        },
+        "pro": {
+          "name": "Pro",
+          "tagline": "Böyüyən komandalar üçün",
+          "cta": "Pro seç",
+          "note": "İstənilən vaxt ləğv et"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Tez-tez verilən suallar",
+      "subtitle": "Axtardığınızı tapmadınız? Bizə yazın — kömək edək."
+    },
+    "finalCta": {
+      "eyebrow": "Hazırsınız?",
+      "title": "Bu gün öz qeydiyyat linkinizi yaradın",
+      "subtitle": "Dəqiqələr ərzində qurun, müştərilərinizlə paylaşın və rezervasiyaların özü-özünə gəlməsini izləyin.",
+      "ctaStartFree": "Pulsuz başla",
+      "ctaViewDemo": "Əvvəlcə nümunəyə bax"
+    }
+  },
+  "Faq": {
+    "items": [
+      {
+        "q": "SalonBook.az necə işləyir?",
+        "a": "Salonunuzu yaradın, xidmət, usta və iş saatlarını əlavə edin. Sizə şəxsi link verilir — onu Instagram bio və ya WhatsApp-da paylaşın. Müştərilər linkə daxil olub boş vaxt seçir və özləri qeydiyyatdan keçir."
+      },
+      {
+        "q": "Müştərilər tətbiq yükləməlidirmi?",
+        "a": "Xeyr. Qeydiyyat səhifəsi adi bir veb linkdir — telefonda və ya kompüterdə brauzerdə açılır. Heç bir yükləmə və ya hesab tələb olunmur."
+      },
+      {
+        "q": "WhatsApp xatırlatmaları necə işləyir?",
+        "a": "Rezervasiya təsdiqi və görüşdən əvvəl xatırlatma avtomatik göndərilir. Mesajlar fonda işləyən ayrıca xidmət vasitəsilə yollanır — ona görə qeydiyyatın özü heç vaxt gözləmir."
+      },
+      {
+        "q": "İkiqat rezervasiyanın qarşısı necə alınır?",
+        "a": "Eyni usta üçün iki təsdiqlənmiş görüş heç vaxt üst-üstə düşə bilməz — bu, verilənlər bazası səviyyəsində təmin olunur. İki nəfər eyni anda eyni vaxtı seçsə belə, yalnız biri keçir."
+      },
+      {
+        "q": "Pulsuz istifadə edə bilərəm?",
+        "a": "Bəli. Pulsuz planla 2 işçi və ayda 50 rezervasiyaya qədər. Dəvət kodu (EARLYBIRD) ilə Basic planı 3 ay tamamilə pulsuzdur."
+      },
+      {
+        "q": "Ödəniş necə aparılır?",
+        "a": "Hazırda ödənişlər manualdır — planınızı seçirsiniz, biz aktivləşdiririk. Avtomatik onlayn ödəniş və depozitlər (no-show qoruması) Pro üçün hazırlanır."
+      }
+    ]
   }
 }

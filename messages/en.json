@@ -31,5 +31,151 @@
   },
   "LanguageSwitcher": {
     "label": "Language"
+  },
+  "Landing": {
+    "badgeNew": "New",
+    "badgePromo": "3 months free with EARLYBIRD",
+    "heroTitle": "Let clients book themselves — 24/7.",
+    "heroSubtitle": "Stop replying to booking messages on Instagram and WhatsApp. Create a personal link for your salon, share it — we handle the rest.",
+    "ctaStartFree": "Start free",
+    "ctaViewDemo": "View demo page",
+    "heroChecks": {
+      "noCard": "No card required",
+      "quickSetup": "Set up in minutes",
+      "cancelAnytime": "Cancel anytime"
+    },
+    "heroImageAlt": "SalonBook.az online booking page — choosing service, staff and a time slot",
+    "features": {
+      "eyebrow": "Features",
+      "title": "Everything you need for bookings",
+      "subtitle": "Simple tools that stop the messaging, fill the chair and keep your team in sync.",
+      "items": {
+        "booking": {
+          "title": "24/7 online booking",
+          "body": "Clients pick a free slot and book themselves, day or night — no need for you."
+        },
+        "whatsapp": {
+          "title": "WhatsApp reminders",
+          "body": "Automatic confirmation and reminder messages — fewer no-shows."
+        },
+        "overlap": {
+          "title": "Double-booking protection",
+          "body": "Overlapping appointments for the same staff member are impossible — enforced at the database level."
+        },
+        "team": {
+          "title": "Team and services",
+          "body": "Separate working hours per staff member, service durations and buffer time between them."
+        },
+        "slots": {
+          "title": "Smart free slots",
+          "body": "Available slots are computed precisely in real time, based on duration and buffer."
+        },
+        "roi": {
+          "title": "ROI analytics",
+          "body": "Revenue earned from online bookings, returning clients and your most profitable services — at a glance, on every plan."
+        }
+      }
+    },
+    "steps": {
+      "eyebrow": "How it works",
+      "title": "Get started in three steps",
+      "subtitle": "Setup takes minutes. No technical knowledge required.",
+      "items": {
+        "profile": {
+          "title": "Build your profile",
+          "body": "Add services, staff and working hours — in just a few minutes."
+        },
+        "share": {
+          "title": "Share your link",
+          "body": "Put your personal booking link in your Instagram bio or on WhatsApp."
+        },
+        "accept": {
+          "title": "Accept bookings",
+          "body": "Your calendar fills automatically, reminders send themselves. You focus on the work."
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "Simple, transparent pricing",
+      "subtitle": "Start free, scale as you grow. No hidden fees.",
+      "perMonth": "/mo",
+      "unlimited": "Unlimited",
+      "footnote": "All prices are in AZN. Payments are currently activated manually.",
+      "rows": {
+        "employees": "Staff",
+        "monthlyBookings": "Monthly bookings",
+        "branches": "Branches",
+        "onlineBooking": "24/7 online booking",
+        "whatsappReminders": "WhatsApp reminders",
+        "overlapProtection": "Double-booking protection",
+        "roiPanel": "ROI analytics dashboard",
+        "payroll": "Payroll module (salary + commission)",
+        "roles": "Role management (coming soon)",
+        "exports": "Data export (coming soon)",
+        "deposits": "Deposit / no-show protection (coming soon)"
+      },
+      "plans": {
+        "free": {
+          "name": "Free",
+          "tagline": "To get started",
+          "cta": "Start free",
+          "note": "No card required"
+        },
+        "basic": {
+          "name": "Basic",
+          "tagline": "For active salons",
+          "cta": "Choose Basic",
+          "note": "First 3 months free with EARLYBIRD",
+          "badge": "Popular"
+        },
+        "pro": {
+          "name": "Pro",
+          "tagline": "For growing teams",
+          "cta": "Choose Pro",
+          "note": "Cancel anytime"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "title": "Frequently asked questions",
+      "subtitle": "Didn't find what you were looking for? Write to us — we'll help."
+    },
+    "finalCta": {
+      "eyebrow": "Ready?",
+      "title": "Create your booking link today",
+      "subtitle": "Set it up in minutes, share it with your clients and watch the bookings come in on their own.",
+      "ctaStartFree": "Start free",
+      "ctaViewDemo": "See the demo first"
+    }
+  },
+  "Faq": {
+    "items": [
+      {
+        "q": "How does SalonBook.az work?",
+        "a": "Create your salon, add services, staff and working hours. You get a personal link — share it in your Instagram bio or on WhatsApp. Clients open the link, pick a free slot and book themselves."
+      },
+      {
+        "q": "Do clients need to install an app?",
+        "a": "No. The booking page is an ordinary web link — it opens in a browser on a phone or computer. No download or account required."
+      },
+      {
+        "q": "How do WhatsApp reminders work?",
+        "a": "A booking confirmation and a reminder before the appointment are sent automatically. Messages are delivered by a separate background service — so booking itself never waits."
+      },
+      {
+        "q": "How is double-booking prevented?",
+        "a": "Two confirmed appointments for the same staff member can never overlap — this is enforced at the database level. Even if two people pick the same time at once, only one goes through."
+      },
+      {
+        "q": "Can I use it for free?",
+        "a": "Yes. The free plan includes 2 staff and up to 50 bookings per month. With the invite code (EARLYBIRD) the Basic plan is completely free for 3 months."
+      },
+      {
+        "q": "How is payment handled?",
+        "a": "Payments are currently manual — you pick your plan, we activate it. Automatic online payments and deposits (no-show protection) are in the works for Pro."
+      }
+    ]
   }
 }

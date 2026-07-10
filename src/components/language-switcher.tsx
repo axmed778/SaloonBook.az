@@ -44,10 +44,12 @@ export function LanguageSwitcher() {
         title={t("label")}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 sm:px-2.5"
       >
         <Globe className="h-[18px] w-[18px]" strokeWidth={2} />
-        <span className="font-medium">{current.code}</span>
+        {/* Code is redundant on phones where header space is tight; the globe
+            alone is enough. Show the code from sm up. */}
+        <span className="hidden font-medium sm:inline">{current.code}</span>
       </button>
 
       {open && (

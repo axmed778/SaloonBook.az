@@ -2,36 +2,12 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 
-const FAQS = [
-  {
-    q: "SalonBook.az necə işləyir?",
-    a: "Salonunuzu yaradın, xidmət, usta və iş saatlarını əlavə edin. Sizə şəxsi link verilir — onu Instagram bio və ya WhatsApp-da paylaşın. Müştərilər linkə daxil olub boş vaxt seçir və özləri qeydiyyatdan keçir.",
-  },
-  {
-    q: "Müştərilər tətbiq yükləməlidirmi?",
-    a: "Xeyr. Qeydiyyat səhifəsi adi bir veb linkdir — telefonda və ya kompüterdə brauzerdə açılır. Heç bir yükləmə və ya hesab tələb olunmur.",
-  },
-  {
-    q: "WhatsApp xatırlatmaları necə işləyir?",
-    a: "Rezervasiya təsdiqi və görüşdən əvvəl xatırlatma avtomatik göndərilir. Mesajlar fonda işləyən ayrıca xidmət vasitəsilə yollanır — ona görə qeydiyyatın özü heç vaxt gözləmir.",
-  },
-  {
-    q: "İkiqat rezervasiyanın qarşısı necə alınır?",
-    a: "Eyni usta üçün iki təsdiqlənmiş görüş heç vaxt üst-üstə düşə bilməz — bu, verilənlər bazası səviyyəsində təmin olunur. İki nəfər eyni anda eyni vaxtı seçsə belə, yalnız biri keçir.",
-  },
-  {
-    q: "Pulsuz istifadə edə bilərəm?",
-    a: "Bəli. Pulsuz planla 2 işçi və ayda 50 rezervasiyaya qədər. Dəvət kodu (EARLYBIRD) ilə Basic planı 3 ay tamamilə pulsuzdur.",
-  },
-  {
-    q: "Ödəniş necə aparılır?",
-    a: "Hazırda ödənişlər manualdır — planınızı seçirsiniz, biz aktivləşdiririk. Avtomatik onlayn ödəniş və depozitlər (no-show qoruması) Pro üçün hazırlanır.",
-  },
-];
-
 export function Faq() {
+  const t = useTranslations("Faq");
+  const FAQS = t.raw("items") as { q: string; a: string }[];
   const [open, setOpen] = useState<number | null>(0);
 
   return (

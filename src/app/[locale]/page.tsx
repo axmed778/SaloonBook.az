@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { PLAN_FEATURES, PLAN_LIMITS } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
@@ -24,110 +25,7 @@ import { Faq } from "@/components/faq";
 import heroBookingDark from "../../../public/hero/booking-dark.png";
 import heroBookingLight from "../../../public/hero/booking-light.png";
 
-/* ------------------------------- Content --------------------------------- */
-
-const FEATURES = [
-  {
-    icon: CalendarClock,
-    title: "24/7 onlayn qeydiyyat",
-    body: "Müştərilər gecə-gündüz, sizdən asılı olmadan özləri boş vaxt seçib yer ayırır.",
-  },
-  {
-    icon: MessageCircle,
-    title: "WhatsApp xatırlatmaları",
-    body: "Avtomatik təsdiq və xatırlatma mesajları — gəlməyənlərin (no-show) sayı azalır.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "İkiqat rezervasiya qoruması",
-    body: "Eyni usta üçün üst-üstə düşən görüş mümkün deyil — verilənlər bazası səviyyəsində.",
-  },
-  {
-    icon: Users,
-    title: "Komanda və xidmətlər",
-    body: "Hər usta üçün ayrıca iş saatları, xidmət müddəti və aralarındakı bufer vaxtı.",
-  },
-  {
-    icon: Clock,
-    title: "Ağıllı boş vaxtlar",
-    body: "Mövcud slotlar müddət və bufer əsasında real vaxtda, dəqiq hesablanır.",
-  },
-  {
-    icon: BarChart3,
-    title: "ROI analitika",
-    body: "Onlayn qeydiyyatın qazandırdığı gəlir, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda.",
-  },
-];
-
-const STEPS = [
-  {
-    icon: Scissors,
-    title: "Profilini qur",
-    body: "Xidmətləri, ustaları və iş saatlarını əlavə et — bir neçə dəqiqəyə.",
-  },
-  {
-    icon: Share2,
-    title: "Linkini paylaş",
-    body: "Şəxsi qeydiyyat linkini Instagram bio və ya WhatsApp-da yerləşdir.",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Rezervasiyaları qəbul et",
-    body: "Təqvim avtomatik dolur, xatırlatmalar özü gedir. Sən işinə fokuslan.",
-  },
-];
-
 type Row = { label: string; value: boolean | string };
-
-const fmtLimit = (n: number) => (n === Infinity ? "Limitsiz" : String(n));
-
-function planRows(id: "FREE" | "BASIC" | "PRO"): Row[] {
-  const lim = PLAN_LIMITS[id];
-  const feat = PLAN_FEATURES[id];
-  return [
-    { label: "İşçi", value: fmtLimit(lim.maxEmployees) },
-    { label: "Aylıq rezervasiya", value: fmtLimit(lim.maxBookingsPerMonth) },
-    { label: "Filial", value: fmtLimit(lim.maxBranches) },
-    { label: "24/7 onlayn qeydiyyat", value: true },
-    { label: "WhatsApp xatırlatmaları", value: true },
-    { label: "İkiqat rezervasiya qoruması", value: true },
-    { label: "ROI analitika paneli", value: true },
-    { label: "Əməkhaqqı modulu (maaş + komissiya)", value: feat.payroll },
-    { label: "Rol idarəetməsi (tezliklə)", value: feat.staffRoles },
-    { label: "Məlumat eksportu (tezliklə)", value: feat.exports },
-    { label: "Depozit / no-show qoruması (tezliklə)", value: feat.deposits },
-  ];
-}
-
-const PLANS = [
-  {
-    id: "FREE" as const,
-    name: "Pulsuz",
-    tagline: "Başlamaq üçün",
-    cta: "Pulsuz başla",
-    note: "Kart tələb olunmur",
-    highlight: false,
-    badge: null,
-  },
-  {
-    id: "BASIC" as const,
-    name: "Basic",
-    tagline: "Aktiv salonlar üçün",
-    cta: "Basic seç",
-    note: "EARLYBIRD ilə ilk 3 ay pulsuz",
-    highlight: true,
-    badge: "Populyar",
-  },
-  {
-    id: "PRO" as const,
-    name: "Pro",
-    tagline: "Böyüyən komandalar üçün",
-    cta: "Pro seç",
-    note: "İstənilən vaxt ləğv et",
-    highlight: false,
-    badge: null,
-  },
-];
 
 /* ------------------------------ Primitives ------------------------------- */
 
@@ -151,9 +49,24 @@ function FeatureCard({
   );
 }
 
-function PricingCard({ plan }: { plan: (typeof PLANS)[number] }) {
+function PricingCard({
+  plan,
+  rows,
+  perMonth,
+}: {
+  plan: {
+    id: "FREE" | "BASIC" | "PRO";
+    name: string;
+    tagline: string;
+    cta: string;
+    note: string;
+    highlight: boolean;
+    badge: string | null;
+  };
+  rows: Row[];
+  perMonth: string;
+}) {
   const price = (PLAN_LIMITS[plan.id].priceMinor / 100).toString();
-  const rows = planRows(plan.id);
 
   return (
     <div
@@ -178,7 +91,7 @@ function PricingCard({ plan }: { plan: (typeof PLANS)[number] }) {
         <span className="text-4xl font-semibold tracking-tight text-foreground">
           {price} ₼
         </span>
-        <span className="text-sm text-muted-foreground">/ay</span>
+        <span className="text-sm text-muted-foreground">{perMonth}</span>
       </div>
 
       <ButtonLink
@@ -222,7 +135,50 @@ function PricingCard({ plan }: { plan: (typeof PLANS)[number] }) {
 
 /* --------------------------------- Page ---------------------------------- */
 
-export default function Home() {
+export default async function Home() {
+  const t = await getTranslations("Landing");
+
+  const fmtLimit = (n: number) => (n === Infinity ? t("pricing.unlimited") : String(n));
+
+  const features = [
+    { icon: CalendarClock, key: "booking" },
+    { icon: MessageCircle, key: "whatsapp" },
+    { icon: ShieldCheck, key: "overlap" },
+    { icon: Users, key: "team" },
+    { icon: Clock, key: "slots" },
+    { icon: BarChart3, key: "roi" },
+  ] as const;
+
+  const steps = [
+    { icon: Scissors, key: "profile" },
+    { icon: Share2, key: "share" },
+    { icon: CalendarCheck, key: "accept" },
+  ] as const;
+
+  const plans = [
+    { id: "FREE" as const, key: "free", highlight: false, hasBadge: false },
+    { id: "BASIC" as const, key: "basic", highlight: true, hasBadge: true },
+    { id: "PRO" as const, key: "pro", highlight: false, hasBadge: false },
+  ];
+
+  function planRows(id: "FREE" | "BASIC" | "PRO"): Row[] {
+    const lim = PLAN_LIMITS[id];
+    const feat = PLAN_FEATURES[id];
+    return [
+      { label: t("pricing.rows.employees"), value: fmtLimit(lim.maxEmployees) },
+      { label: t("pricing.rows.monthlyBookings"), value: fmtLimit(lim.maxBookingsPerMonth) },
+      { label: t("pricing.rows.branches"), value: fmtLimit(lim.maxBranches) },
+      { label: t("pricing.rows.onlineBooking"), value: true },
+      { label: t("pricing.rows.whatsappReminders"), value: true },
+      { label: t("pricing.rows.overlapProtection"), value: true },
+      { label: t("pricing.rows.roiPanel"), value: true },
+      { label: t("pricing.rows.payroll"), value: feat.payroll },
+      { label: t("pricing.rows.roles"), value: feat.staffRoles },
+      { label: t("pricing.rows.exports"), value: feat.exports },
+      { label: t("pricing.rows.deposits"), value: feat.deposits },
+    ];
+  }
+
   return (
     <>
       <SiteHeader />
@@ -243,34 +199,32 @@ export default function Home() {
               >
                 <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
                   <Sparkles className="h-3 w-3" strokeWidth={2} />
-                  Yeni
+                  {t("badgeNew")}
                 </span>
-                EARLYBIRD ilə 3 ay pulsuz
+                {t("badgePromo")}
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
               </a>
 
               <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-6xl">
-                Müştərilər özləri qeydiyyatdan keçsin — 24/7.
+                {t("heroTitle")}
               </h1>
 
               <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-                Instagram və WhatsApp-da qeydiyyat mesajlarına cavab verməyi
-                dayandırın. Salonunuz üçün şəxsi link yaradın, paylaşın —
-                qalanını biz edirik.
+                {t("heroSubtitle")}
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink href="/register" variant="primary" size="lg">
-                  Pulsuz başla
+                  {t("ctaStartFree")}
                   <ArrowRight className="h-4 w-4" strokeWidth={2} />
                 </ButtonLink>
                 <ButtonLink href="/demostudio" variant="secondary" size="lg">
-                  Nümunə səhifəyə bax
+                  {t("ctaViewDemo")}
                 </ButtonLink>
               </div>
 
               <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                {["Kart tələb olunmur", "Dəqiqələrə quraşdır", "İstənilən vaxt ləğv et"].map(
+                {[t("heroChecks.noCard"), t("heroChecks.quickSetup"), t("heroChecks.cancelAnytime")].map(
                   (item) => (
                     <li key={item} className="inline-flex items-center gap-1.5">
                       <Check className="h-4 w-4 text-accent" strokeWidth={2.5} />
@@ -289,7 +243,7 @@ export default function Home() {
               <div className="relative max-h-[680px] overflow-hidden rounded-xl border border-border bg-card shadow-frame">
                 <Image
                   src={heroBookingDark}
-                  alt="SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi"
+                  alt={t("heroImageAlt")}
                   priority
                   placeholder="blur"
                   className="hero-shot-dark w-full"
@@ -297,7 +251,7 @@ export default function Home() {
                 />
                 <Image
                   src={heroBookingLight}
-                  alt="SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi"
+                  alt={t("heroImageAlt")}
                   priority
                   placeholder="blur"
                   className="hero-shot-light w-full"
@@ -313,13 +267,18 @@ export default function Home() {
         <section id="features" className="scroll-mt-24 border-t border-border">
           <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
             <SectionHeader
-              eyebrow="İmkanlar"
-              title="Qeydiyyat üçün lazım olan hər şey"
-              subtitle="Mesajlaşmanı dayandıran, masanı dolduran və komandanı sinxron saxlayan sadə alətlər."
+              eyebrow={t("features.eyebrow")}
+              title={t("features.title")}
+              subtitle={t("features.subtitle")}
             />
             <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map((f) => (
-                <FeatureCard key={f.title} {...f} />
+              {features.map((f) => (
+                <FeatureCard
+                  key={f.key}
+                  icon={f.icon}
+                  title={t(`features.items.${f.key}.title`)}
+                  body={t(`features.items.${f.key}.body`)}
+                />
               ))}
             </div>
           </div>
@@ -329,14 +288,14 @@ export default function Home() {
         <section id="how" className="scroll-mt-24 border-t border-border">
           <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
             <SectionHeader
-              eyebrow="Necə işləyir"
-              title="Üç addımda işə başla"
-              subtitle="Quraşdırma dəqiqələr çəkir. Texniki bilik tələb olunmur."
+              eyebrow={t("steps.eyebrow")}
+              title={t("steps.title")}
+              subtitle={t("steps.subtitle")}
             />
             <div className="mt-14 grid gap-4 md:grid-cols-3">
-              {STEPS.map((step, i) => (
+              {steps.map((step, i) => (
                 <div
-                  key={step.title}
+                  key={step.key}
                   className="relative rounded-xl border border-border bg-card p-6 shadow-soft"
                 >
                   <div className="flex items-center justify-between">
@@ -348,10 +307,10 @@ export default function Home() {
                     </span>
                   </div>
                   <h3 className="mt-5 text-base font-medium text-foreground">
-                    {step.title}
+                    {t(`steps.items.${step.key}.title`)}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {step.body}
+                    {t(`steps.items.${step.key}.body`)}
                   </p>
                 </div>
               ))}
@@ -363,17 +322,30 @@ export default function Home() {
         <section id="pricing" className="scroll-mt-24 border-t border-border">
           <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
             <SectionHeader
-              eyebrow="Qiymətlər"
-              title="Sadə, şəffaf qiymət"
-              subtitle="Pulsuz başla, böyüdükcə yüksəl. Gizli ödəniş yoxdur."
+              eyebrow={t("pricing.eyebrow")}
+              title={t("pricing.title")}
+              subtitle={t("pricing.subtitle")}
             />
             <div className="mt-16 grid gap-5 lg:grid-cols-3">
-              {PLANS.map((plan) => (
-                <PricingCard key={plan.id} plan={plan} />
+              {plans.map((plan) => (
+                <PricingCard
+                  key={plan.id}
+                  plan={{
+                    id: plan.id,
+                    name: t(`pricing.plans.${plan.key}.name`),
+                    tagline: t(`pricing.plans.${plan.key}.tagline`),
+                    cta: t(`pricing.plans.${plan.key}.cta`),
+                    note: t(`pricing.plans.${plan.key}.note`),
+                    highlight: plan.highlight,
+                    badge: plan.hasBadge ? t(`pricing.plans.${plan.key}.badge`) : null,
+                  }}
+                  rows={planRows(plan.id)}
+                  perMonth={t("pricing.perMonth")}
+                />
               ))}
             </div>
             <p className="mt-8 text-center text-sm text-muted-foreground">
-              Bütün qiymətlər AZN-dədir. Ödənişlər hazırda manual aktivləşdirilir.
+              {t("pricing.footnote")}
             </p>
           </div>
         </section>
@@ -382,9 +354,9 @@ export default function Home() {
         <section id="faq" className="scroll-mt-24 border-t border-border">
           <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
             <SectionHeader
-              eyebrow="FAQ"
-              title="Tez-tez verilən suallar"
-              subtitle="Axtardığınızı tapmadınız? Bizə yazın — kömək edək."
+              eyebrow={t("faq.eyebrow")}
+              title={t("faq.title")}
+              subtitle={t("faq.subtitle")}
               className="mb-14"
             />
             <Faq />
@@ -398,21 +370,20 @@ export default function Home() {
             <div className="absolute inset-x-0 top-0 h-[400px] glow-accent" />
           </div>
           <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">
-            <Eyebrow className="justify-center">Hazırsınız?</Eyebrow>
+            <Eyebrow className="justify-center">{t("finalCta.eyebrow")}</Eyebrow>
             <h2 className="mx-auto mt-4 max-w-2xl text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Bu gün öz qeydiyyat linkinizi yaradın
+              {t("finalCta.title")}
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-              Dəqiqələr ərzində qurun, müştərilərinizlə paylaşın və rezervasiyaların
-              özü-özünə gəlməsini izləyin.
+              {t("finalCta.subtitle")}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <ButtonLink href="/register" variant="primary" size="lg">
-                Pulsuz başla
+                {t("finalCta.ctaStartFree")}
                 <ArrowRight className="h-4 w-4" strokeWidth={2} />
               </ButtonLink>
               <ButtonLink href="/demostudio" variant="secondary" size="lg">
-                Əvvəlcə nümunəyə bax
+                {t("finalCta.ctaViewDemo")}
               </ButtonLink>
             </div>
           </div>
