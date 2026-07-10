@@ -9,9 +9,9 @@ import { rateLimit, clientIp } from "@/lib/ratelimit";
 export const dynamic = "force-dynamic";
 
 // Self-service appointment management. The manageToken in the URL is the whole
-// capability: whoever holds the link (shown after booking; later a WhatsApp
-// button) can view, cancel or reschedule that one appointment. Unauthenticated
-// by design — customers have no accounts.
+// capability: whoever holds the link (shown after booking, sent as a WhatsApp
+// URL button, copyable from the calendar popup) can view, cancel or reschedule
+// that one appointment. Unauthenticated by design — customers have no accounts.
 
 const TOKEN_RE = /^[0-9a-f-]{36}$/i;
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;

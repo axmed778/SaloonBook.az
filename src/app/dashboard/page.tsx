@@ -34,6 +34,7 @@ const APPT_SELECT = {
   status: true,
   priceMinor: true,
   source: true,
+  manageToken: true,
   service: { select: { name: true } },
   employee: { select: { name: true } },
   customer: { select: { name: true, phone: true } },
@@ -47,6 +48,7 @@ type ApptRow = {
   status: string;
   priceMinor: number;
   source: string;
+  manageToken: string;
   service: { name: string };
   employee: { name: string };
   customer: { name: string; phone: string };
@@ -65,6 +67,7 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
     priceMinor: a.priceMinor,
     customerPhone: a.customer.phone,
     source: a.source,
+    manageToken: a.manageToken,
     employeeName: a.employee.name,
     dateLabel,
   };

@@ -25,6 +25,28 @@ export function AppointmentPopup({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Customer self-service page for this appointment (view / cancel /
+  // reschedule). Until WhatsApp templates are approved, this is how the salon
+  // gets the link to the customer: copy it, or open their own WhatsApp with a
+  // prefilled message.
+  const manageUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/a/${block.manageToken}`
+      : `/a/${block.manageToken}`;
+  const waHref =
+    `https://wa.me/${block.customerPhone.replace(/[^\d]/g, "")}?text=` +
+    encodeURIComponent(
+      `Salam, ${block.subtitle}! Görüşünüzə baxmaq, vaxtını dəyişmək və ya ləğv etmək üçün: ${manageUrl}`,
+    );
+
+  function copyManageUrl() {
+    navigator.clipboard?.writeText(manageUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
   function apply(status: "COMPLETED" | "NO_SHOW" | "CANCELLED") {
     setError(null);
@@ -87,7 +109,32 @@ export function AppointmentPopup({
         {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
 
         {block.status === "CONFIRMED" && (
-          <div className="mt-5 space-y-2">
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+            <p className="text-xs font-medium text-zinc-400">
+              Müştəri linki — vaxtı dəyişmək / ləğv etmək üçün
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={copyManageUrl}
+                className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+              >
+                {copied ? "Kopyalandı" : "Linki kopyala"}
+              </button>
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+              >
+                WhatsApp-la göndər
+              </a>
+            </div>
+          </div>
+        )}
+
+        {block.status === "CONFIRMED" && (
+          <div className="mt-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"

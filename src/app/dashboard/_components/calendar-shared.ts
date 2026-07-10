@@ -24,6 +24,7 @@ export type CalendarBlock = {
   priceMinor: number;
   customerPhone: string;
   source: string; // "PUBLIC" | "DASHBOARD"
+  manageToken: string; // customer self-service link: /a/{manageToken}
   employeeName: string; // shown in the detail popup (and week-view blocks)
   dateLabel: string; // this appointment's Baku date label (for the popup)
 };
