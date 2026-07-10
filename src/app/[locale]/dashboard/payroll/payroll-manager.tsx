@@ -3,9 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { azn } from "@/app/dashboard/_components/calendar-shared";
-import { ConfirmDialog } from "@/app/dashboard/_components/confirm-dialog";
-import { ErrorToast } from "@/app/dashboard/_components/toast";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { ConfirmDialog } from "@/app/[locale]/dashboard/_components/confirm-dialog";
+import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { saveEmployeePay, recordPayout, deletePayout } from "./actions";
 
 export type PayrollRow = {

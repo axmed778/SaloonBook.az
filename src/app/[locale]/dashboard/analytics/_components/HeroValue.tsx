@@ -2,7 +2,7 @@
 // stat line (count · value). Brand-new salons (count === 0) get a short prompt
 // instead of a bare "0 ₼".
 import Link from "next/link";
-import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export function HeroValue({
   monthLabel,

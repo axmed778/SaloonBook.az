@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "title": "SalonBook.az — onlayn qeydiyyat 24/7",
+    "description": "Müştərilərinizin özləri 24/7 onlayn qeydiyyatdan keçməsinə imkan verin. Salonunuz üçün şəxsi qeydiyyat linki yaradın və paylaşın."
+  },
+  "Header": {
+    "navFeatures": "İmkanlar",
+    "navHow": "Necə işləyir",
+    "navPricing": "Qiymətlər",
+    "navFaq": "FAQ",
+    "login": "Daxil ol",
+    "start": "Başla"
+  },
+  "Footer": {
+    "productTitle": "Məhsul",
+    "companyTitle": "Şirkət",
+    "features": "İmkanlar",
+    "pricing": "Qiymətlər",
+    "demo": "Nümunə səhifə",
+    "faq": "FAQ",
+    "contact": "Əlaqə",
+    "privacy": "Məxfilik Siyasəti",
+    "terms": "İstifadə Şərtləri",
+    "tagline": "Azərbaycan salonları, bərbərxanalar və klinikalar üçün onlayn qeydiyyat. Müştərilər özləri yer ayırsın — 24/7.",
+    "madeIn": "Bakıda hazırlanıb · Asia/Baku (UTC+4)"
+  },
+  "ThemeToggle": {
+    "toLight": "İşıqlı rejimə keç",
+    "toDark": "Qaranlıq rejimə keç",
+    "theme": "Mövzu"
+  },
+  "LanguageSwitcher": {
+    "label": "Dil"
+  }
+}

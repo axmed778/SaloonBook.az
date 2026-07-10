@@ -1,7 +1,7 @@
 // Top revenue services this month, with a horizontal bar per row (top row full
 // rose, the rest muted rose). Spans two columns on lg. Empty salons get a
 // graceful "Hələ məlumat yoxdur" instead of a bare card.
-import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export type TopServiceRow = {
   name: string;

@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { PLAN_LIMITS } from "@/lib/plans";
-import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export const dynamic = "force-dynamic";
 

@@ -8,7 +8,7 @@ import {
   formatBakuDate,
 } from "@/lib/time";
 import { PLAN_LIMITS } from "@/lib/plans";
-import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { HeroValue } from "./_components/HeroValue";
 import { TrialNudge } from "./_components/TrialNudge";
 import { StatCard, type Delta } from "./_components/StatCard";

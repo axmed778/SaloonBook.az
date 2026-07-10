@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { azn, inputCls, labelCls } from "@/app/dashboard/_components/calendar-shared";
-import { ErrorToast } from "@/app/dashboard/_components/toast";
-import { BookingModal } from "@/app/dashboard/_components/booking-modal";
-import type { CatalogEmployee } from "@/app/dashboard/_components/calendar-shared";
-import { setAppointmentStatus } from "@/app/dashboard/actions";
+import { azn, inputCls, labelCls } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
+import { BookingModal } from "@/app/[locale]/dashboard/_components/booking-modal";
+import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { setAppointmentStatus } from "@/app/[locale]/dashboard/actions";
 import {
   updateCustomer,
   addCustomerNote,

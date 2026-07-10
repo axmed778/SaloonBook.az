@@ -1,27 +1,30 @@
+import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/site-header";
 
-// Anchor links are rooted (/#…) so they also work from /privacy and /terms.
-const COLUMNS = [
-  {
-    title: "Məhsul",
-    links: [
-      { label: "İmkanlar", href: "/#features" },
-      { label: "Qiymətlər", href: "/#pricing" },
-      { label: "Nümunə səhifə", href: "/demostudio" },
-      { label: "FAQ", href: "/#faq" },
-    ],
-  },
-  {
-    title: "Şirkət",
-    links: [
-      { label: "Əlaqə", href: "https://wa.me/994502990440" },
-      { label: "Məxfilik Siyasəti", href: "/privacy" },
-      { label: "İstifadə Şərtləri", href: "/terms" },
-    ],
-  },
-];
+export async function SiteFooter() {
+  const t = await getTranslations("Footer");
 
-export function SiteFooter() {
+  // Anchor links are rooted (/#…) so they also work from /privacy and /terms.
+  const columns = [
+    {
+      title: t("productTitle"),
+      links: [
+        { label: t("features"), href: "/#features" },
+        { label: t("pricing"), href: "/#pricing" },
+        { label: t("demo"), href: "/demostudio" },
+        { label: t("faq"), href: "/#faq" },
+      ],
+    },
+    {
+      title: t("companyTitle"),
+      links: [
+        { label: t("contact"), href: "https://wa.me/994502990440" },
+        { label: t("privacy"), href: "/privacy" },
+        { label: t("terms"), href: "/terms" },
+      ],
+    },
+  ];
+
   return (
     <footer className="border-t border-border">
       <div className="mx-auto max-w-6xl px-6 py-14">
@@ -29,13 +32,12 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Logo />
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Azərbaycan salonları, bərbərxanalar və klinikalar üçün onlayn
-              qeydiyyat. Müştərilər özləri yer ayırsın — 24/7.
+              {t("tagline")}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-12 sm:gap-20">
-            {COLUMNS.map((col) => (
+            {columns.map((col) => (
               <div key={col.title}>
                 <h3 className="text-sm font-medium text-foreground">{col.title}</h3>
                 <ul className="mt-4 space-y-3">
@@ -57,7 +59,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center">
           <p>© {new Date().getFullYear()} SalonBook.az</p>
-          <p>Bakıda hazırlanıb · Asia/Baku (UTC+4)</p>
+          <p>{t("madeIn")}</p>
         </div>
       </div>
     </footer>

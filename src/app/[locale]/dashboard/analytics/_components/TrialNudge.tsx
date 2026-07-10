@@ -2,7 +2,7 @@
 // countdown and a small CTA, escalating urgency (border + count colour) as the
 // trial ends. Every branch is null-safe.
 import Link from "next/link";
-import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { PLAN_LIMITS } from "@/lib/plans";
 
 const BILLING_HREF = "/dashboard/billing";

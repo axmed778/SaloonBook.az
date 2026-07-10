@@ -21,8 +21,8 @@ import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Faq } from "@/components/faq";
-import heroBookingDark from "../../public/hero/booking-dark.png";
-import heroBookingLight from "../../public/hero/booking-light.png";
+import heroBookingDark from "../../../public/hero/booking-dark.png";
+import heroBookingLight from "../../../public/hero/booking-light.png";
 
 /* ------------------------------- Content --------------------------------- */
 

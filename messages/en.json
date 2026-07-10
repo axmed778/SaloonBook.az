@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "title": "SalonBook.az — online booking 24/7",
+    "description": "Let your clients book online themselves, 24/7. Create a personal booking link for your salon and share it."
+  },
+  "Header": {
+    "navFeatures": "Features",
+    "navHow": "How it works",
+    "navPricing": "Pricing",
+    "navFaq": "FAQ",
+    "login": "Log in",
+    "start": "Get started"
+  },
+  "Footer": {
+    "productTitle": "Product",
+    "companyTitle": "Company",
+    "features": "Features",
+    "pricing": "Pricing",
+    "demo": "Demo page",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "tagline": "Online booking for salons, barbershops and clinics in Azerbaijan. Let clients book themselves — 24/7.",
+    "madeIn": "Made in Baku · Asia/Baku (UTC+4)"
+  },
+  "ThemeToggle": {
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode",
+    "theme": "Theme"
+  },
+  "LanguageSwitcher": {
+    "label": "Language"
+  }
+}

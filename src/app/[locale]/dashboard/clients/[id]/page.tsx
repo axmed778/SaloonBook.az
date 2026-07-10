@@ -3,7 +3,7 @@ import { AppointmentStatus } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate, formatBakuDateTime } from "@/lib/time";
-import type { CatalogEmployee } from "@/app/dashboard/_components/calendar-shared";
+import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import {
   ClientProfile,
   type AppointmentItem,

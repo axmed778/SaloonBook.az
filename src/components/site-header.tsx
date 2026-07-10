@@ -1,15 +1,9 @@
-import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui";
+import { Link } from "@/i18n/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-// Rooted (/#…) so the nav also works from non-landing pages (/privacy, /terms).
-const NAV = [
-  { label: "İmkanlar", href: "/#features" },
-  { label: "Necə işləyir", href: "/#how" },
-  { label: "Qiymətlər", href: "/#pricing" },
-  { label: "FAQ", href: "/#faq" },
-];
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -27,14 +21,24 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const t = await getTranslations("Header");
+
+  // Rooted (/#…) so the nav also works from non-landing pages (/privacy, /terms).
+  const nav = [
+    { label: t("navFeatures"), href: "/#features" },
+    { label: t("navHow"), href: "/#how" },
+    { label: t("navPricing"), href: "/#pricing" },
+    { label: t("navFaq"), href: "/#faq" },
+  ];
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Logo />
 
         <nav className="hidden items-center gap-8 md:flex">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <a
               key={item.href}
               href={item.href}
@@ -46,12 +50,13 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <ThemeToggle />
           <ButtonLink href="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
-            Daxil ol
+            {t("login")}
           </ButtonLink>
           <ButtonLink href="/register" variant="primary" size="sm">
-            Başla
+            {t("start")}
           </ButtonLink>
         </div>
       </div>
