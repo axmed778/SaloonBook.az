@@ -109,6 +109,98 @@
     "home": "Home",
     "viewDemo": "View demo page"
   },
+  "SalonPage": {
+    "createOwn": "Create your own salon",
+    "open": "Open",
+    "poweredBy": "Powered by SalonBook.az",
+    "metaTitleSuffix": "Online booking",
+    "metaNotFound": "Salon not found — SalonBook.az",
+    "metaDescription": "{name}{addr} — book your time online, 24/7. With SalonBook.az."
+  },
+  "Booking": {
+    "eyebrow": "Online booking",
+    "change": "Change",
+    "steps": {
+      "gender": "Who is it for?",
+      "service": "Choose a service",
+      "employee": "Choose a specialist",
+      "date": "Choose a date",
+      "time": "Choose a time",
+      "contact": "Contact details"
+    },
+    "noServices": "No matching services.",
+    "noEmployees": "No specialist for this service.",
+    "noSlots": "No free slots for this day.",
+    "pickAnotherDay": "Pick another day",
+    "minutesShort": "{min} min",
+    "nameLabel": "Your name",
+    "namePlaceholder": "Full name",
+    "phoneLabel": "Phone",
+    "submit": "Confirm booking",
+    "submitting": "Confirming…",
+    "errors": {
+      "nameRequired": "Please enter your name.",
+      "phoneInvalid": "Phone must be +994 followed by 9 digits.",
+      "incomplete": "The information is incomplete.",
+      "confirmHuman": "Please confirm you're not a robot.",
+      "bookingFailed": "Booking failed. Please try again.",
+      "network": "Network error. Please try again."
+    },
+    "success": {
+      "title": "Booking confirmed!",
+      "reminderNote": "We'll send you a reminder before your appointment.",
+      "manageIntro": "If you need to change or cancel the appointment:",
+      "copy": "Copy",
+      "copied": "Copied ✓",
+      "saveLinkNote": "Save this link — it's for managing your appointment online."
+    }
+  },
+  "Manage": {
+    "eyebrow": "Appointment management",
+    "back": "Back",
+    "minutesShort": "{min} min",
+    "rows": {
+      "customer": "Customer",
+      "service": "Service",
+      "employee": "Specialist",
+      "date": "Date",
+      "price": "Price"
+    },
+    "banner": {
+      "cancelled": "This appointment has been cancelled.",
+      "completed": "This appointment is complete. Thank you!",
+      "noShow": "This appointment didn't take place.",
+      "past": "This appointment has already passed."
+    },
+    "notices": {
+      "cancelled": "Appointment cancelled.",
+      "rescheduled": "The appointment time was changed. A new confirmation message will be sent."
+    },
+    "errors": {
+      "actionFailed": "The operation failed. Please try again.",
+      "network": "Network error. Please try again."
+    },
+    "actions": {
+      "reschedule": "Change time",
+      "cancel": "Cancel appointment"
+    },
+    "cancelConfirm": {
+      "title": "Cancel this appointment?",
+      "body": "The salon will be notified. You can use the salon's page to book again.",
+      "cancelling": "Cancelling…",
+      "confirm": "Yes, cancel"
+    },
+    "reschedule": {
+      "title": "Choose a new time",
+      "close": "Close",
+      "noSlots": "No free slots for this day.",
+      "pickDate": "Choose a date.",
+      "rescheduling": "Rescheduling…",
+      "confirmNewTime": "Confirm new time — {time}",
+      "pickTime": "Choose a time"
+    },
+    "goToSalon": "Go to {name} page"
+  },
   "Landing": {
     "badgeNew": "New",
     "badgePromo": "3 months free with EARLYBIRD",

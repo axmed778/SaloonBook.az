@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { matchesClientGender, type Audience } from "@/lib/audience";
 
 // Cloudflare Turnstile: only wired when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set
@@ -75,6 +76,8 @@ export function BookingWidget({
   employees: Employee[];
   days: Day[];
 }) {
+  const t = useTranslations("Booking");
+  const tGender = useTranslations("Audience");
   const needGender = salonAudience === "ALL";
   const stepKeys = [
     ...(needGender ? ["gender"] : []),
@@ -243,11 +246,11 @@ export function BookingWidget({
   async function submit() {
     setError(null);
     const digits = phoneDigits.replace(/\D/g, "");
-    if (!name.trim()) return setError("Adınızı daxil edin.");
-    if (digits.length !== 9) return setError("Telefon +994 və 9 rəqəmdən ibarət olmalıdır.");
-    if (!slot || !serviceId || !employeeId) return setError("Məlumat natamamdır.");
+    if (!name.trim()) return setError(t("errors.nameRequired"));
+    if (digits.length !== 9) return setError(t("errors.phoneInvalid"));
+    if (!slot || !serviceId || !employeeId) return setError(t("errors.incomplete"));
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      return setError("Robot olmadığınızı təsdiqləyin.");
+      return setError(t("errors.confirmHuman"));
     }
 
     setSubmitting(true);
@@ -268,7 +271,7 @@ export function BookingWidget({
       if (!res.ok) {
         // The server consumed the token during verification; get a new one.
         resetTurnstile();
-        setError(data.error ?? "Qeydiyyat alınmadı. Yenidən cəhd edin.");
+        setError(data.error ?? t("errors.bookingFailed"));
         return;
       }
       setDone({
@@ -277,7 +280,7 @@ export function BookingWidget({
         manageUrl: typeof data.manageUrl === "string" ? data.manageUrl : null,
       });
     } catch {
-      setError("Şəbəkə xətası. Yenidən cəhd edin.");
+      setError(t("errors.network"));
     } finally {
       setSubmitting(false);
     }
@@ -291,20 +294,20 @@ export function BookingWidget({
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/20 text-success">
             <Check className="h-6 w-6" strokeWidth={2.5} />
           </span>
-          <h3 className="mt-4 text-lg font-semibold text-foreground">Qeydiyyat təsdiqləndi!</h3>
+          <h3 className="mt-4 text-lg font-semibold text-foreground">{t("success.title")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {selectedService?.name} · {selectedEmployee?.name}
             <br />
             {done.dayLabel}, {done.time}
           </p>
           <p className="mt-4 text-xs text-faint-foreground">
-            Görüşdən əvvəl sizə xatırlatma göndəriləcək.
+            {t("success.reminderNote")}
           </p>
 
           {done.manageUrl && (
             <div className="mt-5 rounded-lg border border-border bg-card p-4 text-left">
               <p className="text-sm font-medium text-foreground">
-                Görüşü dəyişmək və ya ləğv etmək lazım olsa:
+                {t("success.manageIntro")}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <a
@@ -326,11 +329,11 @@ export function BookingWidget({
                   }}
                   className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground transition hover:border-border-strong hover:text-foreground"
                 >
-                  {linkCopied ? "Kopyalandı ✓" : "Kopyala"}
+                  {linkCopied ? t("success.copied") : t("success.copy")}
                 </button>
               </div>
               <p className="mt-2 text-xs text-faint-foreground">
-                Bu linki saxlayın — görüşünüzü onlayn idarə etmək üçündür.
+                {t("success.saveLinkNote")}
               </p>
             </div>
           )}
@@ -340,19 +343,19 @@ export function BookingWidget({
   }
 
   const stepTitle: Record<string, string> = {
-    gender: "Kim üçün?",
-    service: "Xidmət seçin",
-    employee: "Mütəxəssis seçin",
-    date: "Tarix seçin",
-    time: "Vaxt seçin",
-    contact: "Əlaqə məlumatları",
+    gender: t("steps.gender"),
+    service: t("steps.service"),
+    employee: t("steps.employee"),
+    date: t("steps.date"),
+    time: t("steps.time"),
+    contact: t("steps.contact"),
   };
 
   // Compact summary text for a completed step.
   function summaryValue(key: string): string {
     switch (key) {
       case "gender":
-        return gender === "MALE" ? "Kişi" : "Qadın";
+        return gender === "MALE" ? tGender("MALE") : tGender("FEMALE");
       case "service":
         return selectedService
           ? `${selectedService.name} · ${azn(selectedService.priceMinor)} ₼`
@@ -378,7 +381,7 @@ export function BookingWidget({
           <p className="text-xs text-muted-foreground">{stepTitle[keyName]}</p>
           <p className="truncate font-medium text-foreground">{summaryValue(keyName)}</p>
         </div>
-        <span className="shrink-0 text-xs font-medium text-accent">Dəyiş</span>
+        <span className="shrink-0 text-xs font-medium text-accent">{t("change")}</span>
       </button>
     );
   }
@@ -387,7 +390,7 @@ export function BookingWidget({
     <section className="mt-8">
       <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
         <span className="h-1 w-1 rounded-full bg-accent" />
-        Onlayn qeydiyyat
+        {t("eyebrow")}
       </div>
 
       <div className="space-y-2">
@@ -410,7 +413,7 @@ export function BookingWidget({
                   {(["MALE", "FEMALE"] as Gender[]).map((g) => (
                     <button key={g} onClick={() => pickGender(g)} className={optionCls(gender === g)}>
                       <span className="font-medium text-foreground">
-                        {g === "MALE" ? "Kişi" : "Qadın"}
+                        {tGender(g)}
                       </span>
                     </button>
                   ))}
@@ -420,14 +423,14 @@ export function BookingWidget({
               {key === "service" && (
                 <div className="space-y-2">
                   {visibleServices.length === 0 && (
-                    <p className="py-4 text-center text-sm text-muted-foreground">Uyğun xidmət yoxdur.</p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">{t("noServices")}</p>
                   )}
                   {visibleServices.map((s) => (
                     <button key={s.id} onClick={() => pickService(s.id)} className={optionCls(serviceId === s.id)}>
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="font-medium text-foreground">{s.name}</p>
-                          <p className="text-sm text-muted-foreground">{s.durationMin} dəq</p>
+                          <p className="text-sm text-muted-foreground">{t("minutesShort", { min: s.durationMin })}</p>
                         </div>
                         <span className="shrink-0 font-medium text-foreground">{azn(s.priceMinor)} ₼</span>
                       </div>
@@ -440,7 +443,7 @@ export function BookingWidget({
                 <div className="space-y-2">
                   {visibleEmployees.length === 0 && (
                     <p className="py-4 text-center text-sm text-muted-foreground">
-                      Bu xidmət üçün mütəxəssis yoxdur.
+                      {t("noEmployees")}
                     </p>
                   )}
                   {visibleEmployees.map((e) => (
@@ -485,12 +488,12 @@ export function BookingWidget({
                   )}
                   {!slotsLoading && slots && slots.length === 0 && (
                     <div className="py-4 text-center">
-                      <p className="text-sm text-muted-foreground">Bu gün üçün boş vaxt yoxdur.</p>
+                      <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
                       <button
                         onClick={() => editStep(idx("date"))}
                         className="mt-2 text-sm font-medium text-accent hover:underline"
                       >
-                        Başqa gün seçin
+                        {t("pickAnotherDay")}
                       </button>
                     </div>
                   )}
@@ -520,16 +523,16 @@ export function BookingWidget({
                     </p>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Adınız</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("nameLabel")}</label>
                     <input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Ad Soyad"
+                      placeholder={t("namePlaceholder")}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Telefon</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("phoneLabel")}</label>
                     <div className="flex items-center gap-2">
                       <span className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">+994</span>
                       <input
@@ -551,7 +554,7 @@ export function BookingWidget({
                     disabled={submitting}
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground shadow-sm shadow-accent/20 transition hover:bg-accent-hover disabled:opacity-60"
                   >
-                    {submitting ? "Təsdiqlənir…" : "Qeydiyyatı təsdiqlə"}
+                    {submitting ? t("submitting") : t("submit")}
                     {!submitting && <ChevronRight className="h-4 w-4" strokeWidth={2} />}
                   </button>
                 </div>

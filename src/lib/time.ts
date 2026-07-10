@@ -56,10 +56,14 @@ export function shiftYmd(dayYmd: string, deltaDays: number): string {
   return new Date(Date.UTC(y, m - 1, d + deltaDays)).toISOString().slice(0, 10);
 }
 
-/** Human date label for a Baku calendar date, e.g. "1 iyul 2026, çərşənbə axşamı". */
-export function formatBakuDate(dayYmd: string): string {
+/**
+ * Human date label for a Baku calendar date, e.g. "1 iyul 2026, çərşənbə axşamı".
+ * `locale` is a BCP-47 tag for display (defaults to Azerbaijani); the Baku time
+ * zone is fixed regardless of locale. Server/worker callers can omit it.
+ */
+export function formatBakuDate(dayYmd: string, locale = "az-AZ"): string {
   const [y, m, d] = dayYmd.split("-").map(Number);
-  return new Intl.DateTimeFormat("az-AZ", {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: BAKU_TZ,
     day: "numeric",
     month: "long",
@@ -91,8 +95,8 @@ export function minutesToHHMM(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export function formatBakuDateTime(date: Date): string {
-  return new Intl.DateTimeFormat("az-AZ", {
+export function formatBakuDateTime(date: Date, locale = "az-AZ"): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: BAKU_TZ,
     dateStyle: "medium",
     timeStyle: "short",

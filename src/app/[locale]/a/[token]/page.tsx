@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, shiftYmd, formatBakuDateTime } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ManageWidget } from "./manage-widget";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +17,12 @@ export const dynamic = "force-dynamic";
 export default async function ManageAppointmentPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ locale: string; token: string }>;
 }) {
   const { token } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(token)) notFound();
+  const locale = await getLocale();
+  const df = intlLocale(locale);
 
   const appt = await prisma.appointment.findUnique({
     where: { manageToken: token },
@@ -37,7 +42,7 @@ export default async function ManageAppointmentPage({
   const days = Array.from({ length: 14 }, (_, i) => {
     const ymd = shiftYmd(bakuToday(), i);
     const [y, m, d] = ymd.split("-").map(Number);
-    const label = new Intl.DateTimeFormat("az-AZ", {
+    const label = new Intl.DateTimeFormat(df, {
       timeZone: "Asia/Baku",
       day: "numeric",
       month: "short",
@@ -55,7 +60,10 @@ export default async function ManageAppointmentPage({
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 max-w-xl items-center justify-between px-6">
           <Logo />
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -68,7 +76,7 @@ export default async function ManageAppointmentPage({
           service={appt.service.name}
           durationMin={appt.service.durationMin}
           employee={appt.employee.name}
-          whenLabel={formatBakuDateTime(appt.startsAt)}
+          whenLabel={formatBakuDateTime(appt.startsAt, df)}
           priceMinor={appt.priceMinor}
           status={appt.status}
           upcoming={upcoming}

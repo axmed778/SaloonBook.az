@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import type { Audience } from "@/lib/audience";
 import { bakuToday, shiftYmd } from "@/lib/time";
+import { intlLocale, ogLocale } from "@/i18n/format";
 import { ButtonLink } from "@/components/ui";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { BookingWidget } from "./booking-widget";
 
 export const dynamic = "force-dynamic";
@@ -17,21 +20,22 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  const t = await getTranslations({ locale, namespace: "SalonPage" });
   const salon = await prisma.salon.findUnique({
     where: { slug },
     select: { name: true, description: true, address: true, status: true },
   });
   if (!salon || salon.status !== "ACTIVE") {
-    return { title: "Salon tapılmadı — SalonBook.az", robots: { index: false } };
+    return { title: t("metaNotFound"), robots: { index: false } };
   }
 
-  const title = `${salon.name} — Onlayn qeydiyyat`;
+  const title = `${salon.name} — ${t("metaTitleSuffix")}`;
+  const addr = salon.address ? ` · ${salon.address}` : "";
   const description =
-    salon.description?.trim() ||
-    `${salon.name}${salon.address ? ` · ${salon.address}` : ""} — vaxtınızı onlayn ayırın, 24/7. SalonBook.az ilə.`;
+    salon.description?.trim() || t("metaDescription", { name: salon.name, addr });
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
   return {
@@ -44,7 +48,7 @@ export async function generateMetadata({
       description,
       url: `/${slug}`,
       siteName: "SalonBook.az",
-      locale: "az_AZ",
+      locale: ogLocale(locale),
       type: "website",
     },
     twitter: {
@@ -66,9 +70,11 @@ const initials = (name: string) =>
 export default async function BookingPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
+  const t = await getTranslations("SalonPage");
+  const locale = await getLocale();
 
   const salon = await prisma.salon.findUnique({
     where: { slug },
@@ -103,7 +109,7 @@ export default async function BookingPage({
   const days = Array.from({ length: 14 }, (_, i) => {
     const ymd = shiftYmd(bakuToday(), i);
     const [y, m, d] = ymd.split("-").map(Number);
-    const label = new Intl.DateTimeFormat("az-AZ", {
+    const label = new Intl.DateTimeFormat(intlLocale(locale), {
       timeZone: "Asia/Baku",
       day: "numeric",
       month: "short",
@@ -135,9 +141,10 @@ export default async function BookingPage({
         <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-6">
           <Logo />
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
-            <ButtonLink href="/register" variant="ghost" size="sm">
-              Öz salonunu yarat
+            <ButtonLink href="/register" variant="ghost" size="sm" className="hidden sm:inline-flex">
+              {t("createOwn")}
             </ButtonLink>
           </div>
         </div>
@@ -156,7 +163,7 @@ export default async function BookingPage({
               </h1>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
                 <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                Açıqdır
+                {t("open")}
               </span>
             </div>
             {salon.description && (
@@ -178,7 +185,7 @@ export default async function BookingPage({
 
         <p className="mt-10 flex items-center justify-center gap-1.5 text-center text-sm text-faint-foreground">
           <MapPin className="h-3.5 w-3.5" strokeWidth={2} />
-          SalonBook.az ilə gücləndirilib
+          {t("poweredBy")}
         </p>
       </main>
     </div>

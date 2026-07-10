@@ -109,6 +109,98 @@
     "home": "Ana səhifə",
     "viewDemo": "Nümunə səhifəyə bax"
   },
+  "SalonPage": {
+    "createOwn": "Öz salonunu yarat",
+    "open": "Açıqdır",
+    "poweredBy": "SalonBook.az ilə gücləndirilib",
+    "metaTitleSuffix": "Onlayn qeydiyyat",
+    "metaNotFound": "Salon tapılmadı — SalonBook.az",
+    "metaDescription": "{name}{addr} — vaxtınızı onlayn ayırın, 24/7. SalonBook.az ilə."
+  },
+  "Booking": {
+    "eyebrow": "Onlayn qeydiyyat",
+    "change": "Dəyiş",
+    "steps": {
+      "gender": "Kim üçün?",
+      "service": "Xidmət seçin",
+      "employee": "Mütəxəssis seçin",
+      "date": "Tarix seçin",
+      "time": "Vaxt seçin",
+      "contact": "Əlaqə məlumatları"
+    },
+    "noServices": "Uyğun xidmət yoxdur.",
+    "noEmployees": "Bu xidmət üçün mütəxəssis yoxdur.",
+    "noSlots": "Bu gün üçün boş vaxt yoxdur.",
+    "pickAnotherDay": "Başqa gün seçin",
+    "minutesShort": "{min} dəq",
+    "nameLabel": "Adınız",
+    "namePlaceholder": "Ad Soyad",
+    "phoneLabel": "Telefon",
+    "submit": "Qeydiyyatı təsdiqlə",
+    "submitting": "Təsdiqlənir…",
+    "errors": {
+      "nameRequired": "Adınızı daxil edin.",
+      "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır.",
+      "incomplete": "Məlumat natamamdır.",
+      "confirmHuman": "Robot olmadığınızı təsdiqləyin.",
+      "bookingFailed": "Qeydiyyat alınmadı. Yenidən cəhd edin.",
+      "network": "Şəbəkə xətası. Yenidən cəhd edin."
+    },
+    "success": {
+      "title": "Qeydiyyat təsdiqləndi!",
+      "reminderNote": "Görüşdən əvvəl sizə xatırlatma göndəriləcək.",
+      "manageIntro": "Görüşü dəyişmək və ya ləğv etmək lazım olsa:",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı ✓",
+      "saveLinkNote": "Bu linki saxlayın — görüşünüzü onlayn idarə etmək üçündür."
+    }
+  },
+  "Manage": {
+    "eyebrow": "Görüş idarəetməsi",
+    "back": "Geri",
+    "minutesShort": "{min} dəq",
+    "rows": {
+      "customer": "Müştəri",
+      "service": "Xidmət",
+      "employee": "Mütəxəssis",
+      "date": "Tarix",
+      "price": "Qiymət"
+    },
+    "banner": {
+      "cancelled": "Bu görüş ləğv edilib.",
+      "completed": "Bu görüş tamamlanıb. Təşəkkürlər!",
+      "noShow": "Bu görüş baş tutmayıb.",
+      "past": "Bu görüşün vaxtı keçib."
+    },
+    "notices": {
+      "cancelled": "Görüş ləğv edildi.",
+      "rescheduled": "Görüşün vaxtı dəyişdirildi. Yeni təsdiq mesajı göndəriləcək."
+    },
+    "errors": {
+      "actionFailed": "Əməliyyat alınmadı. Yenidən cəhd edin.",
+      "network": "Şəbəkə xətası. Yenidən cəhd edin."
+    },
+    "actions": {
+      "reschedule": "Vaxtı dəyiş",
+      "cancel": "Görüşü ləğv et"
+    },
+    "cancelConfirm": {
+      "title": "Görüşü ləğv etmək istəyirsiniz?",
+      "body": "Salon məlumatlandırılacaq. Yenidən yer ayırmaq üçün salonun səhifəsindən istifadə edə bilərsiniz.",
+      "cancelling": "Ləğv edilir…",
+      "confirm": "Bəli, ləğv et"
+    },
+    "reschedule": {
+      "title": "Yeni vaxt seçin",
+      "close": "Bağla",
+      "noSlots": "Bu gün üçün boş vaxt yoxdur.",
+      "pickDate": "Tarix seçin.",
+      "rescheduling": "Dəyişdirilir…",
+      "confirmNewTime": "Yeni vaxtı təsdiqlə — {time}",
+      "pickTime": "Vaxt seçin"
+    },
+    "goToSalon": "{name} səhifəsinə keç"
+  },
   "Landing": {
     "badgeNew": "Yeni",
     "badgePromo": "EARLYBIRD ilə 3 ay pulsuz",

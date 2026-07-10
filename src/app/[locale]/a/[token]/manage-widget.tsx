@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 import { Check, CalendarClock, XCircle } from "lucide-react";
 
 type Slot = { startUtc: string; time: string };
@@ -40,6 +41,7 @@ export function ManageWidget({
   upcoming: boolean;
   days: Day[];
 }) {
+  const t = useTranslations("Manage");
   const router = useRouter();
   const canModify = status === "CONFIRMED" && upcoming;
 
@@ -88,12 +90,12 @@ export function ManageWidget({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Əməliyyat alınmadı. Yenidən cəhd edin.");
+        setError(data.error ?? t("errors.actionFailed"));
         return false;
       }
       return true;
     } catch {
-      setError("Şəbəkə xətası. Yenidən cəhd edin.");
+      setError(t("errors.network"));
       return false;
     } finally {
       setBusy(false);
@@ -102,7 +104,7 @@ export function ManageWidget({
 
   async function cancelAppointment() {
     if (await post({ action: "cancel" })) {
-      setNotice("Görüş ləğv edildi.");
+      setNotice(t("notices.cancelled"));
       setMode("view");
       router.refresh();
     }
@@ -111,7 +113,7 @@ export function ManageWidget({
   async function reschedule() {
     if (!slot) return;
     if (await post({ action: "reschedule", startUtc: slot.startUtc })) {
-      setNotice("Görüşün vaxtı dəyişdirildi. Yeni təsdiq mesajı göndəriləcək.");
+      setNotice(t("notices.rescheduled"));
       setMode("view");
       router.refresh();
     }
@@ -120,26 +122,26 @@ export function ManageWidget({
   const statusBanner =
     status === "CANCELLED" ? (
       <Banner tone="muted" icon={<XCircle className="h-5 w-5" />}>
-        Bu görüş ləğv edilib.
+        {t("banner.cancelled")}
       </Banner>
     ) : status === "COMPLETED" ? (
       <Banner tone="success" icon={<Check className="h-5 w-5" />}>
-        Bu görüş tamamlanıb. Təşəkkürlər!
+        {t("banner.completed")}
       </Banner>
     ) : status === "NO_SHOW" ? (
       <Banner tone="muted" icon={<XCircle className="h-5 w-5" />}>
-        Bu görüş baş tutmayıb.
+        {t("banner.noShow")}
       </Banner>
     ) : !upcoming ? (
       <Banner tone="muted" icon={<CalendarClock className="h-5 w-5" />}>
-        Bu görüşün vaxtı keçib.
+        {t("banner.past")}
       </Banner>
     ) : null;
 
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground">Görüş idarəetməsi</p>
+        <p className="text-sm text-muted-foreground">{t("eyebrow")}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
           {salonName}
         </h1>
@@ -155,11 +157,11 @@ export function ManageWidget({
       {/* Appointment details */}
       <section className="rounded-xl border border-border bg-card p-5 shadow-soft">
         <dl className="space-y-2.5 text-sm">
-          <Row label="Müştəri" value={customerName} />
-          <Row label="Xidmət" value={`${service} · ${durationMin} dəq`} />
-          <Row label="Mütəxəssis" value={employee} />
-          <Row label="Tarix" value={whenLabel} />
-          <Row label="Qiymət" value={`${azn(priceMinor)} ₼`} />
+          <Row label={t("rows.customer")} value={customerName} />
+          <Row label={t("rows.service")} value={`${service} · ${t("minutesShort", { min: durationMin })}`} />
+          <Row label={t("rows.employee")} value={employee} />
+          <Row label={t("rows.date")} value={whenLabel} />
+          <Row label={t("rows.price")} value={`${azn(priceMinor)} ₼`} />
         </dl>
       </section>
 
@@ -176,7 +178,7 @@ export function ManageWidget({
             }}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
           >
-            Vaxtı dəyiş
+            {t("actions.reschedule")}
           </button>
           <button
             onClick={() => {
@@ -185,7 +187,7 @@ export function ManageWidget({
             }}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:border-danger/50 hover:text-danger"
           >
-            Görüşü ləğv et
+            {t("actions.cancel")}
           </button>
         </div>
       )}
@@ -193,10 +195,9 @@ export function ManageWidget({
       {/* Cancel confirmation */}
       {canModify && mode === "confirm-cancel" && (
         <section className="rounded-xl border border-danger/30 bg-danger/5 p-5">
-          <p className="text-sm font-medium text-foreground">Görüşü ləğv etmək istəyirsiniz?</p>
+          <p className="text-sm font-medium text-foreground">{t("cancelConfirm.title")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Salon məlumatlandırılacaq. Yenidən yer ayırmaq üçün salonun səhifəsindən istifadə
-            edə bilərsiniz.
+            {t("cancelConfirm.body")}
           </p>
           <div className="mt-3 flex gap-2">
             <button
@@ -204,14 +205,14 @@ export function ManageWidget({
               disabled={busy}
               className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
             >
-              {busy ? "Ləğv edilir…" : "Bəli, ləğv et"}
+              {busy ? t("cancelConfirm.cancelling") : t("cancelConfirm.confirm")}
             </button>
             <button
               onClick={() => setMode("view")}
               disabled={busy}
               className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
             >
-              Geri
+              {t("back")}
             </button>
           </div>
         </section>
@@ -221,12 +222,12 @@ export function ManageWidget({
       {canModify && mode === "reschedule" && (
         <section className="rounded-xl border border-border bg-card p-5 shadow-soft">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-foreground">Yeni vaxt seçin</h2>
+            <h2 className="text-sm font-medium text-foreground">{t("reschedule.title")}</h2>
             <button
               onClick={() => setMode("view")}
               className="text-sm text-muted-foreground transition hover:text-foreground"
             >
-              Bağla
+              {t("reschedule.close")}
             </button>
           </div>
 
@@ -275,9 +276,9 @@ export function ManageWidget({
                 ))}
               </div>
             ) : slots ? (
-              <p className="text-sm text-muted-foreground">Bu gün üçün boş vaxt yoxdur.</p>
+              <p className="text-sm text-muted-foreground">{t("reschedule.noSlots")}</p>
             ) : (
-              <p className="text-sm text-muted-foreground">Tarix seçin.</p>
+              <p className="text-sm text-muted-foreground">{t("reschedule.pickDate")}</p>
             )}
           </div>
 
@@ -286,15 +287,19 @@ export function ManageWidget({
             disabled={!slot || busy}
             className="mt-4 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Dəyişdirilir…" : slot ? `Yeni vaxtı təsdiqlə — ${slot.time}` : "Vaxt seçin"}
+            {busy
+              ? t("reschedule.rescheduling")
+              : slot
+                ? t("reschedule.confirmNewTime", { time: slot.time })
+                : t("reschedule.pickTime")}
           </button>
         </section>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
-        <a href={`/${salonSlug}`} className="text-accent hover:underline">
-          {salonName} səhifəsinə keç
-        </a>
+        <Link href={`/${salonSlug}`} className="text-accent hover:underline">
+          {t("goToSalon", { name: salonName })}
+        </Link>
       </p>
     </div>
   );
