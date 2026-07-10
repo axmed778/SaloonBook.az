@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 // Replacement for native alert() on list-level action errors: a transient
 // bottom-center toast in the dashboard palette. Caller holds the message in
@@ -14,6 +15,7 @@ export function ErrorToast({
   onClose: () => void;
   durationMs?: number;
 }) {
+  const t = useTranslations("Common");
   useEffect(() => {
     const t = setTimeout(onClose, durationMs);
     return () => clearTimeout(t);
@@ -28,8 +30,8 @@ export function ErrorToast({
         <span className="min-w-0">{message}</span>
         <button
           onClick={onClose}
-          aria-label="Bağla"
-          title="Bağla"
+          aria-label={t("close")}
+          title={t("close")}
           className="shrink-0 text-rose-300/70 transition hover:text-rose-100"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

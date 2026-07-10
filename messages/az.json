@@ -49,6 +49,79 @@
     "roleAdmin": "Platform Admin",
     "roleOwner": "Salon sahibi"
   },
+  "Common": {
+    "cancel": "Ləğv et",
+    "pleaseWait": "Gözləyin…",
+    "confirmDelete": "Bəli, sil",
+    "close": "Bağla",
+    "audienceFor": "Kimin üçün"
+  },
+  "Calendar": {
+    "title": "Təqvim",
+    "viewDay": "Gün",
+    "viewWeek": "Həftə",
+    "prevDay": "Əvvəlki gün",
+    "nextDay": "Növbəti gün",
+    "prevWeek": "Əvvəlki həftə",
+    "nextWeek": "Növbəti həftə",
+    "thisDay": "Bu gün",
+    "thisWeek": "Bu həftə",
+    "newBooking": "Yeni görüş",
+    "needStaffFirst": "Əvvəlcə işçi və xidmət əlavə edin",
+    "emptyTitle": "Hələ işçi əlavə etməmisiniz",
+    "emptyBody": "Təqvimdə görüşlərin görünməsi üçün əvvəlcə İşçilər bölməsindən işçi əlavə edin.",
+    "status": {
+      "CONFIRMED": "Təsdiqlənib",
+      "COMPLETED": "Tamamlanıb",
+      "NO_SHOW": "Gəlmədi"
+    },
+    "source": {
+      "PUBLIC": "Onlayn qeydiyyat",
+      "DASHBOARD": "Əl ilə (panel)"
+    },
+    "popup": {
+      "customer": "Müştəri",
+      "phone": "Telefon",
+      "employee": "Mütəxəssis",
+      "date": "Tarix",
+      "time": "Vaxt",
+      "price": "Qiymət",
+      "source": "Mənbə",
+      "manageLinkLabel": "Müştəri linki — vaxtı dəyişmək / ləğv etmək üçün",
+      "copyLink": "Linki kopyala",
+      "copied": "Kopyalandı",
+      "sendViaWhatsapp": "WhatsApp-la göndər",
+      "complete": "Tamamla",
+      "markNoShow": "Gəlmədi",
+      "waMessage": "Salam, {name}! Görüşünüzə baxmaq, vaxtını dəyişmək və ya ləğv etmək üçün: {url}"
+    },
+    "modal": {
+      "employee": "Mütəxəssis",
+      "select": "Seçin…",
+      "service": "Xidmət",
+      "selectStaffFirst": "Əvvəlcə mütəxəssis seçin",
+      "noServicesForStaff": "Bu işçiyə xidmət təyin edilməyib.",
+      "date": "Tarix",
+      "freeSlot": "Boş vaxt",
+      "noSlots": "Bu gün üçün boş vaxt yoxdur.",
+      "customerName": "Müştəri adı",
+      "namePlaceholder": "Ad Soyad",
+      "phone": "Telefon",
+      "create": "Görüşü yarat",
+      "creating": "Yaradılır…",
+      "minutesShort": "{min} dəq",
+      "errors": {
+        "selectStaffService": "İşçi və xidmət seçin.",
+        "selectSlot": "Boş vaxt seçin.",
+        "enterCustomerName": "Müştəri adını daxil edin.",
+        "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır."
+      }
+    }
+  },
+  "Dashboard": {
+    "noSalonTitle": "Salon tapılmadı",
+    "noSalonBody": "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",

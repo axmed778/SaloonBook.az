@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { intlLocale } from "@/i18n/format";
 import {
   BAKU_TZ,
   bakuToday,
@@ -73,15 +75,15 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
   };
 }
 
-function weekDayLabels(ymd: string): { weekdayLabel: string; dayLabel: string } {
+function weekDayLabels(ymd: string, df: string): { weekdayLabel: string; dayLabel: string } {
   const [y, m, d] = ymd.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d, 12));
   return {
-    weekdayLabel: new Intl.DateTimeFormat("az-AZ", {
+    weekdayLabel: new Intl.DateTimeFormat(df, {
       timeZone: BAKU_TZ,
       weekday: "short",
     }).format(dt),
-    dayLabel: new Intl.DateTimeFormat("az-AZ", {
+    dayLabel: new Intl.DateTimeFormat(df, {
       timeZone: BAKU_TZ,
       day: "numeric",
       month: "short",
@@ -102,15 +104,18 @@ export default async function DashboardPage({
 }) {
   // The layout already guarantees a session (redirects otherwise).
   const session = (await getSession())!;
+  const locale = await getLocale();
+  const df = intlLocale(locale);
+  const t = await getTranslations("Dashboard");
 
   // Platform admins manage accounts, not a salon calendar.
-  if (session.isAdmin) redirect("/dashboard/admin");
+  if (session.isAdmin) redirect({ href: "/dashboard/admin", locale });
   if (!session.salonId) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-zinc-100">Salon tapılmadı</h1>
+        <h1 className="text-xl font-semibold text-zinc-100">{t("noSalonTitle")}</h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın.
+          {t("noSalonBody")}
         </p>
       </div>
     );
@@ -171,13 +176,13 @@ export default async function DashboardPage({
 
     const weekDays: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
       const ymd = shiftYmd(weekStart, i);
-      return { ymd, ...weekDayLabels(ymd), isToday: ymd === today };
+      return { ymd, ...weekDayLabels(ymd, df), isToday: ymd === today };
     });
 
     const blocks = appts
       .map((a) => {
         const ymd = bakuYmd(a.startsAt);
-        return toBlock(a, ymd, formatBakuDate(ymd));
+        return toBlock(a, ymd, formatBakuDate(ymd, df));
       })
       .filter((b) => b.endMin > b.startMin);
 
@@ -186,7 +191,7 @@ export default async function DashboardPage({
         view="week"
         day={day}
         today={today}
-        periodLabel={`${weekDayLabels(weekStart).dayLabel} – ${formatBakuDate(weekEnd)}`}
+        periodLabel={`${weekDayLabels(weekStart, df).dayLabel} – ${formatBakuDate(weekEnd, df)}`}
         columns={columns}
         weekDays={weekDays}
         blocks={blocks}
@@ -197,7 +202,7 @@ export default async function DashboardPage({
 
   // --- Day view ---
   const { startUtc, endUtc } = bakuDayBoundsUtc(day);
-  const dateLabel = formatBakuDate(day);
+  const dateLabel = formatBakuDate(day, df);
   const appts = (await prisma.appointment.findMany({
     where: {
       salonId,

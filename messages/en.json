@@ -49,6 +49,79 @@
     "roleAdmin": "Platform Admin",
     "roleOwner": "Salon owner"
   },
+  "Common": {
+    "cancel": "Cancel",
+    "pleaseWait": "Please wait…",
+    "confirmDelete": "Yes, delete",
+    "close": "Close",
+    "audienceFor": "For whom"
+  },
+  "Calendar": {
+    "title": "Calendar",
+    "viewDay": "Day",
+    "viewWeek": "Week",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "thisDay": "Today",
+    "thisWeek": "This week",
+    "newBooking": "New booking",
+    "needStaffFirst": "Add staff and services first",
+    "emptyTitle": "You haven't added any staff yet",
+    "emptyBody": "To see appointments on the calendar, first add staff from the Staff section.",
+    "status": {
+      "CONFIRMED": "Confirmed",
+      "COMPLETED": "Completed",
+      "NO_SHOW": "No-show"
+    },
+    "source": {
+      "PUBLIC": "Online booking",
+      "DASHBOARD": "Manual (panel)"
+    },
+    "popup": {
+      "customer": "Customer",
+      "phone": "Phone",
+      "employee": "Specialist",
+      "date": "Date",
+      "time": "Time",
+      "price": "Price",
+      "source": "Source",
+      "manageLinkLabel": "Customer link — to reschedule / cancel",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "sendViaWhatsapp": "Send via WhatsApp",
+      "complete": "Complete",
+      "markNoShow": "No-show",
+      "waMessage": "Hi, {name}! To view, reschedule or cancel your appointment: {url}"
+    },
+    "modal": {
+      "employee": "Specialist",
+      "select": "Select…",
+      "service": "Service",
+      "selectStaffFirst": "Choose a specialist first",
+      "noServicesForStaff": "No services assigned to this staff member.",
+      "date": "Date",
+      "freeSlot": "Free slot",
+      "noSlots": "No free slots for this day.",
+      "customerName": "Customer name",
+      "namePlaceholder": "Full name",
+      "phone": "Phone",
+      "create": "Create booking",
+      "creating": "Creating…",
+      "minutesShort": "{min} min",
+      "errors": {
+        "selectStaffService": "Select a staff member and a service.",
+        "selectSlot": "Select a free slot.",
+        "enterCustomerName": "Enter the customer's name.",
+        "phoneInvalid": "Phone must be +994 followed by 9 digits."
+      }
+    }
+  },
+  "Dashboard": {
+    "noSalonTitle": "Salon not found",
+    "noSalonBody": "No salon is linked to your account. Please contact support."
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",

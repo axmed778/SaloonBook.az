@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
 import { setAppointmentStatus } from "../actions";
 import {
-  STATUS_LABEL,
   STATUS_BADGE,
-  sourceLabel,
   azn,
   type CalendarBlock,
 } from "./calendar-shared";
@@ -22,6 +21,8 @@ export function AppointmentPopup({
   block: CalendarBlock;
   onClose: () => void;
 }) {
+  const t = useTranslations("Calendar");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +38,7 @@ export function AppointmentPopup({
       : `/a/${block.manageToken}`;
   const waHref =
     `https://wa.me/${block.customerPhone.replace(/[^\d]/g, "")}?text=` +
-    encodeURIComponent(
-      `Salam, ${block.subtitle}! Görüşünüzə baxmaq, vaxtını dəyişmək və ya ləğv etmək üçün: ${manageUrl}`,
-    );
+    encodeURIComponent(t("popup.waMessage", { name: block.subtitle, url: manageUrl }));
 
   function copyManageUrl() {
     navigator.clipboard?.writeText(manageUrl).then(() => {
@@ -80,13 +79,13 @@ export function AppointmentPopup({
                 STATUS_BADGE[block.status]
               }
             >
-              {STATUS_LABEL[block.status]}
+              {t(`status.${block.status}`)}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Bağla" title="Bağla"
+            aria-label={tc("close")} title={tc("close")}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -94,16 +93,16 @@ export function AppointmentPopup({
         </div>
 
         <dl className="mt-4 space-y-3 text-sm">
-          <Row label="Müştəri" value={block.subtitle} />
-          <Row label="Telefon" value={block.customerPhone} mono />
-          <Row label="Mütəxəssis" value={block.employeeName} />
-          <Row label="Tarix" value={block.dateLabel} />
+          <Row label={t("popup.customer")} value={block.subtitle} />
+          <Row label={t("popup.phone")} value={block.customerPhone} mono />
+          <Row label={t("popup.employee")} value={block.employeeName} />
+          <Row label={t("popup.date")} value={block.dateLabel} />
           <Row
-            label="Vaxt"
+            label={t("popup.time")}
             value={`${minutesToHHMM(block.startMin)} – ${minutesToHHMM(block.endMin)}`}
           />
-          <Row label="Qiymət" value={`${azn(block.priceMinor)} ₼`} />
-          <Row label="Mənbə" value={sourceLabel(block.source)} />
+          <Row label={t("popup.price")} value={`${azn(block.priceMinor)} ₼`} />
+          <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>
 
         {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
@@ -111,7 +110,7 @@ export function AppointmentPopup({
         {block.status === "CONFIRMED" && (
           <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
             <p className="text-xs font-medium text-zinc-400">
-              Müştəri linki — vaxtı dəyişmək / ləğv etmək üçün
+              {t("popup.manageLinkLabel")}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
@@ -119,7 +118,7 @@ export function AppointmentPopup({
                 onClick={copyManageUrl}
                 className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
               >
-                {copied ? "Kopyalandı" : "Linki kopyala"}
+                {copied ? t("popup.copied") : t("popup.copyLink")}
               </button>
               <a
                 href={waHref}
@@ -127,7 +126,7 @@ export function AppointmentPopup({
                 rel="noreferrer"
                 className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20"
               >
-                WhatsApp-la göndər
+                {t("popup.sendViaWhatsapp")}
               </a>
             </div>
           </div>
@@ -142,7 +141,7 @@ export function AppointmentPopup({
                 onClick={() => apply("COMPLETED")}
                 className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20 disabled:opacity-50"
               >
-                Tamamla
+                {t("popup.complete")}
               </button>
               <button
                 type="button"
@@ -150,7 +149,7 @@ export function AppointmentPopup({
                 onClick={() => apply("NO_SHOW")}
                 className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200 transition hover:bg-amber-500/20 disabled:opacity-50"
               >
-                Gəlmədi
+                {t("popup.markNoShow")}
               </button>
             </div>
             <button
@@ -159,7 +158,7 @@ export function AppointmentPopup({
               onClick={() => apply("CANCELLED")}
               className="w-full rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-400 transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-50"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
           </div>
         )}

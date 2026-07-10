@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { minutesToHHMM } from "@/lib/time";
 import {
   DAY_START_MIN,
@@ -25,6 +26,7 @@ export function DayGrid({
   blocks: CalendarBlock[];
   onSelect: (b: CalendarBlock) => void;
 }) {
+  const t = useTranslations("Calendar");
   const hours: number[] = [];
   for (let m = DAY_START_MIN; m < DAY_END_MIN; m += 60) hours.push(m);
   const bodyHeight = ((DAY_END_MIN - DAY_START_MIN) / 60) * ROW_H;
@@ -32,9 +34,9 @@ export function DayGrid({
   if (columns.length === 0) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-zinc-800 bg-[#0d0d0f] text-center">
-        <p className="text-sm font-medium text-zinc-300">Hələ işçi əlavə etməmisiniz</p>
+        <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
         <p className="mt-1 max-w-xs text-sm text-zinc-500">
-          Təqvimdə görüşlərin görünməsi üçün əvvəlcə İşçilər bölməsindən işçi əlavə edin.
+          {t("emptyBody")}
         </p>
       </div>
     );

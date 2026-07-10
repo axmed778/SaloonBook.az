@@ -50,20 +50,14 @@ export const STATUS_STYLES: Record<CalendarBlock["status"], string> = {
   NO_SHOW: "border-amber-500/50 bg-amber-500/10 text-amber-100/80 hover:bg-amber-500/20",
 };
 
-export const STATUS_LABEL: Record<CalendarBlock["status"], string> = {
-  CONFIRMED: "Təsdiqlənib",
-  COMPLETED: "Tamamlanıb",
-  NO_SHOW: "Gəlmədi",
-};
+// Status/source display text lives in the "Calendar" message namespace
+// (status.*, source.*); components translate it at render.
 
 export const STATUS_BADGE: Record<CalendarBlock["status"], string> = {
   CONFIRMED: "bg-rose-500/15 text-rose-300",
   COMPLETED: "bg-emerald-500/15 text-emerald-300",
   NO_SHOW: "bg-amber-500/15 text-amber-300",
 };
-
-export const sourceLabel = (s: string) =>
-  s === "PUBLIC" ? "Onlayn qeydiyyat" : "Əl ilə (panel)";
 
 /** Minor units (qəpik) -> AZN string, dropping a trailing ".00". */
 export const azn = (minor: number) => {

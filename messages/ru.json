@@ -49,6 +49,79 @@
     "roleAdmin": "Администратор платформы",
     "roleOwner": "Владелец салона"
   },
+  "Common": {
+    "cancel": "Отмена",
+    "pleaseWait": "Подождите…",
+    "confirmDelete": "Да, удалить",
+    "close": "Закрыть",
+    "audienceFor": "Для кого"
+  },
+  "Calendar": {
+    "title": "Календарь",
+    "viewDay": "День",
+    "viewWeek": "Неделя",
+    "prevDay": "Предыдущий день",
+    "nextDay": "Следующий день",
+    "prevWeek": "Предыдущая неделя",
+    "nextWeek": "Следующая неделя",
+    "thisDay": "Сегодня",
+    "thisWeek": "Эта неделя",
+    "newBooking": "Новая запись",
+    "needStaffFirst": "Сначала добавьте сотрудников и услуги",
+    "emptyTitle": "Вы ещё не добавили сотрудников",
+    "emptyBody": "Чтобы записи появлялись в календаре, сначала добавьте сотрудников в разделе «Сотрудники».",
+    "status": {
+      "CONFIRMED": "Подтверждено",
+      "COMPLETED": "Завершено",
+      "NO_SHOW": "Не пришёл"
+    },
+    "source": {
+      "PUBLIC": "Онлайн-запись",
+      "DASHBOARD": "Вручную (панель)"
+    },
+    "popup": {
+      "customer": "Клиент",
+      "phone": "Телефон",
+      "employee": "Мастер",
+      "date": "Дата",
+      "time": "Время",
+      "price": "Цена",
+      "source": "Источник",
+      "manageLinkLabel": "Ссылка для клиента — изменить / отменить",
+      "copyLink": "Копировать ссылку",
+      "copied": "Скопировано",
+      "sendViaWhatsapp": "Отправить в WhatsApp",
+      "complete": "Завершить",
+      "markNoShow": "Не пришёл",
+      "waMessage": "Здравствуйте, {name}! Чтобы посмотреть, перенести или отменить запись: {url}"
+    },
+    "modal": {
+      "employee": "Мастер",
+      "select": "Выберите…",
+      "service": "Услуга",
+      "selectStaffFirst": "Сначала выберите мастера",
+      "noServicesForStaff": "Этому сотруднику не назначены услуги.",
+      "date": "Дата",
+      "freeSlot": "Свободное время",
+      "noSlots": "На этот день нет свободного времени.",
+      "customerName": "Имя клиента",
+      "namePlaceholder": "Имя и фамилия",
+      "phone": "Телефон",
+      "create": "Создать запись",
+      "creating": "Создание…",
+      "minutesShort": "{min} мин",
+      "errors": {
+        "selectStaffService": "Выберите сотрудника и услугу.",
+        "selectSlot": "Выберите свободное время.",
+        "enterCustomerName": "Введите имя клиента.",
+        "phoneInvalid": "Телефон должен быть +994 и 9 цифр."
+      }
+    }
+  },
+  "Dashboard": {
+    "noSalonTitle": "Салон не найден",
+    "noSalonBody": "К вашему аккаунту не привязан салон. Пожалуйста, свяжитесь с поддержкой."
+  },
   "Audience": {
     "ALL": "Все",
     "MALE": "Мужчины",

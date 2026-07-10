@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { shiftYmd, bakuWeekday } from "@/lib/time";
 import {
   type CalendarColumn,
@@ -41,6 +42,7 @@ export function Calendar({
   blocks: CalendarBlock[];
   catalog: CatalogEmployee[];
 }) {
+  const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
   const [booking, setBooking] = useState(false);
 
@@ -58,7 +60,7 @@ export function Calendar({
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Təqvim</h1>
+          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
           <p className="mt-0.5 text-sm capitalize text-zinc-500">{periodLabel}</p>
         </div>
 
@@ -72,7 +74,7 @@ export function Calendar({
                 (!isWeek ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200")
               }
             >
-              Gün
+              {t("viewDay")}
             </Link>
             <Link
               href={href(day, "week")}
@@ -81,7 +83,7 @@ export function Calendar({
                 (isWeek ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200")
               }
             >
-              Həftə
+              {t("viewWeek")}
             </Link>
           </div>
 
@@ -89,8 +91,8 @@ export function Calendar({
           <div className="flex items-center gap-2">
             <Link
               href={href(prev)}
-              aria-label={isWeek ? "Əvvəlki həftə" : "Əvvəlki gün"}
-              title={isWeek ? "Əvvəlki həftə" : "Əvvəlki gün"}
+              aria-label={isWeek ? t("prevWeek") : t("prevDay")}
+              title={isWeek ? t("prevWeek") : t("prevDay")}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
@@ -104,12 +106,12 @@ export function Calendar({
                   : "border-zinc-800 text-zinc-200 hover:bg-zinc-800/60")
               }
             >
-              {isWeek ? "Bu həftə" : "Bu gün"}
+              {isWeek ? t("thisWeek") : t("thisDay")}
             </Link>
             <Link
               href={href(next)}
-              aria-label={isWeek ? "Növbəti həftə" : "Növbəti gün"}
-              title={isWeek ? "Növbəti həftə" : "Növbəti gün"}
+              aria-label={isWeek ? t("nextWeek") : t("nextDay")}
+              title={isWeek ? t("nextWeek") : t("nextDay")}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
@@ -121,11 +123,11 @@ export function Calendar({
             type="button"
             onClick={() => setBooking(true)}
             disabled={!canBook}
-            title={canBook ? undefined : "Əvvəlcə işçi və xidmət əlavə edin"}
+            title={canBook ? undefined : t("needStaffFirst")}
             className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            Yeni görüş
+            {t("newBooking")}
           </button>
         </div>
       </div>

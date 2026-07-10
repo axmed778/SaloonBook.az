@@ -1,12 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 // Replacement for native confirm(): same modal chrome as the rest of the
 // dashboard. Render conditionally — `{state && <ConfirmDialog …/>}` — with the
 // caller holding what's being confirmed in its own state.
 export function ConfirmDialog({
   title,
   body,
-  confirmLabel = "Bəli, sil",
+  confirmLabel,
   pending = false,
   onConfirm,
   onClose,
@@ -18,6 +20,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("Common");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -33,14 +36,14 @@ export function ConfirmDialog({
             disabled={pending}
             className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
           >
-            Ləğv et
+            {t("cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={pending}
             className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
           >
-            {pending ? "Gözləyin…" : confirmLabel}
+            {pending ? t("pleaseWait") : (confirmLabel ?? t("confirmDelete"))}
           </button>
         </div>
       </div>
