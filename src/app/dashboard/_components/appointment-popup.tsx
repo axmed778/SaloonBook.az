@@ -64,7 +64,7 @@ export function AppointmentPopup({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Bağla"
+            aria-label="Bağla" title="Bağla"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

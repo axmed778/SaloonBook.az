@@ -10,6 +10,8 @@ import {
 } from "./actions";
 import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
+import { ConfirmDialog } from "../_components/confirm-dialog";
+import { ErrorToast } from "../_components/toast";
 
 export type ServiceRow = {
   id: string;
@@ -45,6 +47,8 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<ServiceRow | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   function startAdd() {
     setEditingId(null);
@@ -108,10 +112,10 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
   }
 
   function remove(s: ServiceRow) {
-    if (!confirm(`"${s.name}" xidmətini silmək istəyirsiniz?`)) return;
     startTransition(async () => {
       const res = await deleteService(s.id);
-      if (!res.ok) alert(res.error);
+      if (!res.ok) setToast(res.error);
+      setConfirmRemove(null);
       router.refresh();
     });
   }
@@ -268,7 +272,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                   {s.isActive ? "Deaktiv et" : "Aktiv et"}
                 </button>
                 <button
-                  onClick={() => remove(s)}
+                  onClick={() => setConfirmRemove(s)}
                   disabled={pending}
                   className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
@@ -279,6 +283,22 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
           ))}
         </ul>
       )}
+
+      {confirmRemove && (
+        <ConfirmDialog
+          title="Xidməti sil"
+          body={
+            <>
+              <span className="font-medium text-zinc-200">{confirmRemove.name}</span> xidməti
+              silinsin? Bu əməliyyat geri qaytarıla bilməz.
+            </>
+          }
+          pending={pending}
+          onConfirm={() => remove(confirmRemove)}
+          onClose={() => setConfirmRemove(null)}
+        />
+      )}
+      {toast && <ErrorToast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }

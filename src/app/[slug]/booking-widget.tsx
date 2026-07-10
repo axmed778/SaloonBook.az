@@ -474,7 +474,14 @@ export function BookingWidget({
               {key === "time" && (
                 <div>
                   {slotsLoading && (
-                    <p className="py-4 text-center text-sm text-muted-foreground">Yüklənir…</p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-busy="true">
+                      {Array.from({ length: 8 }, (_, i) => (
+                        <div
+                          key={i}
+                          className="h-[38px] animate-pulse rounded-lg border border-border bg-muted"
+                        />
+                      ))}
+                    </div>
                   )}
                   {!slotsLoading && slots && slots.length === 0 && (
                     <div className="py-4 text-center">

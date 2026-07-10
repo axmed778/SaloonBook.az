@@ -249,7 +249,14 @@ export function ManageWidget({
 
           <div className="mt-4">
             {slotsLoading ? (
-              <p className="text-sm text-muted-foreground">Yüklənir…</p>
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5" aria-busy="true">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="h-[34px] animate-pulse rounded-lg border border-border bg-muted"
+                  />
+                ))}
+              </div>
             ) : slots && slots.length > 0 ? (
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
                 {slots.map((s) => (

@@ -125,7 +125,7 @@ export function ClientsTable({
         {query && (
           <button
             onClick={() => setQuery("")}
-            aria-label="Axtarışı təmizlə"
+            aria-label="Axtarışı təmizlə" title="Axtarışı təmizlə"
             className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 transition hover:text-zinc-200"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

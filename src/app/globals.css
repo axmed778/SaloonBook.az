@@ -103,6 +103,18 @@
     border-color: var(--border);
   }
 
+  /* Consistent, visible keyboard-focus ring everywhere. :focus-visible only
+     fires for keyboard/assistive navigation, so mouse clicks stay clean. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar) transparent;
@@ -149,6 +161,15 @@
 }
 
 /* ---- Theme-aware shadows ------------------------------------------------- */
+
+/* Theme-matched hero screenshot: the themeScript puts .light or .dark on <html>
+   before paint, so exactly one of the pair is ever visible. */
+.light .hero-shot-dark {
+  display: none;
+}
+.dark .hero-shot-light {
+  display: none;
+}
 
 .shadow-soft {
   box-shadow: var(--shadow-soft);

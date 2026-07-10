@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { azn } from "@/app/dashboard/_components/calendar-shared";
+import { ConfirmDialog } from "@/app/dashboard/_components/confirm-dialog";
+import { ErrorToast } from "@/app/dashboard/_components/toast";
 import { saveEmployeePay, recordPayout, deletePayout } from "./actions";
 
 export type PayrollRow = {
@@ -72,6 +74,8 @@ export function PayrollManager({
   const [pending, startTransition] = useTransition();
   const [payFor, setPayFor] = useState<PayrollRow | null>(null); // pay-model modal
   const [payoutFor, setPayoutFor] = useState<PayrollRow | null>(null); // payout modal
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null); // payout id
+  const [toast, setToast] = useState<string | null>(null);
 
   const payoutsByEmployee = useMemo(() => {
     const m = new Map<string, PayoutItem[]>();
@@ -96,10 +100,10 @@ export function PayrollManager({
   );
 
   function removePayout(id: string) {
-    if (!confirm("Bu ödəniş qeydini silmək istəyirsiniz?")) return;
     startTransition(async () => {
       const res = await deletePayout(id);
-      if (!res.ok) alert(res.error);
+      if (!res.ok) setToast(res.error);
+      setConfirmRemove(null);
       router.refresh();
     });
   }
@@ -118,7 +122,7 @@ export function PayrollManager({
           <Link
             href={`/dashboard/payroll?ay=${shiftYm(ym, -1)}`}
             className="rounded-md px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-            aria-label="Əvvəlki ay"
+            aria-label="Əvvəlki ay" title="Əvvəlki ay"
           >
             ←
           </Link>
@@ -134,7 +138,7 @@ export function PayrollManager({
                 ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                 : "pointer-events-none text-zinc-700")
             }
-            aria-label="Növbəti ay"
+            aria-label="Növbəti ay" title="Növbəti ay"
           >
             →
           </Link>
@@ -261,7 +265,7 @@ export function PayrollManager({
                           {p.note ? ` · ${p.note}` : ""}
                         </span>
                         <button
-                          onClick={() => removePayout(p.id)}
+                          onClick={() => setConfirmRemove(p.id)}
                           disabled={pending}
                           className="shrink-0 text-zinc-600 transition hover:text-rose-400"
                           aria-label="Ödənişi sil"
@@ -282,6 +286,16 @@ export function PayrollManager({
       {payoutFor && (
         <PayoutModal row={payoutFor} ym={ym} onClose={() => setPayoutFor(null)} />
       )}
+      {confirmRemove && (
+        <ConfirmDialog
+          title="Ödəniş qeydini sil"
+          body="Bu ödəniş qeydi silinsin? Qalıq yenidən hesablanacaq."
+          pending={pending}
+          onConfirm={() => removePayout(confirmRemove)}
+          onClose={() => setConfirmRemove(null)}
+        />
+      )}
+      {toast && <ErrorToast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }

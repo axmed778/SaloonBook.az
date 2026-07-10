@@ -14,13 +14,15 @@ import {
   Users,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { PLAN_FEATURES, PLAN_LIMITS } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BookingPreview } from "@/components/booking-preview";
 import { Faq } from "@/components/faq";
+import heroBookingDark from "../../public/hero/booking-dark.png";
+import heroBookingLight from "../../public/hero/booking-light.png";
 
 /* ------------------------------- Content --------------------------------- */
 
@@ -52,8 +54,8 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: "Sadə analitika",
-    body: "Rezervasiyalar, gəlir və ən məşğul saatlar — bir baxışda (Pro).",
+    title: "ROI analitika",
+    body: "Onlayn qeydiyyatın qazandırdığı gəlir, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda.",
   },
 ];
 
@@ -89,10 +91,11 @@ function planRows(id: "FREE" | "BASIC" | "PRO"): Row[] {
     { label: "24/7 onlayn qeydiyyat", value: true },
     { label: "WhatsApp xatırlatmaları", value: true },
     { label: "İkiqat rezervasiya qoruması", value: true },
-    { label: "Qabaqcıl analitika", value: feat.advancedAnalytics },
-    { label: "Rol idarəetməsi", value: feat.staffRoles },
-    { label: "Məlumat eksportu", value: feat.exports },
-    { label: "Depozit / no-show qoruması", value: feat.deposits },
+    { label: "ROI analitika paneli", value: true },
+    { label: "Əməkhaqqı modulu (maaş + komissiya)", value: feat.payroll },
+    { label: "Rol idarəetməsi (tezliklə)", value: feat.staffRoles },
+    { label: "Məlumat eksportu (tezliklə)", value: feat.exports },
+    { label: "Depozit / no-show qoruması (tezliklə)", value: feat.deposits },
   ];
 }
 
@@ -278,10 +281,30 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Framed product preview */}
+            {/* Real product screenshot: the live /demostudio booking flow at the
+                time-slot step (captured per theme), cropped with a fade so the
+                hero stays compact. */}
             <div className="relative mx-auto mt-16 max-w-2xl">
               <div className="pointer-events-none absolute -inset-x-8 -top-8 bottom-0 -z-10 glow-accent opacity-60" />
-              <BookingPreview />
+              <div className="relative max-h-[680px] overflow-hidden rounded-xl border border-border bg-card shadow-frame">
+                <Image
+                  src={heroBookingDark}
+                  alt="SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi"
+                  priority
+                  placeholder="blur"
+                  className="hero-shot-dark w-full"
+                  sizes="(max-width: 768px) 100vw, 672px"
+                />
+                <Image
+                  src={heroBookingLight}
+                  alt="SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi"
+                  priority
+                  placeholder="blur"
+                  className="hero-shot-light w-full"
+                  sizes="(max-width: 768px) 100vw, 672px"
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+              </div>
             </div>
           </div>
         </section>

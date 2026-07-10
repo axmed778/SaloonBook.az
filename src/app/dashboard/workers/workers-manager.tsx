@@ -11,6 +11,8 @@ import {
 } from "./actions";
 import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
+import { ConfirmDialog } from "../_components/confirm-dialog";
+import { ErrorToast } from "../_components/toast";
 
 type Svc = { id: string; name: string; isActive: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
@@ -97,6 +99,8 @@ export function WorkersManager({
   const [hours, setHours] = useState<HoursState>(defaultHours);
   const [error, setError] = useState<string | null>(null);
   const [timeOffFor, setTimeOffFor] = useState<EmployeeRow | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<EmployeeRow | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const activeServices = services.filter((s) => s.isActive);
   const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "—";
@@ -184,16 +188,16 @@ export function WorkersManager({
   function toggleActive(e: EmployeeRow) {
     startTransition(async () => {
       const res = await setEmployeeActive(e.id, !e.isActive);
-      if (!res.ok) alert(res.error); // e.g. plan seat limit on re-activation
+      if (!res.ok) setToast(res.error); // e.g. plan seat limit on re-activation
       router.refresh();
     });
   }
 
   function remove(e: EmployeeRow) {
-    if (!confirm(`"${e.name}" işçisini silmək istəyirsiniz?`)) return;
     startTransition(async () => {
       const res = await deleteEmployee(e.id);
-      if (!res.ok) alert(res.error);
+      if (!res.ok) setToast(res.error);
+      setConfirmRemove(null);
       router.refresh();
     });
   }
@@ -442,7 +446,7 @@ export function WorkersManager({
                   {e.isActive ? "Deaktiv et" : "Aktiv et"}
                 </button>
                 <button
-                  onClick={() => remove(e)}
+                  onClick={() => setConfirmRemove(e)}
                   disabled={pending}
                   className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
@@ -462,6 +466,21 @@ export function WorkersManager({
           onClose={() => setTimeOffFor(null)}
         />
       )}
+      {confirmRemove && (
+        <ConfirmDialog
+          title="İşçini sil"
+          body={
+            <>
+              <span className="font-medium text-zinc-200">{confirmRemove.name}</span> silinsin?
+              Görüşləri olan işçi silinə bilməz — onu deaktiv edin.
+            </>
+          }
+          pending={pending}
+          onConfirm={() => remove(confirmRemove)}
+          onClose={() => setConfirmRemove(null)}
+        />
+      )}
+      {toast && <ErrorToast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
@@ -507,9 +526,10 @@ function TimeOffModal({
   }
 
   function remove(id: string) {
+    setError(null);
     startTransition(async () => {
       const res = await deleteTimeOff(id);
-      if (!res.ok) alert(res.error);
+      if (!res.ok) setError(res.error);
       router.refresh();
     });
   }
@@ -528,7 +548,7 @@ function TimeOffModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Bağla"
+            aria-label="Bağla" title="Bağla"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>

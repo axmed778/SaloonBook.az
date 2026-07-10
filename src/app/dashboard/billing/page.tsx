@@ -56,10 +56,10 @@ const PLANS: PlanCard[] = [
     features: [
       "Basic-dəki hər şey",
       "Limitsiz işçi",
-      "Çoxfilial dəstəyi",
-      "Genişləndirilmiş analitika",
-      "Excel ixracı",
-      "İşçi rolları və icazələr",
+      "Əməkhaqqı modulu (maaş + komissiya)",
+      "Çoxfilial dəstəyi (tezliklə)",
+      "Excel ixracı (tezliklə)",
+      "İşçi rolları və icazələr (tezliklə)",
     ],
   },
 ];

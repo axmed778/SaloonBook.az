@@ -90,6 +90,7 @@ export function Calendar({
             <Link
               href={href(prev)}
               aria-label={isWeek ? "Əvvəlki həftə" : "Əvvəlki gün"}
+              title={isWeek ? "Əvvəlki həftə" : "Əvvəlki gün"}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
@@ -108,6 +109,7 @@ export function Calendar({
             <Link
               href={href(next)}
               aria-label={isWeek ? "Növbəti həftə" : "Növbəti gün"}
+              title={isWeek ? "Növbəti həftə" : "Növbəti gün"}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>

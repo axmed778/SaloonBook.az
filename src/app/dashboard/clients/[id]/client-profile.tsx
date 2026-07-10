@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { azn, inputCls, labelCls } from "@/app/dashboard/_components/calendar-shared";
+import { ErrorToast } from "@/app/dashboard/_components/toast";
 import { BookingModal } from "@/app/dashboard/_components/booking-modal";
 import type { CatalogEmployee } from "@/app/dashboard/_components/calendar-shared";
 import { setAppointmentStatus } from "@/app/dashboard/actions";
@@ -108,6 +109,7 @@ export function ClientProfile({
   const [deleting, setDeleting] = useState(false);
   const [detail, setDetail] = useState<AppointmentItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function copyPhone() {
     try {
@@ -115,7 +117,7 @@ export function ClientProfile({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      alert(data.phone);
+      setToast(`Kopyalama alınmadı — nömrə: ${data.phone}`);
     }
   }
 
@@ -281,6 +283,7 @@ export function ClientProfile({
           onClose={() => setDetail(null)}
         />
       )}
+      {toast && <ErrorToast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
@@ -379,9 +382,10 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
   }
 
   function remove(id: string) {
+    setError(null);
     startTransition(async () => {
       const res = await deleteCustomerNote(id);
-      if (!res.ok) alert(res.error);
+      if (!res.ok) setError(res.error);
       router.refresh();
     });
   }

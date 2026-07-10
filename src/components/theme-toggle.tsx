@@ -32,6 +32,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={theme === "dark" ? "İşıqlı rejimə keç" : "Qaranlıq rejimə keç"}
+      title={theme === "dark" ? "İşıqlı rejimə keç" : "Qaranlıq rejimə keç"}
       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {/* Render the icon only after mount to avoid a hydration mismatch. */}

@@ -90,7 +90,7 @@ export function DashboardShell({
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 py-3 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label="Menyu"
+            aria-label="Menyu" title="Menyu"
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-300 transition hover:bg-zinc-800/60"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
@@ -144,7 +144,7 @@ function SidebarContent({
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            aria-label="Menyunu yığ/aç"
+            aria-label="Menyunu yığ/aç" title="Menyunu yığ/aç"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -156,7 +156,7 @@ function SidebarContent({
         {onClose && (
           <button
             onClick={onClose}
-            aria-label="Bağla"
+            aria-label="Bağla" title="Bağla"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
