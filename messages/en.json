@@ -32,6 +32,83 @@
   "LanguageSwitcher": {
     "label": "Language"
   },
+  "Audience": {
+    "ALL": "Everyone",
+    "MALE": "Men",
+    "FEMALE": "Women"
+  },
+  "Auth": {
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "show": "Show",
+    "hide": "Hide",
+    "networkError": "Network error. Please try again.",
+    "tooManyAttempts": "Too many attempts. Please try again a bit later.",
+    "passwordRules": [
+      "At least 8 characters",
+      "At least one lowercase letter",
+      "At least one uppercase letter",
+      "At least one digit",
+      "At least one special character"
+    ],
+    "login": {
+      "title": "Log in",
+      "subtitle": "Sign in to your SalonBook.az dashboard.",
+      "submit": "Log in",
+      "submitting": "Signing in…",
+      "forgot": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Sign up",
+      "failed": "Login failed."
+    },
+    "register": {
+      "title": "Salon sign-up",
+      "subtitle": "Create an account for your salon and open your dashboard.",
+      "salonName": "Salon name",
+      "audienceLabel": "Who is the salon for?",
+      "fullName": "Your name (optional)",
+      "confirmPassword": "Confirm password",
+      "submit": "Sign up",
+      "submitting": "Creating…",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Log in",
+      "failed": "Sign-up failed."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "Enter your email — we'll send a reset link.",
+      "sent": "If this email is registered, a reset link has been sent. Check your inbox (and spam folder) — the link is valid for 60 minutes.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "remembered": "Remembered your password?"
+    },
+    "reset": {
+      "title": "New password",
+      "subtitle": "Set a new password for your account. At least 8 characters: uppercase and lowercase letters, a digit and a special character.",
+      "newPassword": "New password",
+      "repeatPassword": "Repeat password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "failed": "Failed to update the password.",
+      "invalidTitle": "Invalid link",
+      "invalidBody": "The reset link is missing or incomplete.",
+      "requestAgain": "Request a new reset"
+    }
+  },
+  "AppError": {
+    "title": "Something went wrong",
+    "publicBody": "An unexpected error occurred. Please try again — if it persists, come back a little later.",
+    "dashboardBody": "An unexpected error occurred while loading this page. Please try again.",
+    "errorCode": "Error code",
+    "tryAgain": "Try again",
+    "home": "Home"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "body": "The salon you're looking for doesn't exist or is no longer active. Check the link and try again.",
+    "home": "Home",
+    "viewDemo": "View demo page"
+  },
   "Landing": {
     "badgeNew": "New",
     "badgePromo": "3 months free with EARLYBIRD",

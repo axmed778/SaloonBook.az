@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 
 // useSearchParams requires a Suspense boundary during prerender in Next 15.
 export default function ResetPasswordPage() {
@@ -13,6 +15,7 @@ export default function ResetPasswordPage() {
 }
 
 function ResetPasswordForm() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
@@ -35,7 +38,7 @@ function ResetPasswordForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Şifrəni yeniləmək alınmadı.");
+        setError(data.error ?? t("reset.failed"));
         if (Array.isArray(data.issues)) setIssues(data.issues);
         return;
       }
@@ -43,7 +46,7 @@ function ResetPasswordForm() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Şəbəkə xətası. Yenidən cəhd edin.");
+      setError(t("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -52,12 +55,12 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-6 py-16">
-        <h1 className="text-2xl font-bold">Link etibarsızdır</h1>
+        <h1 className="text-2xl font-bold">{t("reset.invalidTitle")}</h1>
         <p className="text-sm text-neutral-500">
-          Bərpa linki tapılmadı və ya natamamdır.{" "}
-          <a href="/forgot-password" className="font-medium text-emerald-600 hover:underline">
-            Yenidən bərpa tələb edin
-          </a>
+          {t("reset.invalidBody")}{" "}
+          <Link href="/forgot-password" className="font-medium text-emerald-600 hover:underline">
+            {t("reset.requestAgain")}
+          </Link>
           .
         </p>
       </main>
@@ -67,16 +70,15 @@ function ResetPasswordForm() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16">
       <div>
-        <h1 className="text-2xl font-bold">Yeni şifrə</h1>
+        <h1 className="text-2xl font-bold">{t("reset.title")}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Hesabınız üçün yeni şifrə təyin edin. Ən az 8 simvol: böyük və kiçik
-          hərf, rəqəm və xüsusi simvol.
+          {t("reset.subtitle")}
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          Yeni şifrə
+          {t("reset.newPassword")}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -91,13 +93,13 @@ function ResetPasswordForm() {
               onClick={() => setShowPassword((v) => !v)}
               className="absolute inset-y-0 right-2 my-auto h-fit text-xs font-medium text-emerald-600 hover:underline"
             >
-              {showPassword ? "Gizlət" : "Göstər"}
+              {showPassword ? t("hide") : t("show")}
             </button>
           </div>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Şifrəni təkrarlayın
+          {t("reset.repeatPassword")}
           <input
             type={showPassword ? "text" : "password"}
             required
@@ -126,7 +128,7 @@ function ResetPasswordForm() {
           disabled={submitting}
           className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60"
         >
-          {submitting ? "Yenilənir…" : "Şifrəni yenilə"}
+          {submitting ? t("reset.submitting") : t("reset.submit")}
         </button>
       </form>
     </main>

@@ -1,18 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 import { AUDIENCE_OPTIONS, type Audience } from "@/lib/audience";
 
-const PASSWORD_RULES = [
-  "Ən az 8 simvol",
-  "Ən az bir kiçik hərf",
-  "Ən az bir böyük hərf",
-  "Ən az bir rəqəm",
-  "Ən az bir xüsusi simvol",
-];
-
 export default function RegisterPage() {
+  const t = useTranslations("Auth");
+  const tAudience = useTranslations("Audience");
+  const PASSWORD_RULES = t.raw("passwordRules") as string[];
   const router = useRouter();
   const [salonName, setSalonName] = useState("");
   const [audience, setAudience] = useState<Audience>("ALL");
@@ -38,7 +34,7 @@ export default function RegisterPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Qeydiyyat alınmadı.");
+        setError(data.error ?? t("register.failed"));
         if (Array.isArray(data.issues)) {
           setIssues(
             data.issues
@@ -53,7 +49,7 @@ export default function RegisterPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Şəbəkə xətası. Yenidən cəhd edin.");
+      setError(t("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -62,15 +58,15 @@ export default function RegisterPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16">
       <div>
-        <h1 className="text-2xl font-bold">Salon qeydiyyatı</h1>
+        <h1 className="text-2xl font-bold">{t("register.title")}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Salonunuz üçün hesab yaradın və idarə panelinə daxil olun.
+          {t("register.subtitle")}
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          Salon adı
+          {t("register.salonName")}
           <input
             type="text"
             required
@@ -81,7 +77,7 @@ export default function RegisterPage() {
         </label>
 
         <div className="flex flex-col gap-1 text-sm">
-          Salon kimin üçün?
+          {t("register.audienceLabel")}
           <div className="mt-1 inline-flex rounded-lg border border-neutral-300 p-0.5 dark:border-neutral-700">
             {AUDIENCE_OPTIONS.map((o) => (
               <button
@@ -95,14 +91,14 @@ export default function RegisterPage() {
                     : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100")
                 }
               >
-                {o.label}
+                {tAudience(o.value)}
               </button>
             ))}
           </div>
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          Adınız (istəyə bağlı)
+          {t("register.fullName")}
           <input
             type="text"
             value={fullName}
@@ -112,7 +108,7 @@ export default function RegisterPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          E-poçt
+          {t("emailLabel")}
           <input
             type="email"
             required
@@ -124,7 +120,7 @@ export default function RegisterPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Şifrə
+          {t("passwordLabel")}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -139,13 +135,13 @@ export default function RegisterPage() {
               onClick={() => setShowPassword((v) => !v)}
               className="absolute inset-y-0 right-2 my-auto h-fit text-xs font-medium text-emerald-600 hover:underline"
             >
-              {showPassword ? "Gizlət" : "Göstər"}
+              {showPassword ? t("hide") : t("show")}
             </button>
           </div>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Şifrəni təsdiqləyin
+          {t("register.confirmPassword")}
           <input
             type={showPassword ? "text" : "password"}
             required
@@ -176,15 +172,15 @@ export default function RegisterPage() {
           disabled={submitting}
           className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60"
         >
-          {submitting ? "Yaradılır…" : "Qeydiyyatdan keç"}
+          {submitting ? t("register.submitting") : t("register.submit")}
         </button>
       </form>
 
       <p className="text-sm text-neutral-500">
-        Artıq hesabınız var?{" "}
-        <a href="/login" className="font-medium text-emerald-600 hover:underline">
-          Daxil olun
-        </a>
+        {t("register.haveAccount")}{" "}
+        <Link href="/login" className="font-medium text-emerald-600 hover:underline">
+          {t("register.loginLink")}
+        </Link>
       </p>
     </main>
   );

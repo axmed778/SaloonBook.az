@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 
 export default function LoginPage() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,13 +25,13 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Daxil olmaq alınmadı.");
+        setError(data.error ?? t("login.failed"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Şəbəkə xətası. Yenidən cəhd edin.");
+      setError(t("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -38,13 +40,13 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16">
       <div>
-        <h1 className="text-2xl font-bold">Daxil ol</h1>
-        <p className="mt-1 text-sm text-neutral-500">SalonBook.az idarə panelinə daxil olun.</p>
+        <h1 className="text-2xl font-bold">{t("login.title")}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t("login.subtitle")}</p>
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          E-poçt
+          {t("emailLabel")}
           <input
             type="email"
             required
@@ -56,7 +58,7 @@ export default function LoginPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          Şifrə
+          {t("passwordLabel")}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -71,7 +73,7 @@ export default function LoginPage() {
               onClick={() => setShowPassword((v) => !v)}
               className="absolute inset-y-0 right-2 my-auto h-fit text-xs font-medium text-emerald-600 hover:underline"
             >
-              {showPassword ? "Gizlət" : "Göstər"}
+              {showPassword ? t("hide") : t("show")}
             </button>
           </div>
         </label>
@@ -83,22 +85,22 @@ export default function LoginPage() {
           disabled={submitting}
           className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60"
         >
-          {submitting ? "Daxil olunur…" : "Daxil ol"}
+          {submitting ? t("login.submitting") : t("login.submit")}
         </button>
 
-        <a
+        <Link
           href="/forgot-password"
           className="text-sm font-medium text-emerald-600 hover:underline"
         >
-          Şifrəni unutmusunuz?
-        </a>
+          {t("login.forgot")}
+        </Link>
       </form>
 
       <p className="text-sm text-neutral-500">
-        Hesabınız yoxdur?{" "}
-        <a href="/register" className="font-medium text-emerald-600 hover:underline">
-          Qeydiyyatdan keçin
-        </a>
+        {t("login.noAccount")}{" "}
+        <Link href="/register" className="font-medium text-emerald-600 hover:underline">
+          {t("login.registerLink")}
+        </Link>
       </p>
     </main>
   );

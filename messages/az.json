@@ -32,6 +32,83 @@
   "LanguageSwitcher": {
     "label": "Dil"
   },
+  "Audience": {
+    "ALL": "Hamı",
+    "MALE": "Kişi",
+    "FEMALE": "Qadın"
+  },
+  "Auth": {
+    "emailLabel": "E-poçt",
+    "passwordLabel": "Şifrə",
+    "show": "Göstər",
+    "hide": "Gizlət",
+    "networkError": "Şəbəkə xətası. Yenidən cəhd edin.",
+    "tooManyAttempts": "Çox sayda cəhd. Bir az sonra yenidən yoxlayın.",
+    "passwordRules": [
+      "Ən az 8 simvol",
+      "Ən az bir kiçik hərf",
+      "Ən az bir böyük hərf",
+      "Ən az bir rəqəm",
+      "Ən az bir xüsusi simvol"
+    ],
+    "login": {
+      "title": "Daxil ol",
+      "subtitle": "SalonBook.az idarə panelinə daxil olun.",
+      "submit": "Daxil ol",
+      "submitting": "Daxil olunur…",
+      "forgot": "Şifrəni unutmusunuz?",
+      "noAccount": "Hesabınız yoxdur?",
+      "registerLink": "Qeydiyyatdan keçin",
+      "failed": "Daxil olmaq alınmadı."
+    },
+    "register": {
+      "title": "Salon qeydiyyatı",
+      "subtitle": "Salonunuz üçün hesab yaradın və idarə panelinə daxil olun.",
+      "salonName": "Salon adı",
+      "audienceLabel": "Salon kimin üçün?",
+      "fullName": "Adınız (istəyə bağlı)",
+      "confirmPassword": "Şifrəni təsdiqləyin",
+      "submit": "Qeydiyyatdan keç",
+      "submitting": "Yaradılır…",
+      "haveAccount": "Artıq hesabınız var?",
+      "loginLink": "Daxil olun",
+      "failed": "Qeydiyyat alınmadı."
+    },
+    "forgot": {
+      "title": "Şifrənin bərpası",
+      "subtitle": "E-poçt ünvanınızı yazın — bərpa linki göndərək.",
+      "sent": "Əgər bu e-poçt qeydiyyatdadırsa, bərpa linki göndərildi. Gələnlər qutusunu (və spam qovluğunu) yoxlayın — link 60 dəqiqə etibarlıdır.",
+      "submit": "Bərpa linki göndər",
+      "submitting": "Göndərilir…",
+      "remembered": "Şifrəniz yadınıza düşdü?"
+    },
+    "reset": {
+      "title": "Yeni şifrə",
+      "subtitle": "Hesabınız üçün yeni şifrə təyin edin. Ən az 8 simvol: böyük və kiçik hərf, rəqəm və xüsusi simvol.",
+      "newPassword": "Yeni şifrə",
+      "repeatPassword": "Şifrəni təkrarlayın",
+      "submit": "Şifrəni yenilə",
+      "submitting": "Yenilənir…",
+      "failed": "Şifrəni yeniləmək alınmadı.",
+      "invalidTitle": "Link etibarsızdır",
+      "invalidBody": "Bərpa linki tapılmadı və ya natamamdır.",
+      "requestAgain": "Yenidən bərpa tələb edin"
+    }
+  },
+  "AppError": {
+    "title": "Nəsə xəta baş verdi",
+    "publicBody": "Gözlənilməz xəta yarandı. Yenidən cəhd edin — problem davam edərsə, bir az sonra qayıdın.",
+    "dashboardBody": "Bu səhifə yüklənərkən gözlənilməz xəta yarandı. Yenidən cəhd edin.",
+    "errorCode": "Xəta kodu",
+    "tryAgain": "Yenidən cəhd et",
+    "home": "Ana səhifə"
+  },
+  "NotFound": {
+    "title": "Səhifə tapılmadı",
+    "body": "Axtardığınız salon mövcud deyil və ya artıq aktiv deyil. Linki yoxlayıb yenidən cəhd edin.",
+    "home": "Ana səhifə",
+    "viewDemo": "Nümunə səhifəyə bax"
+  },
   "Landing": {
     "badgeNew": "Yeni",
     "badgePromo": "EARLYBIRD ilə 3 ay pulsuz",
