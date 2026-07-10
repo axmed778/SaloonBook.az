@@ -32,6 +32,23 @@
   "LanguageSwitcher": {
     "label": "Language"
   },
+  "Nav": {
+    "calendar": "Calendar",
+    "clients": "Clients",
+    "services": "Services",
+    "workers": "Staff",
+    "analytics": "Analytics",
+    "payroll": "Payroll",
+    "settings": "Settings",
+    "salons": "Salons",
+    "menu": "Menu",
+    "toggleMenu": "Collapse/expand menu",
+    "close": "Close",
+    "logout": "Log out",
+    "loggingOut": "Logging out…",
+    "roleAdmin": "Platform Admin",
+    "roleOwner": "Salon owner"
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",

@@ -32,6 +32,23 @@
   "LanguageSwitcher": {
     "label": "Язык"
   },
+  "Nav": {
+    "calendar": "Календарь",
+    "clients": "Клиенты",
+    "services": "Услуги",
+    "workers": "Сотрудники",
+    "analytics": "Аналитика",
+    "payroll": "Зарплата",
+    "settings": "Настройки",
+    "salons": "Салоны",
+    "menu": "Меню",
+    "toggleMenu": "Свернуть/развернуть меню",
+    "close": "Закрыть",
+    "logout": "Выйти",
+    "loggingOut": "Выход…",
+    "roleAdmin": "Администратор платформы",
+    "roleOwner": "Владелец салона"
+  },
   "Audience": {
     "ALL": "Все",
     "MALE": "Мужчины",

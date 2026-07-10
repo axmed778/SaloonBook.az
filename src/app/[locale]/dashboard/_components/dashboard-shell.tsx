@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { SidebarNav } from "./sidebar-nav";
 import { LogoutButton } from "../logout-button";
 
@@ -19,6 +21,7 @@ export function DashboardShell({
   isAdmin?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("Nav");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -90,7 +93,7 @@ export function DashboardShell({
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 py-3 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label="Menyu" title="Menyu"
+            aria-label={t("menu")} title={t("menu")}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-300 transition hover:bg-zinc-800/60"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
@@ -98,6 +101,9 @@ export function DashboardShell({
           <span className="font-semibold tracking-tight">
             SalonBook<span className="text-rose-400">.az</span>
           </span>
+          <div className="ml-auto">
+            <LanguageSwitcher />
+          </div>
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
@@ -121,6 +127,7 @@ function SidebarContent({
   onNavigate?: () => void;
   onClose?: () => void;
 }) {
+  const t = useTranslations("Nav");
   return (
     <div className="flex h-full flex-col">
       {/* Header: logo + collapse (desktop) / close (mobile) */}
@@ -144,7 +151,7 @@ function SidebarContent({
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            aria-label="Menyunu yığ/aç" title="Menyunu yığ/aç"
+            aria-label={t("toggleMenu")} title={t("toggleMenu")}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -156,7 +163,7 @@ function SidebarContent({
         {onClose && (
           <button
             onClick={onClose}
-            aria-label="Bağla" title="Bağla"
+            aria-label={t("close")} title={t("close")}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -185,6 +192,11 @@ function SidebarContent({
             </div>
           )}
         </div>
+        {!collapsed && (
+          <div className="mt-2">
+            <LanguageSwitcher />
+          </div>
+        )}
         <div className="mt-2">
           <LogoutButton collapsed={collapsed} />
         </div>

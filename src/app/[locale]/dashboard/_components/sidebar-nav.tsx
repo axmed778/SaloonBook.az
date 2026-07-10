@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 
-// Sidebar navigation. Only "Təqvim" (Calendar) is wired for now; the rest route
-// to placeholder pages until their screens are built. Supports a collapsed
-// (icon-only) mode and an onNavigate callback (used to close the mobile drawer).
+// Sidebar navigation. Supports a collapsed (icon-only) mode and an onNavigate
+// callback (used to close the mobile drawer). Labels come from the Nav
+// namespace via `labelKey`.
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
 };
 
@@ -17,7 +17,7 @@ const ICON = "h-[18px] w-[18px] shrink-0";
 const items: NavItem[] = [
   {
     href: "/dashboard",
-    label: "Təqvim",
+    labelKey: "calendar",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -27,7 +27,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/clients",
-    label: "Müştərilər",
+    labelKey: "clients",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -38,7 +38,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/services",
-    label: "Xidmətlər",
+    labelKey: "services",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 7h-9M14 17H5M17 3l3 3-3 3M7 21l-3-3 3-3" />
@@ -47,7 +47,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/workers",
-    label: "İşçilər",
+    labelKey: "workers",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -57,7 +57,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/analytics",
-    label: "Analitika",
+    labelKey: "analytics",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 3v18h18M7 15l4-4 3 3 5-6" />
@@ -66,7 +66,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/payroll",
-    label: "Əməkhaqqı",
+    labelKey: "payroll",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2" />
@@ -77,7 +77,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/settings",
-    label: "Tənzimləmələr",
+    labelKey: "settings",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -92,7 +92,7 @@ const items: NavItem[] = [
 const adminItems: NavItem[] = [
   {
     href: "/dashboard/admin",
-    label: "Salonlar",
+    labelKey: "salons",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4" />
@@ -110,6 +110,7 @@ export function SidebarNav({
   onNavigate?: () => void;
   isAdmin?: boolean;
 }) {
+  const t = useTranslations("Nav");
   const pathname = usePathname();
   const navItems = isAdmin ? adminItems : items;
 
@@ -125,7 +126,7 @@ export function SidebarNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            title={collapsed ? item.label : undefined}
+            title={collapsed ? t(item.labelKey) : undefined}
             className={
               "flex items-center rounded-lg text-sm font-medium transition " +
               (collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2") +
@@ -136,7 +137,7 @@ export function SidebarNav({
             }
           >
             {item.icon}
-            {!collapsed && item.label}
+            {!collapsed && t(item.labelKey)}
           </Link>
         );
       })}

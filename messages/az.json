@@ -32,6 +32,23 @@
   "LanguageSwitcher": {
     "label": "Dil"
   },
+  "Nav": {
+    "calendar": "Təqvim",
+    "clients": "Müştərilər",
+    "services": "Xidmətlər",
+    "workers": "İşçilər",
+    "analytics": "Analitika",
+    "payroll": "Əməkhaqqı",
+    "settings": "Tənzimləmələr",
+    "salons": "Salonlar",
+    "menu": "Menyu",
+    "toggleMenu": "Menyunu yığ/aç",
+    "close": "Bağla",
+    "logout": "Çıxış",
+    "loggingOut": "Çıxılır…",
+    "roleAdmin": "Platform Admin",
+    "roleOwner": "Salon sahibi"
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",

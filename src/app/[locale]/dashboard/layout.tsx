@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
 import { DashboardShell } from "./_components/dashboard-shell";
 
@@ -14,10 +15,14 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) {
+    redirect({ href: "/login", locale: await getLocale() });
+    return null; // unreachable — redirect() throws — but narrows `session`
+  }
 
+  const t = await getTranslations("Nav");
   const displayName = session.user.fullName?.trim() || session.user.email;
-  const roleLabel = session.isAdmin ? "Platform Admin" : "Salon sahibi";
+  const roleLabel = session.isAdmin ? t("roleAdmin") : t("roleOwner");
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
