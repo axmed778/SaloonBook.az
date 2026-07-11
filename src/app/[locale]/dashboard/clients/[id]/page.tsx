@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { AppointmentStatus } from "@prisma/client";
+import { getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate, formatBakuDateTime } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import {
   ClientProfile,
@@ -28,6 +30,7 @@ export default async function ClientProfilePage({
   const session = (await getSession())!;
   if (session.isAdmin || !session.salonId) notFound();
   const salonId = session.salonId;
+  const df = intlLocale(await getLocale());
 
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -174,7 +177,7 @@ export default async function ClientProfilePage({
     id: customer.id,
     name: customer.name,
     phone: customer.phone,
-    createdLabel: formatBakuDate(bakuYmd(customer.createdAt)),
+    createdLabel: formatBakuDate(bakuYmd(customer.createdAt), df),
     active,
     stats: {
       visits,
@@ -184,12 +187,12 @@ export default async function ClientProfilePage({
       cancelled: counts.get("CANCELLED") ?? 0,
       noShow: counts.get("NO_SHOW") ?? 0,
       upcoming: upcomingCount,
-      firstVisitLabel: firstVisit ? formatBakuDate(bakuYmd(firstVisit)) : null,
-      lastVisitLabel: lastVisit ? formatBakuDate(bakuYmd(lastVisit)) : null,
+      firstVisitLabel: firstVisit ? formatBakuDate(bakuYmd(firstVisit), df) : null,
+      lastVisitLabel: lastVisit ? formatBakuDate(bakuYmd(lastVisit), df) : null,
       favEmployee: favEmployee?.name ?? null,
       favService: favService?.name ?? null,
       frequencyDays,
-      lastActivityLabel: lastActivity ? formatBakuDate(bakuYmd(lastActivity)) : null,
+      lastActivityLabel: lastActivity ? formatBakuDate(bakuYmd(lastActivity), df) : null,
     },
     totalAppointments,
     historyTruncated: totalAppointments > HISTORY_LIMIT,
@@ -199,13 +202,13 @@ export default async function ClientProfilePage({
   const nowMs = now.getTime();
   const toItem = (h: (typeof history)[number]): AppointmentItem => ({
     id: h.id,
-    whenLabel: formatBakuDateTime(h.startsAt),
+    whenLabel: formatBakuDateTime(h.startsAt, df),
     service: h.service.name,
     employee: h.employee.name,
     priceMinor: h.priceMinor,
     status: h.status,
     source: h.source,
-    createdLabel: formatBakuDateTime(h.createdAt),
+    createdLabel: formatBakuDateTime(h.createdAt, df),
   });
   const upcoming: AppointmentItem[] = history
     .filter((h) => h.startsAt.getTime() > nowMs && h.status === "CONFIRMED")
@@ -218,7 +221,7 @@ export default async function ClientProfilePage({
   const noteItems: NoteItem[] = notes.map((n) => ({
     id: n.id,
     body: n.body,
-    createdLabel: formatBakuDateTime(n.createdAt),
+    createdLabel: formatBakuDateTime(n.createdAt, df),
   }));
 
   const catalog: CatalogEmployee[] = employees.map((e) => ({

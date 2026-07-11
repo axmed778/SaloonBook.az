@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import { ClientsTable, type ClientRow, type SortKey } from "./clients-table";
 
 export const dynamic = "force-dynamic";
@@ -50,17 +52,18 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
   const session = (await getSession())!;
+  const df = intlLocale(await getLocale());
 
   if (session.isAdmin || !session.salonId) {
+    const t = await getTranslations("Clients");
+    const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-zinc-100">
-          {session.isAdmin ? "Platforma idarəetməsi" : "Salon tapılmadı"}
+          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          {session.isAdmin
-            ? "Müştərilər salon sahibləri üçündür."
-            : "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."}
+          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>
     );
@@ -170,7 +173,7 @@ export default async function ClientsPage({
     phone: r.phone,
     visits: r.visits,
     spentMinor: r.spentMinor,
-    lastVisitLabel: r.lastVisit ? formatBakuDate(bakuYmd(r.lastVisit)) : null,
+    lastVisitLabel: r.lastVisit ? formatBakuDate(bakuYmd(r.lastVisit), df) : null,
     favEmployee: favByCustomer.get(r.id) ?? null,
     active: (r.lastVisit !== null && r.lastVisit.getTime() >= activeCutoff) || r.upcoming > 0,
   }));

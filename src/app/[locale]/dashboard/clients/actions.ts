@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuPeriodYm } from "@/lib/time";
@@ -41,9 +42,10 @@ const customerSchema = z.object({
 
 export async function updateCustomer(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Clients.errors");
   const parsed = customerSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
 
@@ -52,14 +54,14 @@ export async function updateCustomer(input: unknown): Promise<ActionResult> {
       where: { id: d.id, salonId },
       data: { name: d.name, phone: d.phone },
     });
-    if (res.count === 0) return { ok: false, error: "Müştəri tapılmadı." };
+    if (res.count === 0) return { ok: false, error: t("notFound") };
   } catch (e) {
     // @@unique([salonId, phone]) — the number already belongs to another customer.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { ok: false, error: "Bu nömrə başqa müştəridə qeydiyyatdadır." };
+      return { ok: false, error: t("phoneTaken") };
     }
     console.error("[clients] updateCustomer error", e);
-    return { ok: false, error: "Yadda saxlanmadı." };
+    return { ok: false, error: t("saveFailed") };
   }
 
   revalidateClients(d.id);
@@ -75,9 +77,10 @@ const noteSchema = z.object({
 
 export async function addCustomerNote(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Clients.errors");
   const parsed = noteSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("noteEmpty") };
   }
   const d = parsed.data;
 
@@ -86,7 +89,7 @@ export async function addCustomerNote(input: unknown): Promise<ActionResult> {
     where: { id: d.customerId, salonId },
     select: { id: true },
   });
-  if (!customer) return { ok: false, error: "Müştəri tapılmadı." };
+  if (!customer) return { ok: false, error: t("notFound") };
 
   await prisma.customerNote.create({
     data: { salonId, customerId: d.customerId, body: d.body },
@@ -98,10 +101,11 @@ export async function addCustomerNote(input: unknown): Promise<ActionResult> {
 
 export async function deleteCustomerNote(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+  const t = await getTranslations("Clients.errors");
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
   const res = await prisma.customerNote.deleteMany({ where: { id, salonId } });
-  if (res.count === 0) return { ok: false, error: "Qeyd tapılmadı." };
+  if (res.count === 0) return { ok: false, error: t("noteNotFound") };
 
   revalidateClients();
   return { ok: true };
@@ -123,13 +127,14 @@ export async function deleteCustomerNote(id: string): Promise<ActionResult> {
  */
 export async function deleteCustomer(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+  const t = await getTranslations("Clients.errors");
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
   const customer = await prisma.customer.findFirst({
     where: { id, salonId },
     select: { id: true },
   });
-  if (!customer) return { ok: false, error: "Müştəri tapılmadı." };
+  if (!customer) return { ok: false, error: t("notFound") };
 
   // Block if any COMPLETED appointment falls in an already-settled (paid-out)
   // employee-month.
@@ -151,11 +156,7 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
     });
     const isSettled = payouts.some((p) => settledKeys.has(`${p.employeeId}|${p.periodYm}`));
     if (isSettled) {
-      return {
-        ok: false,
-        error:
-          "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur).",
-      };
+      return { ok: false, error: t("deleteSettled") };
     }
   }
 

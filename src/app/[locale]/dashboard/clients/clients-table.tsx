@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export type SortKey = "name" | "last" | "visits" | "spent";
@@ -29,15 +29,16 @@ function buildQuery(next: { q?: string; sort?: SortKey; dir?: string; page?: num
 }
 
 function StatusChip({ active }: { active: boolean }) {
+  const t = useTranslations("Clients");
   return active ? (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-      Aktiv
+      {t("statusActive")}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500">
       <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-      Passiv
+      {t("statusInactive")}
     </span>
   );
 }
@@ -61,6 +62,7 @@ export function ClientsTable({
   dir: "asc" | "desc";
   salonIsEmpty: boolean;
 }) {
+  const t = useTranslations("Clients");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(q);
@@ -96,11 +98,9 @@ export function ClientsTable({
   const header = (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">Müştərilər</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-zinc-500">
-          {total > 0
-            ? `${total} müştəri · görüşlərdən avtomatik yığılır`
-            : "Müştəri bazanız və görüş tarixçəsi"}
+          {total > 0 ? t("subtitleWithCount", { count: total }) : t("subtitleEmpty")}
         </p>
       </div>
       <div className="relative w-full sm:w-72">
@@ -119,13 +119,13 @@ export function ClientsTable({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ad və ya telefon axtar…"
+          placeholder={t("searchPlaceholder")}
           className="w-full rounded-lg border border-zinc-800 bg-zinc-950 py-2 pl-9 pr-8 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            aria-label="Axtarışı təmizlə" title="Axtarışı təmizlə"
+            aria-label={t("clearSearch")} title={t("clearSearch")}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 transition hover:text-zinc-200"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -148,16 +148,15 @@ export function ClientsTable({
               <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" />
             </svg>
           </div>
-          <p className="mt-4 text-sm font-medium text-zinc-200">Hələ müştəri yoxdur</p>
+          <p className="mt-4 text-sm font-medium text-zinc-200">{t("emptyTitle")}</p>
           <p className="mt-1 max-w-sm text-sm text-zinc-500">
-            Müştərilər ilk görüşdən sonra avtomatik burada görünəcək — istər onlayn
-            qeydiyyatdan, istər təqvimdən əlavə etdiyiniz görüşlərdən.
+            {t("emptyBody")}
           </p>
           <Link
             href="/dashboard"
             className="mt-4 inline-flex items-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
           >
-            Təqvimə keç
+            {t("goToCalendar")}
           </Link>
         </div>
       </div>
@@ -165,10 +164,10 @@ export function ClientsTable({
   }
 
   const sortableHeaders: { key: SortKey; label: string; align?: "right" }[] = [
-    { key: "name", label: "Müştəri" },
-    { key: "visits", label: "Vizitlər", align: "right" },
-    { key: "last", label: "Son vizit" },
-    { key: "spent", label: "Xərclədiyi", align: "right" },
+    { key: "name", label: t("colCustomer") },
+    { key: "visits", label: t("colVisits"), align: "right" },
+    { key: "last", label: t("colLastVisit") },
+    { key: "spent", label: t("colSpent"), align: "right" },
   ];
 
   return (
@@ -178,9 +177,9 @@ export function ClientsTable({
       {rows.length === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-10 text-center">
           <p className="text-sm text-zinc-300">
-            &quot;{q}&quot; üzrə nəticə tapılmadı
+            {t("noResults", { q })}
           </p>
-          <p className="mt-1 text-sm text-zinc-500">Ad və ya telefonun bir hissəsini yoxlayın.</p>
+          <p className="mt-1 text-sm text-zinc-500">{t("noResultsHint")}</p>
         </div>
       ) : (
         <div className={pending ? "opacity-60 transition-opacity" : "transition-opacity"}>
@@ -205,8 +204,8 @@ export function ClientsTable({
                       </button>
                     </th>
                   ))}
-                  <th className="px-4 py-3 font-medium">Sevimli usta</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">{t("colFavEmployee")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,7 +255,8 @@ export function ClientsTable({
                   <p className="mt-0.5 text-xs text-zinc-500">{r.phone}</p>
                   <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
                     <span>
-                      {r.visits} vizit{r.lastVisitLabel ? ` · son: ${r.lastVisitLabel}` : ""}
+                      {t("visitsShort", { count: r.visits })}
+                      {r.lastVisitLabel ? t("lastVisitInline", { date: r.lastVisitLabel }) : ""}
                     </span>
                     <span className="font-medium text-zinc-200">{azn(r.spentMinor)} ₼</span>
                   </div>
@@ -284,7 +284,7 @@ export function ClientsTable({
                   : "text-zinc-300 hover:border-zinc-600 hover:text-zinc-100")
               }
             >
-              ← Əvvəlki
+              ← {t("prev")}
             </Link>
             <Link
               href={buildQuery({ q, sort, dir, page: page + 1 })}
@@ -296,7 +296,7 @@ export function ClientsTable({
                   : "text-zinc-300 hover:border-zinc-600 hover:text-zinc-100")
               }
             >
-              Növbəti →
+              {t("next")} →
             </Link>
           </div>
         </div>

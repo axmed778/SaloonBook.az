@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { azn, inputCls, labelCls } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { BookingModal } from "@/app/[locale]/dashboard/_components/booking-modal";
@@ -54,13 +54,6 @@ export type ProfileData = {
   branchName: string;
 };
 
-const STATUS_LABEL: Record<AppointmentItem["status"], string> = {
-  CONFIRMED: "Təsdiqlənib",
-  COMPLETED: "Tamamlanıb",
-  CANCELLED: "Ləğv edilib",
-  NO_SHOW: "Gəlmədi",
-};
-
 const STATUS_CHIP: Record<AppointmentItem["status"], string> = {
   CONFIRMED: "bg-rose-500/10 text-rose-300",
   COMPLETED: "bg-emerald-500/10 text-emerald-400",
@@ -69,11 +62,12 @@ const STATUS_CHIP: Record<AppointmentItem["status"], string> = {
 };
 
 function StatusPill({ status }: { status: AppointmentItem["status"] }) {
+  const t = useTranslations("ClientProfile.status");
   return (
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[status]}`}
     >
-      {STATUS_LABEL[status]}
+      {t(status)}
     </span>
   );
 }
@@ -102,6 +96,7 @@ export function ClientProfile({
   catalog: CatalogEmployee[];
   today: string;
 }) {
+  const t = useTranslations("ClientProfile");
   const router = useRouter();
   const s = data.stats;
   const [booking, setBooking] = useState(false);
@@ -117,7 +112,7 @@ export function ClientProfile({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      setToast(`Kopyalama alınmadı — nömrə: ${data.phone}`);
+      setToast(t("copyFailed", { phone: data.phone }));
     }
   }
 
@@ -130,7 +125,7 @@ export function ClientProfile({
         href="/dashboard/clients"
         className="inline-flex items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-200"
       >
-        ← Müştərilər
+        ← {t("back")}
       </Link>
 
       {/* Header + quick actions */}
@@ -146,19 +141,19 @@ export function ClientProfile({
                 {data.active ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Aktiv
+                    {t("statusActive")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500">
                     <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                    Passiv
+                    {t("statusInactive")}
                   </span>
                 )}
               </div>
               <p className="mt-0.5 text-sm text-zinc-400">{data.phone}</p>
               <p className="mt-0.5 text-xs text-zinc-600">
-                Qeydiyyat: {data.createdLabel}
-                {s.lastActivityLabel ? ` · son aktivlik: ${s.lastActivityLabel}` : ""}
+                {t("registered")}: {data.createdLabel}
+                {s.lastActivityLabel ? t("lastActivityInline", { date: s.lastActivityLabel }) : ""}
               </p>
             </div>
           </div>
@@ -168,22 +163,22 @@ export function ClientProfile({
               onClick={() => setBooking(true)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-400"
             >
-              + Yeni görüş
+              + {t("newBooking")}
             </button>
             <a href={`tel:${data.phone}`} className={actionBtn}>
-              Zəng et
+              {t("call")}
             </a>
             <button onClick={copyPhone} className={actionBtn}>
-              {copied ? "Kopyalandı ✓" : "Nömrəni kopyala"}
+              {copied ? t("copied") : t("copyPhone")}
             </button>
             <button onClick={() => setEditing(true)} className={actionBtn}>
-              Redaktə et
+              {t("edit")}
             </button>
             <button
               onClick={() => setDeleting(true)}
               className="inline-flex items-center rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
             >
-              Sil
+              {t("delete")}
             </button>
           </div>
         </div>
@@ -191,27 +186,27 @@ export function ClientProfile({
 
       {/* Stats */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Vizitlər" value={String(s.visits)} />
-        <Stat label="Ümumi xərclədiyi (LTV)" value={`${azn(s.spentMinor)} ₼`} highlight />
-        <Stat label="Orta çek" value={s.visits > 0 ? `${azn(s.avgTicketMinor)} ₼` : "—"} />
+        <Stat label={t("stats.visits")} value={String(s.visits)} />
+        <Stat label={t("stats.ltv")} value={`${azn(s.spentMinor)} ₼`} highlight />
+        <Stat label={t("stats.avgTicket")} value={s.visits > 0 ? `${azn(s.avgTicketMinor)} ₼` : "—"} />
         <Stat
-          label="Vizit tezliyi"
-          value={s.frequencyDays !== null ? `~${s.frequencyDays} gündə bir` : "—"}
+          label={t("stats.frequency")}
+          value={s.frequencyDays !== null ? t("stats.frequencyValue", { days: s.frequencyDays }) : "—"}
         />
-        <Stat label="Tamamlanmış" value={String(s.completed)} />
-        <Stat label="Ləğv edilmiş" value={String(s.cancelled)} tone={s.cancelled > 0 ? "muted" : undefined} />
-        <Stat label="Gəlmədi" value={String(s.noShow)} tone={s.noShow > 0 ? "warn" : undefined} />
-        <Stat label="Qarşıdakı görüşlər" value={String(s.upcoming)} />
+        <Stat label={t("stats.completed")} value={String(s.completed)} />
+        <Stat label={t("stats.cancelled")} value={String(s.cancelled)} tone={s.cancelled > 0 ? "muted" : undefined} />
+        <Stat label={t("stats.noShow")} value={String(s.noShow)} tone={s.noShow > 0 ? "warn" : undefined} />
+        <Stat label={t("stats.upcoming")} value={String(s.upcoming)} />
       </section>
 
       {/* Derived analytics */}
       <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-        <h2 className="text-sm font-medium text-zinc-300">Müştəri haqqında</h2>
+        <h2 className="text-sm font-medium text-zinc-300">{t("about")}</h2>
         <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <InfoRow label="Sevimli usta" value={s.favEmployee ?? "—"} />
-          <InfoRow label="Sevimli xidmət" value={s.favService ?? "—"} />
-          <InfoRow label="İlk vizit" value={s.firstVisitLabel ?? "—"} />
-          <InfoRow label="Son vizit" value={s.lastVisitLabel ?? "—"} />
+          <InfoRow label={t("favEmployee")} value={s.favEmployee ?? "—"} />
+          <InfoRow label={t("favService")} value={s.favService ?? "—"} />
+          <InfoRow label={t("firstVisit")} value={s.firstVisitLabel ?? "—"} />
+          <InfoRow label={t("lastVisit")} value={s.lastVisitLabel ?? "—"} />
         </dl>
       </section>
 
@@ -221,7 +216,7 @@ export function ClientProfile({
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-          <h2 className="text-sm font-medium text-zinc-300">Qarşıdakı görüşlər</h2>
+          <h2 className="text-sm font-medium text-zinc-300">{t("upcomingTitle")}</h2>
           <AppointmentList items={upcoming} onSelect={setDetail} />
         </section>
       )}
@@ -229,19 +224,19 @@ export function ClientProfile({
       {/* History */}
       <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
         <h2 className="text-sm font-medium text-zinc-300">
-          Görüş tarixçəsi
+          {t("historyTitle")}
           <span className="ml-2 text-xs font-normal text-zinc-500">
-            {data.totalAppointments} görüş
+            {t("appointmentsCount", { count: data.totalAppointments })}
           </span>
         </h2>
         {past.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">Keçmiş görüş yoxdur.</p>
+          <p className="mt-3 text-sm text-zinc-500">{t("noPast")}</p>
         ) : (
           <>
             <AppointmentList items={past} onSelect={setDetail} />
             {data.historyTruncated && (
               <p className="mt-3 text-xs text-zinc-600">
-                Son {past.length + upcoming.length} görüş göstərilir.
+                {t("showingLast", { count: past.length + upcoming.length })}
               </p>
             )}
           </>
@@ -361,6 +356,7 @@ function AppointmentList({
 // --- Notes ---------------------------------------------------------------------
 
 function NotesSection({ customerId, notes }: { customerId: string; notes: NoteItem[] }) {
+  const t = useTranslations("ClientProfile.notes");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [body, setBody] = useState("");
@@ -393,8 +389,8 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
   return (
     <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
       <h2 className="text-sm font-medium text-zinc-300">
-        Qeydlər
-        <span className="ml-2 text-xs font-normal text-zinc-600">yalnız sizə görünür</span>
+        {t("title")}
+        <span className="ml-2 text-xs font-normal text-zinc-600">{t("privateHint")}</span>
       </h2>
 
       <form onSubmit={submit} className="mt-3 flex gap-2">
@@ -402,7 +398,7 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
           value={body}
           onChange={(e) => setBody(e.target.value)}
           maxLength={1000}
-          placeholder="məs., VIP müştəri · adətən gecikir · Nigarı üstün tutur"
+          placeholder={t("placeholder")}
           className={inputCls + " w-full"}
         />
         <button
@@ -410,7 +406,7 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
           disabled={pending || !body.trim()}
           className="shrink-0 rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-700 disabled:opacity-50"
         >
-          Əlavə et
+          {t("add")}
         </button>
       </form>
       {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
@@ -429,10 +425,10 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
               <button
                 onClick={() => remove(n.id)}
                 disabled={pending}
-                aria-label="Qeydi sil"
+                aria-label={t("deleteAria")}
                 className="shrink-0 text-xs text-zinc-600 transition hover:text-rose-400"
               >
-                Sil
+                {t("delete")}
               </button>
             </li>
           ))}
@@ -478,6 +474,8 @@ function EditCustomerModal({
   phone: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("ClientProfile.edit_modal");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(initialName);
@@ -488,8 +486,8 @@ function EditCustomerModal({
     e.preventDefault();
     setError(null);
     const digits = phoneDigits.replace(/\D/g, "");
-    if (!name.trim()) return setError("Ad tələb olunur.");
-    if (digits.length !== 9) return setError("Telefon +994 və 9 rəqəmdən ibarət olmalıdır.");
+    if (!name.trim()) return setError(t("errNameRequired"));
+    if (digits.length !== 9) return setError(t("errPhone"));
     startTransition(async () => {
       const res = await updateCustomer({ id, name: name.trim(), phone: "+994" + digits });
       if (!res.ok) {
@@ -502,14 +500,14 @@ function EditCustomerModal({
   }
 
   return (
-    <ModalShell title="Müştərini redaktə et" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className={labelCls}>Ad</label>
+          <label className={labelCls}>{t("name")}</label>
           <input className={inputCls + " w-full"} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label className={labelCls}>Telefon</label>
+          <label className={labelCls}>{t("phone")}</label>
           <div className="flex items-center gap-2">
             <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-400">
               +994
@@ -530,14 +528,14 @@ function EditCustomerModal({
             onClick={onClose}
             className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
           >
-            Ləğv et
+            {tc("cancel")}
           </button>
           <button
             type="submit"
             disabled={pending}
             className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
           >
-            {pending ? "Gözləyin…" : "Yadda saxla"}
+            {pending ? tc("pleaseWait") : t("save")}
           </button>
         </div>
       </form>
@@ -558,6 +556,8 @@ function DeleteCustomerModal({
   onDone: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("ClientProfile.delete_modal");
+  const tc = useTranslations("Common");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -573,30 +573,33 @@ function DeleteCustomerModal({
   }
 
   return (
-    <ModalShell title="Müştərini sil" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <p className="text-sm text-zinc-300">
-        <span className="font-medium text-zinc-100">{name}</span> silinsin?
+        {t.rich("confirmWith", {
+          name,
+          b: (chunks) => <span className="font-medium text-zinc-100">{chunks}</span>,
+        })}
       </p>
       <p className="mt-2 text-sm text-rose-300">
         {totalAppointments > 0
-          ? `Bununla birlikdə ${totalAppointments} görüş qeydi və bütün qeydlər həmişəlik silinəcək. Bu görüşlər analitikadan da çıxacaq.`
-          : "Müştəri və bütün qeydləri həmişəlik silinəcək."}
+          ? t("bodyWithHistory", { count: totalAppointments })
+          : t("bodyNoHistory")}
       </p>
-      <p className="mt-1 text-xs text-zinc-500">Bu əməliyyat geri qaytarıla bilməz.</p>
+      <p className="mt-1 text-xs text-zinc-500">{t("irreversible")}</p>
       {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
           className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
         >
-          Ləğv et
+          {tc("cancel")}
         </button>
         <button
           onClick={confirm}
           disabled={pending}
           className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
         >
-          {pending ? "Silinir…" : "Bəli, sil"}
+          {pending ? t("deleting") : tc("confirmDelete")}
         </button>
       </div>
     </ModalShell>
@@ -612,6 +615,8 @@ function AppointmentDetailModal({
   branchName: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("ClientProfile.detail");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -629,48 +634,48 @@ function AppointmentDetailModal({
   }
 
   return (
-    <ModalShell title="Görüş detalları" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <dl className="space-y-2 text-sm">
-        <DetailRow label="Xidmət" value={item.service} />
-        <DetailRow label="Usta" value={item.employee} />
-        <DetailRow label="Tarix" value={item.whenLabel} />
-        <DetailRow label="Qiymət" value={`${azn(item.priceMinor)} ₼`} />
+        <DetailRow label={t("service")} value={item.service} />
+        <DetailRow label={t("employee")} value={item.employee} />
+        <DetailRow label={t("date")} value={item.whenLabel} />
+        <DetailRow label={t("price")} value={`${azn(item.priceMinor)} ₼`} />
         <DetailRow
-          label="Status"
+          label={t("status")}
           value={<StatusPill status={item.status} />}
         />
         <DetailRow
-          label="Mənbə"
-          value={item.source === "PUBLIC" ? "Onlayn qeydiyyat" : "Salon tərəfindən"}
+          label={t("source")}
+          value={item.source === "PUBLIC" ? t("sourcePublic") : t("sourceDashboard")}
         />
-        <DetailRow label="Filial" value={branchName} />
-        <DetailRow label="Yaradılıb" value={item.createdLabel} />
+        <DetailRow label={t("branch")} value={branchName} />
+        <DetailRow label={t("createdAt")} value={item.createdLabel} />
       </dl>
 
       {item.status === "CONFIRMED" && (
         <div className="mt-4 border-t border-zinc-800 pt-4">
-          <p className="mb-2 text-xs text-zinc-500">Statusu dəyiş:</p>
+          <p className="mb-2 text-xs text-zinc-500">{t("changeStatus")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => changeStatus("COMPLETED")}
               disabled={pending}
               className="rounded-lg bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-600/30 disabled:opacity-50"
             >
-              Tamamla
+              {t("complete")}
             </button>
             <button
               onClick={() => changeStatus("NO_SHOW")}
               disabled={pending}
               className="rounded-lg bg-amber-600/20 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-600/30 disabled:opacity-50"
             >
-              Gəlmədi
+              {t("noShow")}
             </button>
             <button
               onClick={() => changeStatus("CANCELLED")}
               disabled={pending}
               className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 disabled:opacity-50"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
           </div>
         </div>
