@@ -378,6 +378,55 @@
       "noShow": "Gəlmədi"
     }
   },
+  "Billing": {
+    "adminTitle": "Platforma idarəetməsi",
+    "adminBody": "Plan və ödəniş salon sahibləri üçündür.",
+    "title": "Plan və ödəniş",
+    "subtitle": "Planı aktivləşdirmək və ya uzatmaq üçün birbaşa bizə yazın — ödəniş şəxsən həyata keçirilir.",
+    "recommended": "Tövsiyə olunur",
+    "perMonth": "/ay",
+    "choosePlan": "{plan} planını seç",
+    "questionsTitle": "Sualınız var?",
+    "questionsBody": "Ödəniş üsulları və planlar barədə birbaşa WhatsApp-da yazın.",
+    "writeOnWhatsapp": "WhatsApp-da yazın",
+    "defaultSalonName": "Salonum",
+    "waActivate": "Salam! {salon} — SalonBook {plan} planını aktivləşdirmək istəyirəm.",
+    "waQuestion": "Salam! {salon} — SalonBook planı barədə sualım var.",
+    "status": {
+      "active": "Aktiv plan: {plan}",
+      "activeWithPeriod": "Aktiv plan: {plan} · növbəti ödəniş {date}",
+      "trial": "Pulsuz sınaq: {days} gün qalıb",
+      "trialEnded": "Sınaq müddəti bitib — planı aktivləşdirin.",
+      "pastDue": "Ödəniş gözlənilir — planı aktivləşdirin.",
+      "freeDowngraded": "Sınaq müddəti bitib — hesab pulsuz plana keçirilib. Planı aktivləşdirin."
+    },
+    "plans": {
+      "basic": {
+        "name": "Basic",
+        "tagline": "Kiçik salonlar üçün",
+        "features": [
+          "Onlayn qeydiyyat linki",
+          "Təqvim və görüş idarəetməsi",
+          "10 işçiyə qədər",
+          "Limitsiz görüş",
+          "WhatsApp bildirişləri",
+          "ROI analitika paneli"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "tagline": "Böyüyən və çoxfiliallı salonlar üçün",
+        "features": [
+          "Basic-dəki hər şey",
+          "Limitsiz işçi",
+          "Əməkhaqqı modulu (maaş + komissiya)",
+          "Çoxfilial dəstəyi (tezliklə)",
+          "Excel ixracı (tezliklə)",
+          "İşçi rolları və icazələr (tezliklə)"
+        ]
+      }
+    }
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",

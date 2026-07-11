@@ -1,7 +1,9 @@
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { intlLocale } from "@/i18n/format";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 type PlanCard = {
-  key: "BASIC" | "PRO";
+  key: "basic" | "pro";
   name: string;
   tagline: string;
   priceMinor: number;
@@ -32,61 +34,48 @@ type PlanCard = {
   highlighted?: boolean;
 };
 
-const PLANS: PlanCard[] = [
-  {
-    key: "BASIC",
-    name: "Basic",
-    tagline: "Kiçik salonlar üçün",
-    priceMinor: PLAN_LIMITS.BASIC.priceMinor,
-    features: [
-      "Onlayn qeydiyyat linki",
-      "Təqvim və görüş idarəetməsi",
-      "10 işçiyə qədər",
-      "Limitsiz görüş",
-      "WhatsApp bildirişləri",
-      "ROI analitika paneli",
-    ],
-  },
-  {
-    key: "PRO",
-    name: "Pro",
-    tagline: "Böyüyən və çoxfiliallı salonlar üçün",
-    priceMinor: PLAN_LIMITS.PRO.priceMinor,
-    highlighted: true,
-    features: [
-      "Basic-dəki hər şey",
-      "Limitsiz işçi",
-      "Əməkhaqqı modulu (maaş + komissiya)",
-      "Çoxfilial dəstəyi (tezliklə)",
-      "Excel ixracı (tezliklə)",
-      "İşçi rolları və icazələr (tezliklə)",
-    ],
-  },
-];
-
 export default async function BillingPage() {
   const session = (await getSession())!;
+  const t = await getTranslations("Billing");
+  const df = intlLocale(await getLocale());
 
   if (session.isAdmin || !session.salonId) {
+    const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-zinc-100">
-          {session.isAdmin ? "Platforma idarəetməsi" : "Salon tapılmadı"}
+          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          {session.isAdmin
-            ? "Plan və ödəniş salon sahibləri üçündür."
-            : "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."}
+          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>
     );
   }
 
+  const PLANS: PlanCard[] = [
+    {
+      key: "basic",
+      name: t("plans.basic.name"),
+      tagline: t("plans.basic.tagline"),
+      priceMinor: PLAN_LIMITS.BASIC.priceMinor,
+      features: t.raw("plans.basic.features") as string[],
+    },
+    {
+      key: "pro",
+      name: t("plans.pro.name"),
+      tagline: t("plans.pro.tagline"),
+      priceMinor: PLAN_LIMITS.PRO.priceMinor,
+      highlighted: true,
+      features: t.raw("plans.pro.features") as string[],
+    },
+  ];
+
   const salon = await prisma.salon.findUnique({
     where: { id: session.salonId },
     select: { name: true, account: { select: { subscription: true } } },
   });
-  const salonName = salon?.name ?? "Salonum";
+  const salonName = salon?.name ?? t("defaultSalonName");
   const sub = salon?.account?.subscription ?? null;
 
   // Trial days-left, Baku-safe (same rule as the analytics nudge).
@@ -99,32 +88,31 @@ export default async function BillingPage() {
       Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000),
     );
   }
-  const planLabel = sub?.plan === "PRO" ? "Pro" : "Basic";
+  const planLabel = sub?.plan === "PRO" ? t("plans.pro.name") : t("plans.basic.name");
   const periodEndLabel = sub?.currentPeriodEnd
-    ? formatBakuDate(bakuYmd(sub.currentPeriodEnd))
+    ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;
 
   let statusLine: { text: string; tone: "emerald" | "amber" | "rose" } | null = null;
   if (sub?.status === "ACTIVE") {
     statusLine = {
-      text: `Aktiv plan: ${planLabel}${periodEndLabel ? ` · növbəti ödəniş ${periodEndLabel}` : ""}`,
+      text: periodEndLabel
+        ? t("status.activeWithPeriod", { plan: planLabel, date: periodEndLabel })
+        : t("status.active", { plan: planLabel }),
       tone: "emerald",
     };
   } else if (sub?.status === "TRIALING" && daysLeft !== null) {
     statusLine =
       daysLeft > 0
         ? {
-            text: `Pulsuz sınaq: ${daysLeft} gün qalıb`,
+            text: t("status.trial", { days: daysLeft }),
             tone: daysLeft <= 3 ? "rose" : "amber",
           }
-        : { text: "Sınaq müddəti bitib — planı aktivləşdirin.", tone: "rose" };
+        : { text: t("status.trialEnded"), tone: "rose" };
   } else if (sub?.status === "PAST_DUE") {
-    statusLine = { text: "Ödəniş gözlənilir — planı aktivləşdirin.", tone: "rose" };
+    statusLine = { text: t("status.pastDue"), tone: "rose" };
   } else if (sub?.status === "FREE_DOWNGRADED") {
-    statusLine = {
-      text: "Sınaq müddəti bitib — hesab pulsuz plana keçirilib. Planı aktivləşdirin.",
-      tone: "rose",
-    };
+    statusLine = { text: t("status.freeDowngraded"), tone: "rose" };
   }
 
   const statusToneCls: Record<"emerald" | "amber" | "rose", string> = {
@@ -136,10 +124,9 @@ export default async function BillingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">Plan və ödəniş</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-zinc-500">
-          Planı aktivləşdirmək və ya uzatmaq üçün birbaşa bizə yazın — ödəniş
-          şəxsən həyata keçirilir.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -163,14 +150,14 @@ export default async function BillingPage() {
                 <h2 className="text-base font-semibold text-zinc-100">{p.name}</h2>
                 {p.highlighted && (
                   <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-300">
-                    Tövsiyə olunur
+                    {t("recommended")}
                   </span>
                 )}
               </div>
               <p className="mt-0.5 text-xs text-zinc-500">{p.tagline}</p>
               <p className="mt-3">
                 <span className="text-3xl font-semibold text-zinc-100">{azn(p.priceMinor)} ₼</span>
-                <span className="text-sm text-zinc-500"> /ay</span>
+                <span className="text-sm text-zinc-500"> {t("perMonth")}</span>
               </p>
               <ul className="mt-4 space-y-2">
                 {p.features.map((f) => (
@@ -192,15 +179,13 @@ export default async function BillingPage() {
               </ul>
             </div>
             <a
-              href={waLink(
-                `Salam! ${salonName} — SalonBook ${p.name} planını aktivləşdirmək istəyirəm.`,
-              )}
+              href={waLink(t("waActivate", { salon: salonName, plan: p.name }))}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500"
             >
               <WhatsAppIcon className="h-4 w-4" />
-              {p.name} planını seç
+              {t("choosePlan", { plan: p.name })}
             </a>
           </div>
         ))}
@@ -208,19 +193,19 @@ export default async function BillingPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
         <div>
-          <p className="font-medium text-zinc-100">Sualınız var?</p>
+          <p className="font-medium text-zinc-100">{t("questionsTitle")}</p>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Ödəniş üsulları və planlar barədə birbaşa WhatsApp-da yazın.
+            {t("questionsBody")}
           </p>
         </div>
         <a
-          href={waLink(`Salam! ${salonName} — SalonBook planı barədə sualım var.`)}
+          href={waLink(t("waQuestion", { salon: salonName }))}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#0b141a] transition hover:brightness-95"
         >
           <WhatsAppIcon className="h-5 w-5" />
-          WhatsApp-da yazın
+          {t("writeOnWhatsapp")}
         </a>
       </div>
     </div>

@@ -378,6 +378,55 @@
       "noShow": "No-show"
     }
   },
+  "Billing": {
+    "adminTitle": "Platform management",
+    "adminBody": "Plan and billing are for salon owners.",
+    "title": "Plan and billing",
+    "subtitle": "To activate or extend a plan, message us directly — payment is handled personally.",
+    "recommended": "Recommended",
+    "perMonth": "/mo",
+    "choosePlan": "Choose {plan}",
+    "questionsTitle": "Have a question?",
+    "questionsBody": "Message us on WhatsApp about payment methods and plans.",
+    "writeOnWhatsapp": "Message on WhatsApp",
+    "defaultSalonName": "My salon",
+    "waActivate": "Hi! {salon} — I'd like to activate the SalonBook {plan} plan.",
+    "waQuestion": "Hi! {salon} — I have a question about the SalonBook plan.",
+    "status": {
+      "active": "Active plan: {plan}",
+      "activeWithPeriod": "Active plan: {plan} · next payment {date}",
+      "trial": "Free trial: {days} days left",
+      "trialEnded": "Your trial has ended — activate a plan.",
+      "pastDue": "Payment pending — activate a plan.",
+      "freeDowngraded": "Your trial has ended — the account was moved to the free plan. Activate a plan."
+    },
+    "plans": {
+      "basic": {
+        "name": "Basic",
+        "tagline": "For small salons",
+        "features": [
+          "Online booking link",
+          "Calendar and appointment management",
+          "Up to 10 staff",
+          "Unlimited bookings",
+          "WhatsApp notifications",
+          "ROI analytics dashboard"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "tagline": "For growing and multi-branch salons",
+        "features": [
+          "Everything in Basic",
+          "Unlimited staff",
+          "Payroll module (salary + commission)",
+          "Multi-branch support (coming soon)",
+          "Excel export (coming soon)",
+          "Staff roles and permissions (coming soon)"
+        ]
+      }
+    }
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",
