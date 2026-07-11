@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 
@@ -15,6 +17,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const session = (await getSession())!;
   if (!session.isAdmin) notFound();
+  const t = await getTranslations("Admin");
+  const df = intlLocale(await getLocale());
 
   const periodYm = bakuToday().slice(0, 7);
   const [accounts, usage] = await Promise.all([
@@ -62,18 +66,22 @@ export default async function AdminPage() {
       salonName: salon?.name ?? "—",
       slug: salon?.slug ?? null,
       ownerEmail: a.memberships[0]?.user.email ?? "—",
-      createdLabel: formatBakuDate(bakuYmd(a.createdAt)),
+      createdLabel: formatBakuDate(bakuYmd(a.createdAt), df),
       plan: sub?.plan ?? "FREE",
       effective: effectivePlan(sub ?? null),
       status: sub?.status ?? null,
-      trialEndsLabel: sub?.trialEndsAt ? formatBakuDate(bakuYmd(sub.trialEndsAt)) : null,
+      trialEndsLabel: sub?.trialEndsAt ? formatBakuDate(bakuYmd(sub.trialEndsAt), df) : null,
       periodEndLabel: sub?.currentPeriodEnd
-        ? formatBakuDate(bakuYmd(sub.currentPeriodEnd))
+        ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
         : null,
       bookingsThisMonth: salon ? (bookingsBySalon.get(salon.id) ?? 0) : 0,
       payments: (sub?.payments ?? []).map((p) => ({
         id: p.id,
-        label: `${(p.amountMinor / 100).toFixed(2)} ₼ · ${p.periodMonths} ay · ${formatBakuDate(bakuYmd(p.paidAt))}`,
+        label: t("paymentLabel", {
+          amount: (p.amountMinor / 100).toFixed(2),
+          months: p.periodMonths,
+          date: formatBakuDate(bakuYmd(p.paidAt), df),
+        }),
       })),
     };
   });

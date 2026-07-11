@@ -427,6 +427,47 @@
       }
     }
   },
+  "Admin": {
+    "title": "Салоны",
+    "subtitle": "Аккаунтов: {count} · активация плана и история платежей",
+    "noAccounts": "Аккаунтов пока нет.",
+    "colSalon": "Салон",
+    "colOwner": "Владелец",
+    "colPlan": "План",
+    "colStatus": "Статус",
+    "colEnds": "Окончание",
+    "colBookings": "Записей в этом месяце",
+    "effectiveTooltip": "Текущее фактическое право",
+    "close": "Закрыть",
+    "payments": "Платежи",
+    "activate": "Активировать",
+    "recentPayments": "Последние платежи",
+    "noPayments": "Записей о платежах нет.",
+    "activateTitle": "Активировать план — {name}",
+    "activateNote": "Платёж фиксируется, срок продлевается {from}.",
+    "fromExisting": "от текущей даты окончания",
+    "fromToday": "с сегодняшнего дня",
+    "planLabel": "План",
+    "monthsLabel": "Месяцы",
+    "amountLabel": "Сумма (₼)",
+    "amountPlaceholder": "цена по прайсу",
+    "confirm": "Подтвердить",
+    "paymentLabel": "{amount} ₼ · {months} мес. · {date}",
+    "errMonthsRange": "Месяцев должно быть от 1 до 24.",
+    "errAmountInvalid": "Некорректная сумма.",
+    "subStatus": {
+      "ACTIVE": "Активна",
+      "TRIALING": "Пробный",
+      "PAST_DUE": "Ожидается оплата",
+      "CANCELLED": "Отменена",
+      "FREE_DOWNGRADED": "Понижен до бесплатного"
+    },
+    "errors": {
+      "unauthorized": "Нет доступа.",
+      "invalidData": "Некорректные данные.",
+      "subNotFound": "Подписка не найдена."
+    }
+  },
   "Audience": {
     "ALL": "Все",
     "MALE": "Мужчины",

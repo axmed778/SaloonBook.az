@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS } from "@/lib/plans";
@@ -28,21 +29,22 @@ const activateSchema = z.object({
 });
 
 export async function activateSubscription(input: unknown): Promise<ActionResult> {
+  const t = await getTranslations("Admin.errors");
   let adminId: string;
   try {
     adminId = await requireAdmin();
   } catch {
-    return { ok: false, error: "İcazə yoxdur." };
+    return { ok: false, error: t("unauthorized") };
   }
   const parsed = activateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
   const d = parsed.data;
 
   const sub = await prisma.subscription.findUnique({
     where: { accountId: d.accountId },
     select: { id: true, plan: true, status: true, currentPeriodEnd: true },
   });
-  if (!sub) return { ok: false, error: "Abunəlik tapılmadı." };
+  if (!sub) return { ok: false, error: t("subNotFound") };
 
   // Early renewal keeps the remaining days: extend from the current period end
   // when it's still in the future, otherwise start the period today.

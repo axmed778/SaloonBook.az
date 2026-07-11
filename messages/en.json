@@ -427,6 +427,47 @@
       }
     }
   },
+  "Admin": {
+    "title": "Salons",
+    "subtitle": "{count} accounts · plan activation and payment history",
+    "noAccounts": "No accounts yet.",
+    "colSalon": "Salon",
+    "colOwner": "Owner",
+    "colPlan": "Plan",
+    "colStatus": "Status",
+    "colEnds": "Ends",
+    "colBookings": "Bookings this month",
+    "effectiveTooltip": "Current effective entitlement",
+    "close": "Close",
+    "payments": "Payments",
+    "activate": "Activate",
+    "recentPayments": "Recent payments",
+    "noPayments": "No payment records.",
+    "activateTitle": "Activate plan — {name}",
+    "activateNote": "The payment is recorded and the period is extended {from}.",
+    "fromExisting": "from the current end date",
+    "fromToday": "from today",
+    "planLabel": "Plan",
+    "monthsLabel": "Months",
+    "amountLabel": "Amount (₼)",
+    "amountPlaceholder": "list price",
+    "confirm": "Confirm",
+    "paymentLabel": "{amount} ₼ · {months} mo · {date}",
+    "errMonthsRange": "Months must be between 1 and 24.",
+    "errAmountInvalid": "The amount is invalid.",
+    "subStatus": {
+      "ACTIVE": "Active",
+      "TRIALING": "Trial",
+      "PAST_DUE": "Payment pending",
+      "CANCELLED": "Cancelled",
+      "FREE_DOWNGRADED": "Downgraded to free"
+    },
+    "errors": {
+      "unauthorized": "Not allowed.",
+      "invalidData": "Invalid data.",
+      "subNotFound": "Subscription not found."
+    }
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",

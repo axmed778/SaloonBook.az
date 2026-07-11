@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { activateSubscription } from "./actions";
 
 export type AccountRow = {
@@ -28,42 +29,35 @@ const STATUS_CHIP: Record<string, string> = {
   FREE_DOWNGRADED: "bg-amber-500/10 text-amber-300",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: "Aktiv",
-  TRIALING: "Sınaq",
-  PAST_DUE: "Ödəniş gözlənilir",
-  CANCELLED: "Ləğv edilib",
-  FREE_DOWNGRADED: "Pulsuza düşüb",
-};
-
 export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
+  const t = useTranslations("Admin");
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">Salonlar</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-zinc-500">
-          {rows.length} hesab · plan aktivləşdirmə və ödəniş tarixçəsi
+          {t("subtitle", { count: rows.length })}
         </p>
       </div>
 
       {rows.length === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-10 text-center text-sm text-zinc-500">
-          Hələ hesab yoxdur.
+          {t("noAccounts")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-[#0d0d0f]">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800 text-xs text-zinc-500">
-                <th className="px-4 py-3 font-medium">Salon</th>
-                <th className="px-4 py-3 font-medium">Sahib</th>
-                <th className="px-4 py-3 font-medium">Plan</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Bitmə</th>
-                <th className="px-4 py-3 text-right font-medium">Bu ay görüş</th>
+                <th className="px-4 py-3 font-medium">{t("colSalon")}</th>
+                <th className="px-4 py-3 font-medium">{t("colOwner")}</th>
+                <th className="px-4 py-3 font-medium">{t("colPlan")}</th>
+                <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
+                <th className="px-4 py-3 font-medium">{t("colEnds")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("colBookings")}</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -102,6 +96,7 @@ function RowGroup({
   onToggle: () => void;
   onActivate: () => void;
 }) {
+  const t = useTranslations("Admin");
   return (
     <>
       <tr className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-900/40">
@@ -123,7 +118,7 @@ function RowGroup({
         <td className="px-4 py-3">
           <span className="text-zinc-200">{r.plan}</span>
           {r.effective !== r.plan && (
-            <span className="ml-1.5 text-xs text-amber-400" title="Hazırkı real hüquq">
+            <span className="ml-1.5 text-xs text-amber-400" title={t("effectiveTooltip")}>
               → {r.effective}
             </span>
           )}
@@ -133,7 +128,7 @@ function RowGroup({
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[r.status] ?? "bg-zinc-800 text-zinc-400"}`}
             >
-              {STATUS_LABEL[r.status] ?? r.status}
+              {t.has(`subStatus.${r.status}`) ? t(`subStatus.${r.status}`) : r.status}
             </span>
           ) : (
             <span className="text-zinc-600">—</span>
@@ -149,13 +144,13 @@ function RowGroup({
               onClick={onToggle}
               className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 transition hover:border-zinc-500"
             >
-              {expanded ? "Bağla" : "Ödənişlər"}
+              {expanded ? t("close") : t("payments")}
             </button>
             <button
               onClick={onActivate}
               className="rounded-lg bg-rose-500 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-rose-400"
             >
-              Aktivləşdir
+              {t("activate")}
             </button>
           </div>
         </td>
@@ -163,9 +158,9 @@ function RowGroup({
       {expanded && (
         <tr className="border-b border-zinc-800/60 bg-zinc-900/30">
           <td colSpan={7} className="px-4 py-3">
-            <p className="text-xs font-medium text-zinc-500">Son ödənişlər</p>
+            <p className="text-xs font-medium text-zinc-500">{t("recentPayments")}</p>
             {r.payments.length === 0 ? (
-              <p className="mt-1 text-sm text-zinc-500">Ödəniş qeydi yoxdur.</p>
+              <p className="mt-1 text-sm text-zinc-500">{t("noPayments")}</p>
             ) : (
               <ul className="mt-1 space-y-1 text-sm text-zinc-300">
                 {r.payments.map((p) => (
@@ -181,6 +176,8 @@ function RowGroup({
 }
 
 function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void }) {
+  const t = useTranslations("Admin");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<"BASIC" | "PRO">(row.plan === "PRO" ? "PRO" : "BASIC");
@@ -192,11 +189,11 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
     e.preventDefault();
     setError(null);
     const m = Number(months);
-    if (!Number.isInteger(m) || m < 1 || m > 24) return setError("Ay 1–24 arası olmalıdır.");
+    if (!Number.isInteger(m) || m < 1 || m > 24) return setError(t("errMonthsRange"));
     let amountMinor: number | null = null;
     if (amount.trim() !== "") {
       const v = Number(amount.trim().replace(",", "."));
-      if (!Number.isFinite(v) || v < 0) return setError("Məbləğ düzgün deyil.");
+      if (!Number.isFinite(v) || v < 0) return setError(t("errAmountInvalid"));
       amountMinor = Math.round(v * 100);
     }
     startTransition(async () => {
@@ -226,16 +223,18 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold text-zinc-100">
-          Planı aktivləşdir — {r_name(row)}
+          {t("activateTitle", { name: r_name(row) })}
         </h2>
         <p className="mt-1 text-xs text-zinc-500">
-          Ödəniş qeydə alınır və müddət {row.status === "ACTIVE" ? "mövcud bitmə tarixindən" : "bu gündən"} uzadılır.
+          {t("activateNote", {
+            from: row.status === "ACTIVE" ? t("fromExisting") : t("fromToday"),
+          })}
         </p>
 
         <form onSubmit={submit} className="mt-4 space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">Plan</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">{t("planLabel")}</label>
               <select
                 className={inputCls + " w-full [color-scheme:dark]"}
                 value={plan}
@@ -246,7 +245,7 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">Ay</label>
+              <label className="mb-1 block text-xs font-medium text-zinc-400">{t("monthsLabel")}</label>
               <input
                 className={inputCls + " w-full"}
                 inputMode="numeric"
@@ -256,12 +255,12 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-400">
-                Məbləğ (₼)
+                {t("amountLabel")}
               </label>
               <input
                 className={inputCls + " w-full"}
                 inputMode="decimal"
-                placeholder="siyahı qiyməti"
+                placeholder={t("amountPlaceholder")}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -274,14 +273,14 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               onClick={onClose}
               className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
             <button
               type="submit"
               disabled={pending}
               className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
             >
-              {pending ? "Gözləyin…" : "Təsdiqlə"}
+              {pending ? tc("pleaseWait") : t("confirm")}
             </button>
           </div>
         </form>

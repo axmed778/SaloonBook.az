@@ -427,6 +427,47 @@
       }
     }
   },
+  "Admin": {
+    "title": "Salonlar",
+    "subtitle": "{count} hesab · plan aktivləşdirmə və ödəniş tarixçəsi",
+    "noAccounts": "Hələ hesab yoxdur.",
+    "colSalon": "Salon",
+    "colOwner": "Sahib",
+    "colPlan": "Plan",
+    "colStatus": "Status",
+    "colEnds": "Bitmə",
+    "colBookings": "Bu ay görüş",
+    "effectiveTooltip": "Hazırkı real hüquq",
+    "close": "Bağla",
+    "payments": "Ödənişlər",
+    "activate": "Aktivləşdir",
+    "recentPayments": "Son ödənişlər",
+    "noPayments": "Ödəniş qeydi yoxdur.",
+    "activateTitle": "Planı aktivləşdir — {name}",
+    "activateNote": "Ödəniş qeydə alınır və müddət {from} uzadılır.",
+    "fromExisting": "mövcud bitmə tarixindən",
+    "fromToday": "bu gündən",
+    "planLabel": "Plan",
+    "monthsLabel": "Ay",
+    "amountLabel": "Məbləğ (₼)",
+    "amountPlaceholder": "siyahı qiyməti",
+    "confirm": "Təsdiqlə",
+    "paymentLabel": "{amount} ₼ · {months} ay · {date}",
+    "errMonthsRange": "Ay 1–24 arası olmalıdır.",
+    "errAmountInvalid": "Məbləğ düzgün deyil.",
+    "subStatus": {
+      "ACTIVE": "Aktiv",
+      "TRIALING": "Sınaq",
+      "PAST_DUE": "Ödəniş gözlənilir",
+      "CANCELLED": "Ləğv edilib",
+      "FREE_DOWNGRADED": "Pulsuza düşüb"
+    },
+    "errors": {
+      "unauthorized": "İcazə yoxdur.",
+      "invalidData": "Yanlış məlumat.",
+      "subNotFound": "Abunəlik tapılmadı."
+    }
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",
