@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
+import { intlLocale } from "@/i18n/format";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { ConfirmDialog } from "@/app/[locale]/dashboard/_components/confirm-dialog";
 import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { saveEmployeePay, recordPayout, deletePayout } from "./actions";
+
+// Loose translator type (avoids depending on next-intl's exact generic shape).
+type Tr = (key: string, values?: Record<string, string | number>) => string;
 
 export type PayrollRow = {
   id: string;
@@ -36,20 +40,20 @@ function shiftYm(ym: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function ymLabel(ym: string): string {
+function ymLabel(ym: string, df: string): string {
   const [y, m] = ym.split("-").map(Number);
-  return new Intl.DateTimeFormat("az-AZ", { month: "long", year: "numeric" }).format(
+  return new Intl.DateTimeFormat(df, { month: "long", year: "numeric" }).format(
     new Date(Date.UTC(y, m - 1, 1, 12)),
   );
 }
 
-/** "500 ₼ + 30%" / "30% komissiya" / "500 ₼ maaş" / "təyin edilməyib" */
-function payModelLabel(r: PayrollRow): string {
+/** Salary + commission / commission only / salary only / unset. */
+function payModelLabel(r: PayrollRow, t: Tr): string {
   if (r.baseSalaryMinor > 0 && r.commissionPct > 0)
-    return `${azn(r.baseSalaryMinor)} ₼ maaş + ${r.commissionPct}%`;
-  if (r.commissionPct > 0) return `${r.commissionPct}% komissiya`;
-  if (r.baseSalaryMinor > 0) return `${azn(r.baseSalaryMinor)} ₼ maaş`;
-  return "təyin edilməyib";
+    return t("payModel.hybrid", { salary: azn(r.baseSalaryMinor), pct: r.commissionPct });
+  if (r.commissionPct > 0) return t("payModel.commissionOnly", { pct: r.commissionPct });
+  if (r.baseSalaryMinor > 0) return t("payModel.salaryOnly", { salary: azn(r.baseSalaryMinor) });
+  return t("payModel.none");
 }
 
 /** Parse an AZN amount ("450" / "450.50" / "450,50") into qəpik, or null. */
@@ -70,6 +74,8 @@ export function PayrollManager({
   rows: PayrollRow[];
   payouts: PayoutItem[];
 }) {
+  const t = useTranslations("Payroll");
+  const df = intlLocale(useLocale());
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [payFor, setPayFor] = useState<PayrollRow | null>(null); // pay-model modal
@@ -113,21 +119,21 @@ export function PayrollManager({
       {/* Header + month nav */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Əməkhaqqı</h1>
+          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Maaş + komissiya hesablanması və ödənişlərin qeydiyyatı.
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-zinc-800 p-1">
           <Link
             href={`/dashboard/payroll?ay=${shiftYm(ym, -1)}`}
             className="rounded-md px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-            aria-label="Əvvəlki ay" title="Əvvəlki ay"
+            aria-label={t("prevMonth")} title={t("prevMonth")}
           >
             ←
           </Link>
           <span className="min-w-[9rem] text-center text-sm font-medium text-zinc-200">
-            {ymLabel(ym)}
+            {ymLabel(ym, df)}
           </span>
           <Link
             href={ym < currentYm ? `/dashboard/payroll?ay=${shiftYm(ym, 1)}` : "#"}
@@ -138,7 +144,7 @@ export function PayrollManager({
                 ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                 : "pointer-events-none text-zinc-700")
             }
-            aria-label="Növbəti ay" title="Növbəti ay"
+            aria-label={t("nextMonth")} title={t("nextMonth")}
           >
             →
           </Link>
@@ -148,15 +154,15 @@ export function PayrollManager({
       {/* Month totals */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-4">
-          <p className="text-xs text-zinc-500">Hesablanmış (bu ay)</p>
+          <p className="text-xs text-zinc-500">{t("totals.earned")}</p>
           <p className="mt-1 text-lg font-semibold text-zinc-100">{azn(totals.earned)} ₼</p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-4">
-          <p className="text-xs text-zinc-500">Ödənilmiş</p>
+          <p className="text-xs text-zinc-500">{t("totals.paid")}</p>
           <p className="mt-1 text-lg font-semibold text-emerald-400">{azn(totals.paid)} ₼</p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-4">
-          <p className="text-xs text-zinc-500">Qalıq</p>
+          <p className="text-xs text-zinc-500">{t("totals.balance")}</p>
           <p
             className={
               "mt-1 text-lg font-semibold " +
@@ -170,9 +176,9 @@ export function PayrollManager({
 
       {rows.length === 0 ? (
         <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-8 text-center">
-          <p className="text-sm font-medium text-zinc-300">Hələ işçi yoxdur</p>
+          <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
           <p className="mt-1 text-sm text-zinc-500">
-            Əvvəlcə İşçilər bölməsindən işçi əlavə edin.
+            {t("emptyBody")}
           </p>
         </div>
       ) : (
@@ -188,13 +194,13 @@ export function PayrollManager({
                       {r.name}
                       {!r.isActive && (
                         <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-500">
-                          deaktiv
+                          {t("inactive")}
                         </span>
                       )}
                     </p>
                     <p className="mt-0.5 text-xs text-zinc-500">
                       {r.position ? `${r.position} · ` : ""}
-                      {payModelLabel(r)}
+                      {payModelLabel(r, t)}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
@@ -202,36 +208,36 @@ export function PayrollManager({
                       onClick={() => setPayFor(r)}
                       className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
                     >
-                      Modeli dəyiş
+                      {t("changeModel")}
                     </button>
                     <button
                       onClick={() => setPayoutFor(r)}
                       className="rounded-lg bg-rose-500 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-rose-400"
                     >
-                      Ödəniş qeyd et
+                      {t("recordPayout")}
                     </button>
                   </div>
                 </div>
 
                 <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
                   <div>
-                    <dt className="text-xs text-zinc-500">Tamamlanmış görüş</dt>
+                    <dt className="text-xs text-zinc-500">{t("row.completed")}</dt>
                     <dd className="text-zinc-200">{r.completedCount}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500">Gəlir</dt>
+                    <dt className="text-xs text-zinc-500">{t("row.revenue")}</dt>
                     <dd className="text-zinc-200">{azn(r.revenueMinor)} ₼</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500">Komissiya</dt>
+                    <dt className="text-xs text-zinc-500">{t("row.commission")}</dt>
                     <dd className="text-zinc-200">{azn(r.commissionMinor)} ₼</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500">Hesablanmış</dt>
+                    <dt className="text-xs text-zinc-500">{t("row.earned")}</dt>
                     <dd className="font-medium text-zinc-100">{azn(r.earnedMinor)} ₼</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500">Qalıq</dt>
+                    <dt className="text-xs text-zinc-500">{t("row.balance")}</dt>
                     <dd
                       className={
                         "font-medium " +
@@ -255,7 +261,7 @@ export function PayrollManager({
                         className="flex items-center justify-between gap-3 text-xs text-zinc-400"
                       >
                         <span className="min-w-0 truncate">
-                          {new Intl.DateTimeFormat("az-AZ", {
+                          {new Intl.DateTimeFormat(df, {
                             timeZone: "Asia/Baku",
                             day: "numeric",
                             month: "short",
@@ -268,9 +274,9 @@ export function PayrollManager({
                           onClick={() => setConfirmRemove(p.id)}
                           disabled={pending}
                           className="shrink-0 text-zinc-600 transition hover:text-rose-400"
-                          aria-label="Ödənişi sil"
+                          aria-label={t("deletePayout")}
                         >
-                          Sil
+                          {t("delete")}
                         </button>
                       </li>
                     ))}
@@ -288,8 +294,8 @@ export function PayrollManager({
       )}
       {confirmRemove && (
         <ConfirmDialog
-          title="Ödəniş qeydini sil"
-          body="Bu ödəniş qeydi silinsin? Qalıq yenidən hesablanacaq."
+          title={t("deletePayoutTitle")}
+          body={t("deletePayoutBody")}
           pending={pending}
           onConfirm={() => removePayout(confirmRemove)}
           onClose={() => setConfirmRemove(null)}
@@ -303,6 +309,7 @@ export function PayrollManager({
 // --- Pay-model modal ---------------------------------------------------------
 
 function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void }) {
+  const t = useTranslations("Payroll");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [salary, setSalary] = useState(row.baseSalaryMinor > 0 ? azn(row.baseSalaryMinor) : "");
@@ -315,11 +322,11 @@ function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void 
     const baseSalaryMinor = salary.trim() === "" ? 0 : parseAzn(salary);
     const commissionPct = pct.trim() === "" ? 0 : Number(pct.trim());
     if (baseSalaryMinor === null) {
-      setError("Maaş məbləği düzgün deyil.");
+      setError(t("errors.salaryInvalid"));
       return;
     }
     if (!Number.isInteger(commissionPct) || commissionPct < 0 || commissionPct > 100) {
-      setError("Komissiya 0–100 arası tam ədəd olmalıdır.");
+      setError(t("errors.commissionRange"));
       return;
     }
     startTransition(async () => {
@@ -334,10 +341,10 @@ function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void 
   }
 
   return (
-    <Modal title={`Maaş modeli — ${row.name}`} onClose={onClose}>
+    <Modal title={t("payModelTitle", { name: row.name })} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm text-zinc-300">
-          Aylıq maaş (₼)
+          {t("payModelModal.salaryLabel")}
           <input
             inputMode="decimal"
             placeholder="0"
@@ -347,7 +354,7 @@ function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void 
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-zinc-300">
-          Komissiya (tamamlanmış görüşlərin gəlirindən %)
+          {t("payModelModal.commissionLabel")}
           <input
             inputMode="numeric"
             placeholder="0"
@@ -357,11 +364,10 @@ function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void 
           />
         </label>
         <p className="text-xs text-zinc-500">
-          Yalnız maaş üçün faizi boş saxlayın; yalnız komissiya üçün maaşı boş saxlayın;
-          hibrid üçün hər ikisini doldurun.
+          {t("payModelModal.hint")}
         </p>
         {error && <p className="text-sm text-rose-400">{error}</p>}
-        <ModalActions pending={pending} onClose={onClose} submitLabel="Yadda saxla" />
+        <ModalActions pending={pending} onClose={onClose} submitLabel={t("save")} />
       </form>
     </Modal>
   );
@@ -378,6 +384,8 @@ function PayoutModal({
   ym: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("Payroll");
+  const df = intlLocale(useLocale());
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const balance = row.earnedMinor - row.paidMinor;
@@ -390,7 +398,7 @@ function PayoutModal({
     setError(null);
     const amountMinor = parseAzn(amount);
     if (amountMinor === null || amountMinor <= 0) {
-      setError("Məbləğ düzgün deyil.");
+      setError(t("errors.amountInvalid"));
       return;
     }
     startTransition(async () => {
@@ -410,17 +418,17 @@ function PayoutModal({
   }
 
   return (
-    <Modal title={`Ödəniş — ${row.name} (${ymLabel(ym)})`} onClose={onClose}>
+    <Modal title={t("payoutTitle", { name: row.name, month: ymLabel(ym, df) })} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <p className="text-sm text-zinc-400">
-          Hesablanmış: <span className="text-zinc-100">{azn(row.earnedMinor)} ₼</span> · Ödənilmiş:{" "}
-          <span className="text-zinc-100">{azn(row.paidMinor)} ₼</span> · Qalıq:{" "}
+          {t("payoutModal.earnedLabel")}: <span className="text-zinc-100">{azn(row.earnedMinor)} ₼</span> · {t("payoutModal.paidLabel")}:{" "}
+          <span className="text-zinc-100">{azn(row.paidMinor)} ₼</span> · {t("payoutModal.balanceLabel")}:{" "}
           <span className={balance > 0 ? "text-amber-300" : "text-zinc-100"}>
             {azn(balance)} ₼
           </span>
         </p>
         <label className="flex flex-col gap-1 text-sm text-zinc-300">
-          Məbləğ (₼)
+          {t("payoutModal.amount")}
           <input
             inputMode="decimal"
             required
@@ -430,17 +438,17 @@ function PayoutModal({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-zinc-300">
-          Qeyd (istəyə bağlı)
+          {t("payoutModal.note")}
           <input
             maxLength={300}
-            placeholder="məs., nağd / kart"
+            placeholder={t("payoutModal.notePlaceholder")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none"
           />
         </label>
         {error && <p className="text-sm text-rose-400">{error}</p>}
-        <ModalActions pending={pending} onClose={onClose} submitLabel="Qeyd et" />
+        <ModalActions pending={pending} onClose={onClose} submitLabel={t("payoutModal.submit")} />
       </form>
     </Modal>
   );
@@ -482,6 +490,7 @@ function ModalActions({
   onClose: () => void;
   submitLabel: string;
 }) {
+  const tc = useTranslations("Common");
   return (
     <div className="flex justify-end gap-2">
       <button
@@ -489,14 +498,14 @@ function ModalActions({
         onClick={onClose}
         className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
       >
-        Ləğv et
+        {tc("cancel")}
       </button>
       <button
         type="submit"
         disabled={pending}
         className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
       >
-        {pending ? "Gözləyin…" : submitLabel}
+        {pending ? tc("pleaseWait") : submitLabel}
       </button>
     </div>
   );

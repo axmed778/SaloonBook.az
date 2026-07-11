@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { featuresFor } from "@/lib/plans";
@@ -19,7 +20,8 @@ async function requirePayrollSalon(): Promise<string> {
   if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
   const sub = await subscriptionForSalon(prisma, session.salonId);
   if (!featuresFor(effectivePlan(sub)).payroll) {
-    throw new Error("Əməkhaqqı modulu Pro planın funksiyasıdır.");
+    const t = await getTranslations("Payroll");
+    throw new Error(t("proOnly"));
   }
   return session.salonId;
 }
@@ -34,21 +36,22 @@ const paySchema = z.object({
 });
 
 export async function saveEmployeePay(input: unknown): Promise<ActionResult> {
+  const te = await getTranslations("Payroll.errors");
   let salonId: string;
   try {
     salonId = await requirePayrollSalon();
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "İcazə yoxdur." };
+    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
   }
   const parsed = paySchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  if (!parsed.success) return { ok: false, error: te("invalidData") };
   const d = parsed.data;
 
   const res = await prisma.employee.updateMany({
     where: { id: d.employeeId, salonId },
     data: { baseSalaryMinor: d.baseSalaryMinor, commissionPct: d.commissionPct },
   });
-  if (res.count === 0) return { ok: false, error: "İşçi tapılmadı." };
+  if (res.count === 0) return { ok: false, error: te("employeeNotFound") };
 
   revalidatePath("/dashboard/payroll");
   return { ok: true };
@@ -62,14 +65,15 @@ const payoutSchema = z.object({
 });
 
 export async function recordPayout(input: unknown): Promise<ActionResult> {
+  const te = await getTranslations("Payroll.errors");
   let salonId: string;
   try {
     salonId = await requirePayrollSalon();
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "İcazə yoxdur." };
+    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
   }
   const parsed = payoutSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  if (!parsed.success) return { ok: false, error: te("invalidData") };
   const d = parsed.data;
 
   // Tenant guard: the employee must belong to this salon.
@@ -77,7 +81,7 @@ export async function recordPayout(input: unknown): Promise<ActionResult> {
     where: { id: d.employeeId, salonId },
     select: { id: true },
   });
-  if (!employee) return { ok: false, error: "İşçi tapılmadı." };
+  if (!employee) return { ok: false, error: te("employeeNotFound") };
 
   await prisma.payout.create({
     data: {
@@ -94,16 +98,17 @@ export async function recordPayout(input: unknown): Promise<ActionResult> {
 }
 
 export async function deletePayout(id: string): Promise<ActionResult> {
+  const te = await getTranslations("Payroll.errors");
   let salonId: string;
   try {
     salonId = await requirePayrollSalon();
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "İcazə yoxdur." };
+    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
   }
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: te("invalidData") };
 
   const res = await prisma.payout.deleteMany({ where: { id, salonId } });
-  if (res.count === 0) return { ok: false, error: "Ödəniş tapılmadı." };
+  if (res.count === 0) return { ok: false, error: te("payoutNotFound") };
 
   revalidatePath("/dashboard/payroll");
   return { ok: true };

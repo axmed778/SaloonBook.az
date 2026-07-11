@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc } from "@/lib/time";
@@ -24,17 +25,17 @@ export default async function PayrollPage({
   searchParams: Promise<{ ay?: string }>;
 }) {
   const session = (await getSession())!;
+  const t = await getTranslations("Payroll");
 
   if (session.isAdmin || !session.salonId) {
+    const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-zinc-100">
-          {session.isAdmin ? "Platforma idarəetməsi" : "Salon tapılmadı"}
+          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          {session.isAdmin
-            ? "Əməkhaqqı salon sahibləri üçündür."
-            : "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."}
+          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>
     );
@@ -50,20 +51,19 @@ export default async function PayrollPage({
   if (!featuresFor(plan).payroll) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="text-lg font-semibold text-zinc-100">Əməkhaqqı</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
         <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/5 p-6">
           <p className="text-sm font-medium text-zinc-100">
-            Əməkhaqqı modulu Pro planın funksiyasıdır.
+            {t("proOnly")}
           </p>
           <p className="mt-2 text-sm text-zinc-400">
-            İşçilərin maaş və faiz (komissiya) modelini qurun, hər ay nə qədər
-            qazandıqlarını avtomatik hesablayın və ödənişləri qeyd edin.
+            {t("proBody")}
           </p>
           <Link
             href="/dashboard/billing"
             className="mt-4 inline-flex items-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
           >
-            Pro plana keç
+            {t("upgradeToPro")}
           </Link>
         </div>
       </div>

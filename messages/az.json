@@ -468,6 +468,60 @@
       "subNotFound": "Abunəlik tapılmadı."
     }
   },
+  "Payroll": {
+    "title": "Əməkhaqqı",
+    "subtitle": "Maaş + komissiya hesablanması və ödənişlərin qeydiyyatı.",
+    "adminTitle": "Platforma idarəetməsi",
+    "adminBody": "Əməkhaqqı salon sahibləri üçündür.",
+    "proOnly": "Əməkhaqqı modulu Pro planın funksiyasıdır.",
+    "proBody": "İşçilərin maaş və faiz (komissiya) modelini qurun, hər ay nə qədər qazandıqlarını avtomatik hesablayın və ödənişləri qeyd edin.",
+    "upgradeToPro": "Pro plana keç",
+    "prevMonth": "Əvvəlki ay",
+    "nextMonth": "Növbəti ay",
+    "totals": { "earned": "Hesablanmış (bu ay)", "paid": "Ödənilmiş", "balance": "Qalıq" },
+    "emptyTitle": "Hələ işçi yoxdur",
+    "emptyBody": "Əvvəlcə İşçilər bölməsindən işçi əlavə edin.",
+    "inactive": "deaktiv",
+    "changeModel": "Modeli dəyiş",
+    "recordPayout": "Ödəniş qeyd et",
+    "row": { "completed": "Tamamlanmış görüş", "revenue": "Gəlir", "commission": "Komissiya", "earned": "Hesablanmış", "balance": "Qalıq" },
+    "delete": "Sil",
+    "deletePayout": "Ödənişi sil",
+    "deletePayoutTitle": "Ödəniş qeydini sil",
+    "deletePayoutBody": "Bu ödəniş qeydi silinsin? Qalıq yenidən hesablanacaq.",
+    "save": "Yadda saxla",
+    "payModel": {
+      "hybrid": "{salary} ₼ maaş + {pct}%",
+      "commissionOnly": "{pct}% komissiya",
+      "salaryOnly": "{salary} ₼ maaş",
+      "none": "təyin edilməyib"
+    },
+    "payModelTitle": "Maaş modeli — {name}",
+    "payModelModal": {
+      "salaryLabel": "Aylıq maaş (₼)",
+      "commissionLabel": "Komissiya (tamamlanmış görüşlərin gəlirindən %)",
+      "hint": "Yalnız maaş üçün faizi boş saxlayın; yalnız komissiya üçün maaşı boş saxlayın; hibrid üçün hər ikisini doldurun."
+    },
+    "payoutTitle": "Ödəniş — {name} ({month})",
+    "payoutModal": {
+      "earnedLabel": "Hesablanmış",
+      "paidLabel": "Ödənilmiş",
+      "balanceLabel": "Qalıq",
+      "amount": "Məbləğ (₼)",
+      "note": "Qeyd (istəyə bağlı)",
+      "notePlaceholder": "məs., nağd / kart",
+      "submit": "Qeyd et"
+    },
+    "errors": {
+      "salaryInvalid": "Maaş məbləği düzgün deyil.",
+      "commissionRange": "Komissiya 0–100 arası tam ədəd olmalıdır.",
+      "amountInvalid": "Məbləğ düzgün deyil.",
+      "unauthorized": "İcazə yoxdur.",
+      "invalidData": "Yanlış məlumat.",
+      "employeeNotFound": "İşçi tapılmadı.",
+      "payoutNotFound": "Ödəniş tapılmadı."
+    }
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",

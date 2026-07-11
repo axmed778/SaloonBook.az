@@ -468,6 +468,60 @@
       "subNotFound": "Subscription not found."
     }
   },
+  "Payroll": {
+    "title": "Payroll",
+    "subtitle": "Salary + commission calculation and payout tracking.",
+    "adminTitle": "Platform management",
+    "adminBody": "Payroll is for salon owners.",
+    "proOnly": "The payroll module is a Pro plan feature.",
+    "proBody": "Set up each staff member's salary and commission (percentage) model, automatically calculate what they earn each month, and record payouts.",
+    "upgradeToPro": "Upgrade to Pro",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "totals": { "earned": "Earned (this month)", "paid": "Paid", "balance": "Balance" },
+    "emptyTitle": "No staff yet",
+    "emptyBody": "Add staff in the Staff section first.",
+    "inactive": "inactive",
+    "changeModel": "Change model",
+    "recordPayout": "Record payout",
+    "row": { "completed": "Completed appointments", "revenue": "Revenue", "commission": "Commission", "earned": "Earned", "balance": "Balance" },
+    "delete": "Delete",
+    "deletePayout": "Delete payout",
+    "deletePayoutTitle": "Delete payout record",
+    "deletePayoutBody": "Delete this payout record? The balance will be recalculated.",
+    "save": "Save",
+    "payModel": {
+      "hybrid": "{salary} ₼ salary + {pct}%",
+      "commissionOnly": "{pct}% commission",
+      "salaryOnly": "{salary} ₼ salary",
+      "none": "not set"
+    },
+    "payModelTitle": "Pay model — {name}",
+    "payModelModal": {
+      "salaryLabel": "Monthly salary (₼)",
+      "commissionLabel": "Commission (% of completed-appointment revenue)",
+      "hint": "For salary only, leave the percentage empty; for commission only, leave the salary empty; for hybrid, fill in both."
+    },
+    "payoutTitle": "Payout — {name} ({month})",
+    "payoutModal": {
+      "earnedLabel": "Earned",
+      "paidLabel": "Paid",
+      "balanceLabel": "Balance",
+      "amount": "Amount (₼)",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. cash / card",
+      "submit": "Record"
+    },
+    "errors": {
+      "salaryInvalid": "The salary amount is invalid.",
+      "commissionRange": "Commission must be a whole number between 0 and 100.",
+      "amountInvalid": "The amount is invalid.",
+      "unauthorized": "Not allowed.",
+      "invalidData": "Invalid data.",
+      "employeeNotFound": "Staff member not found.",
+      "payoutNotFound": "Payout not found."
+    }
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",
