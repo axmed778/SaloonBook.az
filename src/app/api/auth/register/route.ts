@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { localeFromCookie } from "@/i18n/request-locale";
 import { TRIAL_MONTHS } from "@/lib/plans";
 import { addMonths } from "@/lib/time";
 
@@ -60,6 +62,8 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
+
   const ip = clientIp(req);
   const [burst, hourly] = await Promise.all([
     rateLimit(`register:ip:${ip}`, LIMITS.burst.limit, LIMITS.burst.windowSec),
@@ -68,7 +72,7 @@ export async function POST(req: NextRequest) {
   if (!burst.allowed || !hourly.allowed) {
     const resetSec = Math.max(burst.resetSec, hourly.resetSec);
     return NextResponse.json(
-      { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+      { error: t("tooManyAttempts") },
       { status: 429, headers: { "Retry-After": String(resetSec) } },
     );
   }
@@ -84,9 +88,10 @@ export async function POST(req: NextRequest) {
   const { email, password, salonName, audience, fullName } = parsed.data;
 
   // Enforce password policy server-side (the client also shows the rules).
-  const issues = passwordIssues(password);
-  if (issues.length > 0) {
-    return NextResponse.json({ error: "Şifrə tələblərə uyğun deyil.", issues }, { status: 400 });
+  const issueCodes = passwordIssues(password);
+  if (issueCodes.length > 0) {
+    const issues = issueCodes.map((c) => t(`passwordIssues.${c}`));
+    return NextResponse.json({ error: t("api.passwordWeak"), issues }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -95,7 +100,7 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   });
   if (existing) {
-    return NextResponse.json({ error: "Bu e-poçt artıq qeydiyyatdadır." }, { status: 409 });
+    return NextResponse.json({ error: t("api.emailTaken") }, { status: 409 });
   }
 
   const slug = await uniqueSlug(slugify(salonName));
@@ -141,10 +146,10 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     // Unique-constraint race (email/slug) → conflict; everything else → 500.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return NextResponse.json({ error: "Bu e-poçt artıq qeydiyyatdadır." }, { status: 409 });
+      return NextResponse.json({ error: t("api.emailTaken") }, { status: 409 });
     }
     console.error("[auth/register] error", e);
-    return NextResponse.json({ error: "Qeydiyyat alınmadı." }, { status: 500 });
+    return NextResponse.json({ error: t("api.registerFailed") }, { status: 500 });
   }
 
   await setSession(userId);

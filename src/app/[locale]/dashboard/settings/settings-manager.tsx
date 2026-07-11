@@ -311,7 +311,7 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
 
       <div className="mt-4 flex items-center gap-3">
         <button onClick={save} disabled={pending} className={saveBtn}>
-          {pending ? "Saxlanılır…" : "Saxla"}
+          {pending ? t("saving") : t("save")}
         </button>
         {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-400" : "text-rose-400")}>{msg.text}</span>}
       </div>

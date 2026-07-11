@@ -655,6 +655,29 @@
       "Ən az bir rəqəm",
       "Ən az bir xüsusi simvol"
     ],
+    "passwordIssues": {
+      "min8": "Ən az 8 simvol olmalıdır.",
+      "lower": "Ən az bir kiçik hərf olmalıdır.",
+      "upper": "Ən az bir böyük hərf olmalıdır.",
+      "digit": "Ən az bir rəqəm olmalıdır.",
+      "special": "Ən az bir xüsusi simvol olmalıdır."
+    },
+    "api": {
+      "invalidCredentials": "E-poçt və ya şifrə yanlışdır.",
+      "passwordMismatch": "Şifrələr uyğun gəlmir.",
+      "passwordWeak": "Şifrə tələblərə uyğun deyil.",
+      "emailTaken": "Bu e-poçt artıq qeydiyyatdadır.",
+      "registerFailed": "Qeydiyyat alınmadı.",
+      "invalidData": "Yanlış məlumat.",
+      "resetLinkInvalid": "Link etibarsızdır və ya vaxtı keçib. Yenidən bərpa tələb edin."
+    },
+    "email": {
+      "resetSubject": "SalonBook.az — şifrənin bərpası",
+      "resetHeading": "Şifrənin bərpası",
+      "resetBody": "SalonBook.az hesabınız üçün şifrə bərpası tələb olunub. Yeni şifrə təyin etmək üçün aşağıdakı düyməyə klikləyin — link {minutes} dəqiqə etibarlıdır.",
+      "resetButton": "Yeni şifrə təyin et",
+      "resetIgnore": "Əgər bu tələbi siz göndərməmisinizsə, bu e-poçtu nəzərə almayın — şifrəniz dəyişməyəcək."
+    },
     "login": {
       "title": "Daxil ol",
       "subtitle": "SalonBook.az idarə panelinə daxil olun.",
@@ -804,7 +827,17 @@
       "confirmNewTime": "Yeni vaxtı təsdiqlə — {time}",
       "pickTime": "Vaxt seçin"
     },
-    "goToSalon": "{name} səhifəsinə keç"
+    "goToSalon": "{name} səhifəsinə keç",
+    "api": {
+      "tooManyRequests": "Çox sayda sorğu.",
+      "tooManyAttempts": "Çox sayda cəhd. Bir az sonra yenidən yoxlayın.",
+      "notActive": "Bu görüş artıq aktiv deyil.",
+      "pastCannotChange": "Vaxtı keçmiş görüş dəyişdirilə bilməz.",
+      "salonUnavailable": "Salon hazırda əlçatan deyil. Görüşü yalnız ləğv edə bilərsiniz.",
+      "dateTooFar": "Bu tarix çox uzaqdır.",
+      "slotTaken": "Bu vaxt artıq tutulub.",
+      "changeFailed": "Dəyişiklik alınmadı."
+    }
   },
   "Landing": {
     "badgeNew": "Yeni",

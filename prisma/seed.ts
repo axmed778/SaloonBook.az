@@ -61,6 +61,7 @@ async function seedAuthAccounts() {
           `Set it to a strong value in the environment (do not commit it).`,
       );
     }
+    // (issue codes above are dev-facing only)
     await prisma.user.create({
       data: {
         email: adminEmail,

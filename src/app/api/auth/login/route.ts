@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { localeFromCookie } from "@/i18n/request-locale";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +23,18 @@ const bodySchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-function tooMany(resetSec: number) {
+function tooMany(resetSec: number, message: string) {
   return NextResponse.json(
-    { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+    { error: message },
     { status: 429, headers: { "Retry-After": String(resetSec) } },
   );
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
+
   const ipRl = await rateLimit(`login:ip:${clientIp(req)}`, LIMITS.ip.limit, LIMITS.ip.windowSec);
-  if (!ipRl.allowed) return tooMany(ipRl.resetSec);
+  if (!ipRl.allowed) return tooMany(ipRl.resetSec, t("tooManyAttempts"));
 
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
     LIMITS.email.limit,
     LIMITS.email.windowSec,
   );
-  if (!emailRl.allowed) return tooMany(emailRl.resetSec);
+  if (!emailRl.allowed) return tooMany(emailRl.resetSec, t("tooManyAttempts"));
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
   // don't leak which emails are registered.
   const ok = user ? verifyPassword(parsed.data.password, user.passwordHash) : false;
   if (!ok || !user) {
-    return NextResponse.json({ error: "E-poçt və ya şifrə yanlışdır." }, { status: 401 });
+    return NextResponse.json({ error: t("api.invalidCredentials") }, { status: 401 });
   }
 
   await setSession(user.id);

@@ -28,16 +28,19 @@ export function verifyPassword(pw: string, stored: string | null | undefined): b
 }
 
 /**
- * Returns a list of human-readable reasons a password is rejected, or an empty
- * array if it passes. Rules: 8+ chars, ≥1 lowercase, ≥1 uppercase, ≥1 digit,
+ * Returns stable issue CODES for why a password is rejected, or an empty array
+ * if it passes. Callers translate them (Auth.passwordIssues.<code>); the seed
+ * uses the codes as-is. Rules: 8+ chars, ≥1 lowercase, ≥1 uppercase, ≥1 digit,
  * ≥1 special character.
  */
-export function passwordIssues(pw: string): string[] {
-  const issues: string[] = [];
-  if (pw.length < 8) issues.push("Ən az 8 simvol olmalıdır.");
-  if (!/[a-z]/.test(pw)) issues.push("Ən az bir kiçik hərf olmalıdır.");
-  if (!/[A-Z]/.test(pw)) issues.push("Ən az bir böyük hərf olmalıdır.");
-  if (!/[0-9]/.test(pw)) issues.push("Ən az bir rəqəm olmalıdır.");
-  if (!/[^A-Za-z0-9]/.test(pw)) issues.push("Ən az bir xüsusi simvol olmalıdır.");
+export type PasswordIssue = "min8" | "lower" | "upper" | "digit" | "special";
+
+export function passwordIssues(pw: string): PasswordIssue[] {
+  const issues: PasswordIssue[] = [];
+  if (pw.length < 8) issues.push("min8");
+  if (!/[a-z]/.test(pw)) issues.push("lower");
+  if (!/[A-Z]/.test(pw)) issues.push("upper");
+  if (!/[0-9]/.test(pw)) issues.push("digit");
+  if (!/[^A-Za-z0-9]/.test(pw)) issues.push("special");
   return issues;
 }

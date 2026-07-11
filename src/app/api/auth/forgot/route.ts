@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createHash, randomBytes } from "node:crypto";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { localeFromCookie } from "@/i18n/request-locale";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +23,12 @@ const LIMITS = {
 const bodySchema = z.object({ email: z.string().email().max(254) });
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
+
   const ipRl = await rateLimit(`forgot:ip:${clientIp(req)}`, LIMITS.ip.limit, LIMITS.ip.windowSec);
   if (!ipRl.allowed) {
     return NextResponse.json(
-      { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+      { error: t("tooManyAttempts") },
       { status: 429, headers: { "Retry-After": String(ipRl.resetSec) } },
     );
   }
@@ -68,23 +72,21 @@ export async function POST(req: NextRequest) {
   const link = `${appUrl}/reset-password?token=${raw}`;
   await sendEmail({
     to: email,
-    subject: "SalonBook.az — şifrənin bərpası",
+    subject: t("email.resetSubject"),
     html: `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto">
-        <h2 style="font-size:18px">Şifrənin bərpası</h2>
+        <h2 style="font-size:18px">${t("email.resetHeading")}</h2>
         <p style="color:#444;line-height:1.5">
-          SalonBook.az hesabınız üçün şifrə bərpası tələb olunub. Yeni şifrə
-          təyin etmək üçün aşağıdakı düyməyə klikləyin — link ${TOKEN_TTL_MIN} dəqiqə etibarlıdır.
+          ${t("email.resetBody", { minutes: TOKEN_TTL_MIN })}
         </p>
         <p style="margin:24px 0">
           <a href="${link}"
              style="background:#e11d48;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">
-            Yeni şifrə təyin et
+            ${t("email.resetButton")}
           </a>
         </p>
         <p style="color:#888;font-size:13px;line-height:1.5">
-          Əgər bu tələbi siz göndərməmisinizsə, bu e-poçtu nəzərə almayın —
-          şifrəniz dəyişməyəcək.
+          ${t("email.resetIgnore")}
         </p>
       </div>`,
   });

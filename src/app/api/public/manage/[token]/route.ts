@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
-import { getAvailableSlots, isSlotBookable, type SlotRejectReason } from "@/lib/availability";
+import { getAvailableSlots, isSlotBookable } from "@/lib/availability";
 import { isOverlapError } from "@/lib/booking";
 import { enqueueNotification } from "@/lib/queue";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { localeFromCookie } from "@/i18n/request-locale";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +21,6 @@ const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 // How far ahead a reschedule may land (same horizon as the booking widget +
 // slack) — bounds abuse and typos.
 const MAX_AHEAD_DAYS = 60;
-
-const SLOT_REASON_AZ: Record<SlotRejectReason, string> = {
-  service: "Xidmət tapılmadı.",
-  past: "Bu vaxt keçmişdə qalıb.",
-  hours: "İşçi bu vaxt işləmir.",
-  timeoff: "İşçi bu vaxt məzuniyyətdədir.",
-  overlap: "Bu vaxt artıq tutulub.",
-};
 
 async function loadByToken(token: string) {
   if (!TOKEN_RE.test(token)) return null;
@@ -55,8 +49,9 @@ export async function GET(
   const { token } = await params;
   const rl = await rateLimit(`manage:get:${clientIp(req)}`, 60, 60);
   if (!rl.allowed) {
+    const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Manage.api" });
     return NextResponse.json(
-      { error: "Çox sayda sorğu." },
+      { error: t("tooManyRequests") },
       { status: 429, headers: { "Retry-After": String(rl.resetSec) } },
     );
   }
@@ -91,6 +86,9 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
+  const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Manage.api" });
+  const tSlot = await getTranslations({ locale: await localeFromCookie(), namespace: "Actions" });
+
   const ip = clientIp(req);
   const [ipRl, tokenRl] = await Promise.all([
     rateLimit(`manage:post:ip:${ip}`, 10, 60),
@@ -99,7 +97,7 @@ export async function POST(
   if (!ipRl.allowed || !tokenRl.allowed) {
     const resetSec = Math.max(ipRl.resetSec, tokenRl.resetSec);
     return NextResponse.json(
-      { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+      { error: t("tooManyAttempts") },
       { status: 429, headers: { "Retry-After": String(resetSec) } },
     );
   }
@@ -115,16 +113,10 @@ export async function POST(
 
   const now = new Date();
   if (appt.status !== "CONFIRMED") {
-    return NextResponse.json(
-      { error: "Bu görüş artıq aktiv deyil." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: t("notActive") }, { status: 409 });
   }
   if (appt.startsAt <= now) {
-    return NextResponse.json(
-      { error: "Vaxtı keçmiş görüş dəyişdirilə bilməz." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: t("pastCannotChange") }, { status: 409 });
   }
 
   if (parsed.data.action === "cancel") {
@@ -165,7 +157,7 @@ export async function POST(
     });
 
     if (ownerNoticeId === "conflict") {
-      return NextResponse.json({ error: "Bu görüş artıq aktiv deyil." }, { status: 409 });
+      return NextResponse.json({ error: t("notActive") }, { status: 409 });
     }
     if (ownerNoticeId) {
       await enqueueBestEffort([{ id: ownerNoticeId }]);
@@ -178,15 +170,12 @@ export async function POST(
   // status the same way the public /book route does. A SUSPENDED (or otherwise
   // non-active) salon takes no new commitments; cancelling above stays allowed.
   if (appt.salon.status !== "ACTIVE") {
-    return NextResponse.json(
-      { error: "Salon hazırda əlçatan deyil. Görüşü yalnız ləğv edə bilərsiniz." },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: t("salonUnavailable") }, { status: 409 });
   }
 
   const startUtc = new Date(parsed.data.startUtc);
   if (startUtc.getTime() > now.getTime() + MAX_AHEAD_DAYS * 86_400_000) {
-    return NextResponse.json({ error: "Bu tarix çox uzaqdır." }, { status: 400 });
+    return NextResponse.json({ error: t("dateTooFar") }, { status: 400 });
   }
 
   const check = await isSlotBookable(prisma, {
@@ -197,7 +186,11 @@ export async function POST(
   });
   if (!check.ok) {
     return NextResponse.json(
-      { error: SLOT_REASON_AZ[check.reason] ?? "Bu vaxt uyğun deyil." },
+      {
+        error: tSlot.has(`slotReason.${check.reason}`)
+          ? tSlot(`slotReason.${check.reason}`)
+          : tSlot("slotUnavailable"),
+      },
       { status: 409 },
     );
   }
@@ -255,13 +248,13 @@ export async function POST(
     });
   } catch (e) {
     if (e instanceof Error && e.message === "conflict") {
-      return NextResponse.json({ error: "Bu görüş artıq aktiv deyil." }, { status: 409 });
+      return NextResponse.json({ error: t("notActive") }, { status: 409 });
     }
     if (isOverlapError(e)) {
-      return NextResponse.json({ error: "Bu vaxt artıq tutulub." }, { status: 409 });
+      return NextResponse.json({ error: t("slotTaken") }, { status: 409 });
     }
     console.error("[manage] reschedule error", e);
-    return NextResponse.json({ error: "Dəyişiklik alınmadı." }, { status: 500 });
+    return NextResponse.json({ error: t("changeFailed") }, { status: 500 });
   }
 
   await enqueueBestEffort(toEnqueue);

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createHash } from "node:crypto";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { localeFromCookie } from "@/i18n/request-locale";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +26,12 @@ const bodySchema = z
   });
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
+
   const ipRl = await rateLimit(`reset:ip:${clientIp(req)}`, 10, 900);
   if (!ipRl.allowed) {
     return NextResponse.json(
-      { error: "Çox sayda cəhd. Bir az sonra yenidən yoxlayın." },
+      { error: t("tooManyAttempts") },
       { status: 429, headers: { "Retry-After": String(ipRl.resetSec) } },
     );
   }
@@ -35,15 +39,17 @@ export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
+    const mismatch = parsed.error.issues.some((i) => i.path.includes("confirmPassword"));
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." },
+      { error: mismatch ? t("api.passwordMismatch") : t("api.invalidData") },
       { status: 400 },
     );
   }
 
-  const issues = passwordIssues(parsed.data.password);
-  if (issues.length > 0) {
-    return NextResponse.json({ error: "Şifrə tələblərə uyğun deyil.", issues }, { status: 400 });
+  const issueCodes = passwordIssues(parsed.data.password);
+  if (issueCodes.length > 0) {
+    const issues = issueCodes.map((c) => t(`passwordIssues.${c}`));
+    return NextResponse.json({ error: t("api.passwordWeak"), issues }, { status: 400 });
   }
 
   const tokenHash = createHash("sha256").update(parsed.data.token).digest("hex");
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
   });
   if (!token || token.usedAt || token.expiresAt < new Date()) {
     return NextResponse.json(
-      { error: "Link etibarsızdır və ya vaxtı keçib. Yenidən bərpa tələb edin." },
+      { error: t("api.resetLinkInvalid") },
       { status: 400 },
     );
   }

@@ -655,6 +655,29 @@
       "At least one digit",
       "At least one special character"
     ],
+    "passwordIssues": {
+      "min8": "Must be at least 8 characters.",
+      "lower": "Must include at least one lowercase letter.",
+      "upper": "Must include at least one uppercase letter.",
+      "digit": "Must include at least one digit.",
+      "special": "Must include at least one special character."
+    },
+    "api": {
+      "invalidCredentials": "Email or password is incorrect.",
+      "passwordMismatch": "Passwords don't match.",
+      "passwordWeak": "The password doesn't meet the requirements.",
+      "emailTaken": "This email is already registered.",
+      "registerFailed": "Sign-up failed.",
+      "invalidData": "Invalid data.",
+      "resetLinkInvalid": "The link is invalid or expired. Request a new reset."
+    },
+    "email": {
+      "resetSubject": "SalonBook.az — password reset",
+      "resetHeading": "Password reset",
+      "resetBody": "A password reset was requested for your SalonBook.az account. Click the button below to set a new password — the link is valid for {minutes} minutes.",
+      "resetButton": "Set a new password",
+      "resetIgnore": "If you didn't request this, ignore this email — your password won't change."
+    },
     "login": {
       "title": "Log in",
       "subtitle": "Sign in to your SalonBook.az dashboard.",
@@ -804,7 +827,17 @@
       "confirmNewTime": "Confirm new time — {time}",
       "pickTime": "Choose a time"
     },
-    "goToSalon": "Go to {name} page"
+    "goToSalon": "Go to {name} page",
+    "api": {
+      "tooManyRequests": "Too many requests.",
+      "tooManyAttempts": "Too many attempts. Please try again a bit later.",
+      "notActive": "This appointment is no longer active.",
+      "pastCannotChange": "A past appointment can't be changed.",
+      "salonUnavailable": "The salon is currently unavailable. You can only cancel the appointment.",
+      "dateTooFar": "This date is too far away.",
+      "slotTaken": "This time is already taken.",
+      "changeFailed": "The change failed."
+    }
   },
   "Landing": {
     "badgeNew": "New",
