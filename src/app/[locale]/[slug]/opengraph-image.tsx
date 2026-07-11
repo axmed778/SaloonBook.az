@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { intlLocale } from "@/i18n/format";
 
 // Per-salon Open Graph image (1200×630), rendered on demand. Next picks this
 // up automatically for /{slug} — shared booking links preview with the salon's
@@ -10,17 +12,23 @@ export const alt = "Onlayn qeydiyyat — SalonBook.az";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const initials = (name: string) =>
+const initials = (name: string, df: string) =>
   name
     .split(/\s+/)
     .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
     .join("")
-    .toLocaleUpperCase("az-AZ");
+    .toLocaleUpperCase(df);
 
-export default async function OgImage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function OgImage({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  const df = intlLocale(locale);
+  const t = await getTranslations({ locale, namespace: "SalonPage" });
   const salon = await prisma.salon.findUnique({
     where: { slug },
     select: { name: true, address: true, status: true },
@@ -83,7 +91,7 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
                 fontWeight: 700,
               }}
             >
-              {initials(name)}
+              {initials(name, df)}
             </div>
             <div
               style={{
@@ -120,7 +128,7 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
               background: "#34d399",
             }}
           />
-          Vaxtınızı onlayn ayırın — 24/7
+          {t("ogTagline")}
         </div>
       </div>
     ),

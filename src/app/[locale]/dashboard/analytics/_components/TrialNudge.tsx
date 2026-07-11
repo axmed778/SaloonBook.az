@@ -1,7 +1,8 @@
 // Compact trial/plan strip under the header: a single slim row with the
 // countdown and a small CTA, escalating urgency (border + count colour) as the
 // trial ends. Every branch is null-safe.
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { PLAN_LIMITS } from "@/lib/plans";
 
@@ -18,7 +19,7 @@ function Cta({ children }: { children: string }) {
   );
 }
 
-export function TrialNudge({
+export async function TrialNudge({
   status,
   daysLeft,
   planPriceMinor,
@@ -31,14 +32,15 @@ export function TrialNudge({
   planLabel: string;
   periodEndLabel: string | null;
 }) {
+  const t = await getTranslations("Analytics.trial");
   const price = `${azn(planPriceMinor || PLAN_LIMITS.BASIC.priceMinor)} ₼`;
 
   // Active plan — quiet strip, no CTA.
   if (status === "ACTIVE") {
     return (
       <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-zinc-300">
-        Aktiv plan: <span className="font-medium text-zinc-100">{planLabel}</span>
-        {periodEndLabel ? ` · növbəti ödəniş ${periodEndLabel}` : ""}
+        {t("active")} <span className="font-medium text-zinc-100">{planLabel}</span>
+        {periodEndLabel ? t("nextPayment", { date: periodEndLabel }) : ""}
       </section>
     );
   }
@@ -51,8 +53,8 @@ export function TrialNudge({
   ) {
     return (
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3">
-        <p className="text-sm text-rose-200">Sınaq müddəti bitib — planı aktivləşdirin.</p>
-        <Cta>Aktivləşdir</Cta>
+        <p className="text-sm text-rose-200">{t("trialEnded")}</p>
+        <Cta>{t("activate")}</Cta>
       </section>
     );
   }
@@ -71,10 +73,13 @@ export function TrialNudge({
         className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border ${tone.border} px-4 py-3`}
       >
         <p className="text-sm text-zinc-300">
-          Sınaq <span className={`font-semibold ${tone.count}`}>{daysLeft}</span> gün sonra bitir
-          · cəmi {price}/ay
+          {t.rich("endsIn", {
+            days: daysLeft,
+            price,
+            n: (chunks) => <span className={`font-semibold ${tone.count}`}>{chunks}</span>,
+          })}
         </p>
-        <Cta>Planı aktivləşdir</Cta>
+        <Cta>{t("activatePlan")}</Cta>
       </section>
     );
   }
@@ -83,9 +88,9 @@ export function TrialNudge({
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 px-4 py-3">
       <p className="text-sm text-zinc-400">
-        Planı aktivləşdirərək bütün funksiyaları açıq saxlayın.
+        {t("generic")}
       </p>
-      <Cta>Planlara bax</Cta>
+      <Cta>{t("viewPlans")}</Cta>
     </section>
   );
 }

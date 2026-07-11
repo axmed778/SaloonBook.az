@@ -1,6 +1,7 @@
 // Top revenue services this month, with a horizontal bar per row (top row full
 // rose, the rest muted rose). Spans two columns on lg. Empty salons get a
 // graceful "Hələ məlumat yoxdur" instead of a bare card.
+import { getTranslations } from "next-intl/server";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
 export type TopServiceRow = {
@@ -10,15 +11,16 @@ export type TopServiceRow = {
   pct: number; // 0..100, relative to the top row
 };
 
-export function TopServices({ rows }: { rows: TopServiceRow[] }) {
+export async function TopServices({ rows }: { rows: TopServiceRow[] }) {
+  const t = await getTranslations("Analytics.topServices");
   return (
     <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5 lg:col-span-2">
       <h2 className="text-lg font-semibold text-zinc-100">
-        Ən çox gəlir gətirən xidmətlər
+        {t("title")}
       </h2>
 
       {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-zinc-500">Hələ məlumat yoxdur</p>
+        <p className="mt-4 text-sm text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {rows.map((r, i) => (
@@ -37,7 +39,7 @@ export function TopServices({ rows }: { rows: TopServiceRow[] }) {
                   />
                 </div>
                 <span className="whitespace-nowrap text-xs text-zinc-500">
-                  {r.count} görüş
+                  {t("appointments", { count: r.count })}
                 </span>
               </div>
             </li>

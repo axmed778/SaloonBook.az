@@ -538,6 +538,104 @@
       "overlap": "Bu vaxt artıq tutulub."
     }
   },
+  "Analytics": {
+    "adminTitle": "Platforma idarəetməsi",
+    "adminBody": "Analitika salon sahibləri üçündür.",
+    "monthBrought": "SALONBOOK-UN GƏTİRDİYİ",
+    "heroEmpty": "İlk onlayn görüşünüzü gözləyirik — qeydiyyat linkinizi paylaşın.",
+    "shareLink": "Linki paylaş",
+    "heroLine": "Bu ay <n>{count}</n> onlayn görüş",
+    "trial": {
+      "active": "Aktiv plan:",
+      "nextPayment": " · növbəti ödəniş {date}",
+      "trialEnded": "Sınaq müddəti bitib — planı aktivləşdirin.",
+      "activate": "Aktivləşdir",
+      "endsIn": "Sınaq <n>{days}</n> gün sonra bitir · cəmi {price}/ay",
+      "activatePlan": "Planı aktivləşdir",
+      "generic": "Planı aktivləşdirərək bütün funksiyaları açıq saxlayın.",
+      "viewPlans": "Planlara bax"
+    },
+    "cards": {
+      "revenue": "Bu ayın gəliri (realizə olunmuş)",
+      "new": "yeni",
+      "expected": "Gözlənilən gəlir",
+      "expectedSub": "{count} təsdiqlənmiş görüş qarşıda",
+      "totalBookings": "Ümumi görüşlər",
+      "noShowSub": "Gəlmədi: {count}",
+      "returning": "Qayıdan müştərilər",
+      "returnRate": "{rate}% qayıdış",
+      "noCustomers": "Hələ müştəri yoxdur",
+      "whatsapp": "WhatsApp xatırlatmaları",
+      "comingSoon": "Tezliklə",
+      "waSent": "avtomatik göndərildi"
+    },
+    "onlineShare": {
+      "title": "Onlayn pay",
+      "detail": "{publicCount} onlayn / {totalCount} ümumi görüş"
+    },
+    "topServices": {
+      "title": "Ən çox gəlir gətirən xidmətlər",
+      "empty": "Hələ məlumat yoxdur",
+      "serviceFallback": "Xidmət",
+      "appointments": "{count} görüş"
+    },
+    "customerSource": {
+      "title": "Müştərilərin onlayn istifadəsi",
+      "totalCustomers": "Ümumi {count} müştəri",
+      "noCustomers": "Hələ müştəri yoxdur.",
+      "everOnline": "Onlayn qeydiyyatdan istifadə edən",
+      "firstOnline": "İlk dəfə onlayn gələn",
+      "manualAdded": "Əl ilə əlavə: {count}"
+    },
+    "leaderboards": {
+      "topCustomers": "Ən sadiq müştərilər",
+      "topMasters": "Ən çox görüş alan ustalar",
+      "empty": "Hələ məlumat yoxdur",
+      "appointments": "{count} görüş",
+      "customerFallback": "Müştəri",
+      "masterFallback": "Usta"
+    }
+  },
+  "Legal": {
+    "lastUpdated": "Son yenilənmə",
+    "privacy": {
+      "metaTitle": "Məxfilik Siyasəti — SalonBook.az",
+      "metaDescription": "SalonBook.az-ın şəxsi məlumatların toplanması, istifadəsi və qorunması qaydaları.",
+      "title": "Məxfilik Siyasəti",
+      "updated": "6 iyul 2026",
+      "contactLine": "Suallar və müraciətlər üçün: WhatsApp {wa} və ya saytdakı əlaqə kanalları.",
+      "sections": [
+        { "title": "1. Ümumi məlumat", "body": ["SalonBook.az (bundan sonra — «Platforma») salonlar, bərbərxanalar və klinikalar üçün onlayn qeydiyyat xidmətidir. Bu siyasət Platformadan istifadə zamanı hansı şəxsi məlumatların toplandığını, necə istifadə edildiyini və qorunduğunu izah edir. Platformadan istifadə etməklə bu siyasətlə razılaşmış olursunuz."] },
+        { "title": "2. Topladığımız məlumatlar", "body": ["Aşağıdakı məlumatları toplayırıq:", { "items": ["Salon hesabı məlumatları: e-poçt ünvanı, ad, salon adı və salon profili məlumatları (ünvan, telefon, iş saatları, xidmətlər, işçilər). Şifrələr yalnız birtərəfli heş şəklində saxlanılır.", "Müştəri məlumatları: onlayn qeydiyyat zamanı daxil edilən ad, telefon nömrəsi və seçilmiş görüş məlumatları (xidmət, usta, tarix və saat).", "Texniki məlumatlar: təhlükəsizlik və sui-istifadənin qarşısının alınması məqsədilə IP ünvanı, sessiya kukisi və oxşar texniki qeydlər."] }] },
+        { "title": "3. Məlumatlardan istifadə məqsədləri", "body": [{ "items": ["Onlayn qeydiyyat və görüşlərin idarə edilməsi xidmətini göstərmək;", "WhatsApp vasitəsilə görüşlə bağlı bildirişlər göndərmək (qeydiyyat təsdiqi, görüşdən əvvəl xatırlatma, salona yeni görüş barədə məlumat);", "Hesabın təhlükəsizliyini təmin etmək və sui-istifadənin qarşısını almaq;", "Salon sahibinə öz fəaliyyəti barədə statistika göstərmək."] }, "WhatsApp bildirişləri yalnız görüşlə bağlı əməliyyat xarakterli mesajlardır — telefon nömrənizə reklam və ya marketinq mesajları göndərilmir."] },
+        { "title": "4. Məlumatların paylaşılması", "body": ["Şəxsi məlumatlarınızı üçüncü tərəflərə satmırıq. Məlumatlar yalnız xidmətin göstərilməsi üçün zəruri hallarda paylaşılır:", { "items": ["Meta Platforms (WhatsApp Business API) — bildiriş mesajlarının çatdırılması üçün telefon nömrəsi və mesaj məzmunu ötürülür;", "Hostinq və verilənlər bazası təchizatçıları — Platformanın işləməsi üçün məlumatlar təhlükəsiz serverlərdə saxlanılır;", "Qanunvericiliklə tələb olunduqda səlahiyyətli dövlət orqanlarına."] }, "Müştəri məlumatları yalnız qeydiyyatdan keçdiyi salona görünür — bir salonun məlumatları digər salonlara əlçatan deyil."] },
+        { "title": "5. Kukilər (cookies)", "body": ["Platforma yalnız zəruri kukilərdən istifadə edir: daxil olduqdan sonra sessiyanı saxlayan kuki və interfeys seçimləri (məsələn, tema). İzləmə və ya reklam kukiləri istifadə edilmir."] },
+        { "title": "6. Məlumatların saxlanması və təhlükəsizliyi", "body": ["Məlumatlar hesab aktiv olduğu müddətdə saxlanılır. Məlumatların ötürülməsi HTTPS ilə şifrələnir, şifrələr heş alqoritmi ilə qorunur və verilənlər bazasına giriş məhdudlaşdırılıb."] },
+        { "title": "7. Hüquqlarınız", "body": ["Şəxsi məlumatlarınıza baxmaq, düzəliş etmək və ya silinməsini tələb etmək hüququnuz var. Bunun üçün aşağıdakı əlaqə vasitəsi ilə müraciət edin — müraciətlər ağlabatan müddətdə cavablandırılır."] },
+        { "title": "8. Dəyişikliklər", "body": ["Bu siyasət zaman-zaman yenilənə bilər. Əhəmiyyətli dəyişikliklər bu səhifədə dərc olunur və «Son yenilənmə» tarixi yenilənir."] },
+        { "title": "9. Əlaqə", "body": ["__contact__"] }
+      ]
+    },
+    "terms": {
+      "metaTitle": "İstifadə Şərtləri — SalonBook.az",
+      "metaDescription": "SalonBook.az platformasından istifadə qaydaları və şərtləri.",
+      "title": "İstifadə Şərtləri",
+      "updated": "6 iyul 2026",
+      "contactLine": "Bu şərtlər Azərbaycan Respublikasının qanunvericiliyi ilə tənzimlənir. Suallar üçün: WhatsApp {wa}.",
+      "privacyLink": { "before": "Şəxsi məlumatların toplanması və istifadəsi qaydaları ayrıca", "link": "Məxfilik Siyasətində", "after": "təsvir olunub." },
+      "sections": [
+        { "title": "1. Xidmətin təsviri", "body": ["SalonBook.az salonlar, bərbərxanalar və klinikalar üçün onlayn qeydiyyat platformasıdır: müştərilər salonun səhifəsi vasitəsilə özləri görüş üçün yer ayırır, salon isə təqvim üzərindən görüşləri idarə edir və WhatsApp bildirişləri alır/göndərir. Platformadan istifadə etməklə bu şərtlərlə razılaşırsınız."] },
+        { "title": "2. Hesab və məsuliyyət", "body": [{ "items": ["Hesab yaratmaq üçün düzgün və aktual məlumat təqdim etməlisiniz;", "Hesabınızın giriş məlumatlarının qorunmasına görə siz məsuliyyət daşıyırsınız;", "Salon öz səhifəsində dərc etdiyi məlumatların (xidmətlər, qiymətlər, iş saatları) düzgünlüyünə görə məsuliyyət daşıyır;", "Salon müştərilərinin telefon nömrələrini yalnız görüşlə bağlı bildirişlər üçün istifadə etməyə və bunun üçün müştəri razılığının olmasına görə məsuliyyət daşıyır."] }] },
+        { "title": "3. Qadağan olunan istifadə", "body": [{ "items": ["Yalan və ya başqasının adından qeydiyyatlar yaratmaq;", "Platformadan spam və ya arzuolunmaz mesajlar göndərmək üçün istifadə etmək;", "Platformanın işinə müdaxilə etmək, avtomatlaşdırılmış kütləvi sorğular göndərmək;", "Qanunvericiliyə zidd fəaliyyət üçün istifadə etmək."] }, "Bu qaydaları pozan hesablar xəbərdarlıq edilmədən dayandırıla və ya silinə bilər."] },
+        { "title": "4. Tariflər və ödəniş", "body": ["Platforma pulsuz sınaq müddəti və ödənişli tarif planları ilə işləyir. Aktual qiymətlər saytın «Qiymətlər» bölməsində göstərilir və AZN ilə hesablanır. Ödənişlər hazırda birbaşa (manual) qaydada qəbul olunur — ətraflı məlumat üçün bizimlə əlaqə saxlayın. Tariflər əvvəlcədən bildirilməklə dəyişdirilə bilər."] },
+        { "title": "5. WhatsApp bildirişləri", "body": ["Görüş təsdiqi və xatırlatmalar WhatsApp Business API (Meta Platforms) vasitəsilə göndərilir. Mesajların çatdırılması Meta-nın xidmətindən asılıdır və Platforma çatdırılmaya tam zəmanət vermir. Ləğv edilmiş görüşlər üçün xatırlatma göndərilmir."] },
+        { "title": "6. Xidmətin əlçatanlığı və məsuliyyətin məhdudlaşdırılması", "body": ["Platformanın fasiləsiz işləməsi üçün ağlabatan səylər göstəririk, lakin xidmət «olduğu kimi» təqdim olunur. Texniki fasilələr, üçüncü tərəf xidmətlərinin (hostinq, WhatsApp) dayanması və ya fors-major hallar nəticəsində yaranan itkilərə görə Platforma məsuliyyət daşımır. Salon ilə müştəri arasındakı münasibətlərin (xidmətin keyfiyyəti, ödəniş və s.) tərəfi Platforma deyil."] },
+        { "title": "7. Şəxsi məlumatlar", "body": ["__privacyLink__"] },
+        { "title": "8. Dəyişikliklər və xitam", "body": ["Bu şərtlər zaman-zaman yenilənə bilər; davam edən istifadə yenilənmiş şərtlərin qəbulu sayılır. Hesabınızı istənilən vaxt bağlaya bilərsiniz — bunun üçün bizimlə əlaqə saxlayın."] },
+        { "title": "9. Tətbiq olunan hüquq və əlaqə", "body": ["__contact__"] }
+      ]
+    }
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",
@@ -621,7 +719,8 @@
     "poweredBy": "SalonBook.az ilə gücləndirilib",
     "metaTitleSuffix": "Onlayn qeydiyyat",
     "metaNotFound": "Salon tapılmadı — SalonBook.az",
-    "metaDescription": "{name}{addr} — vaxtınızı onlayn ayırın, 24/7. SalonBook.az ilə."
+    "metaDescription": "{name}{addr} — vaxtınızı onlayn ayırın, 24/7. SalonBook.az ilə.",
+    "ogTagline": "Vaxtınızı onlayn ayırın — 24/7"
   },
   "Booking": {
     "eyebrow": "Onlayn qeydiyyat",

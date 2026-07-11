@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 // Shared shell for the static legal pages (/privacy, /terms). Plain typography
 // without the tailwind typography plugin: Section/P keep the markup terse.
 
-export function LegalShell({
+export async function LegalShell({
   title,
   updated,
   children,
@@ -15,12 +16,13 @@ export function LegalShell({
   updated: string;
   children: ReactNode;
 }) {
+  const t = await getTranslations("Legal");
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-3xl px-6 py-14">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Son yenilənmə: {updated}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("lastUpdated")}: {updated}</p>
         <div className="mt-10 space-y-10">{children}</div>
       </main>
       <SiteFooter />

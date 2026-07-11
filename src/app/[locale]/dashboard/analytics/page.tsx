@@ -1,3 +1,4 @@
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
@@ -7,6 +8,7 @@ import {
   bakuDayBoundsUtc,
   formatBakuDate,
 } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { HeroValue } from "./_components/HeroValue";
@@ -22,18 +24,20 @@ export const dynamic = "force-dynamic";
 export default async function AnalyticsPage() {
   // The layout already guarantees a session (redirects otherwise).
   const session = (await getSession())!;
+  const t = await getTranslations("Analytics");
+  const locale = await getLocale();
+  const df = intlLocale(locale);
 
   // Platform admins don't own a salon; analytics is a per-salon surface.
   if (session.isAdmin || !session.salonId) {
+    const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-zinc-100">
-          {session.isAdmin ? "Platforma idarəetməsi" : "Salon tapılmadı"}
+          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
         <p className="mt-2 max-w-sm text-sm text-zinc-500">
-          {session.isAdmin
-            ? "Analitika salon sahibləri üçündür."
-            : "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."}
+          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>
     );
@@ -62,13 +66,13 @@ export default async function AnalyticsPage() {
     ),
   );
 
-  const monthLabel = new Intl.DateTimeFormat("az-AZ", {
+  const monthLabel = new Intl.DateTimeFormat(df, {
     timeZone: BAKU_TZ,
     month: "long",
     year: "numeric",
   })
     .format(new Date())
-    .toLocaleUpperCase("az-AZ");
+    .toLocaleUpperCase(df);
 
   // Fire every independent query concurrently on the server.
   const [
@@ -271,7 +275,7 @@ export default async function AnalyticsPage() {
   const planPriceMinor = PLAN_LIMITS[sub?.plan ?? "BASIC"].priceMinor;
   const planLabel = sub?.plan === "PRO" ? "Pro" : "Basic";
   const periodEndLabel = sub?.currentPeriodEnd
-    ? formatBakuDate(bakuYmd(sub.currentPeriodEnd))
+    ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;
 
   // --- Realized revenue + MoM delta ---
@@ -285,7 +289,7 @@ export default async function AnalyticsPage() {
         ? { text: `+${pct}%`, tone: "emerald" }
         : { text: `−${Math.abs(pct)}%`, tone: "rose" };
   } else if (revCurMinor > 0) {
-    revDelta = { text: "yeni", tone: "neutral" };
+    revDelta = { text: t("cards.new"), tone: "neutral" };
   }
 
   // --- Online share ---
@@ -308,7 +312,7 @@ export default async function AnalyticsPage() {
   const topServiceRows: TopServiceRow[] = topRows.map((r) => {
     const revenueMinor = r._sum.priceMinor ?? 0;
     return {
-      name: nameMap.get(r.serviceId) ?? "Xidmət",
+      name: nameMap.get(r.serviceId) ?? t("topServices.serviceFallback"),
       count: r._count._all,
       revenueMinor,
       pct: maxSum > 0 ? Math.round((revenueMinor / maxSum) * 100) : 0,
@@ -331,19 +335,19 @@ export default async function AnalyticsPage() {
     return rows.map((r) => ({
       key: r.id,
       label: nameById.get(r.id) ?? fallback,
-      value: `${r.count} görüş`,
+      value: t("leaderboards.appointments", { count: r.count }),
       pct: max > 0 ? Math.round((r.count / max) * 100) : 0,
     }));
   };
   const topCustomerRank = toRankRows(
     topCustomerGroup.map((r) => ({ id: r.customerId, count: r._count._all })),
     topCustomerNames,
-    "Müştəri",
+    t("leaderboards.customerFallback"),
   );
   const topMasterRank = toRankRows(
     topMasterGroup.map((r) => ({ id: r.employeeId, count: r._count._all })),
     topMasterNames,
-    "Usta",
+    t("leaderboards.masterFallback"),
   );
 
   return (
@@ -365,7 +369,7 @@ export default async function AnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          label="Bu ayın gəliri (realizə olunmuş)"
+          label={t("cards.revenue")}
           value={`${azn(revCurMinor)} ₼`}
           valueTone="rose"
           delta={revDelta}
@@ -374,29 +378,29 @@ export default async function AnalyticsPage() {
         <OnlineShareCard share={share} publicCount={heroCount} totalCount={totalCount} />
 
         <StatCard
-          label="Gözlənilən gəlir"
+          label={t("cards.expected")}
           value={`${azn(expectedMinor)} ₼`}
-          subline={`${expectedCount} təsdiqlənmiş görüş qarşıda`}
+          subline={t("cards.expectedSub", { count: expectedCount })}
         />
 
         <StatCard
-          label="Ümumi görüşlər"
+          label={t("cards.totalBookings")}
           value={String(totalCount)}
-          subline={noShowCount > 0 ? `Gəlmədi: ${noShowCount}` : null}
+          subline={noShowCount > 0 ? t("cards.noShowSub", { count: noShowCount }) : null}
           sublineTone="amber"
         />
 
         <StatCard
-          label="Qayıdan müştərilər"
+          label={t("cards.returning")}
           value={String(returning)}
-          subline={thisMonthIds.length > 0 ? `${rate}% qayıdış` : "Hələ müştəri yoxdur"}
+          subline={thisMonthIds.length > 0 ? t("cards.returnRate", { rate }) : t("cards.noCustomers")}
         />
 
         <StatCard
-          label="WhatsApp xatırlatmaları"
-          value={waComingSoon ? "Tezliklə" : String(waDelivered)}
+          label={t("cards.whatsapp")}
+          value={waComingSoon ? t("cards.comingSoon") : String(waDelivered)}
           valueTone={waComingSoon ? "muted" : "emerald"}
-          subline={waComingSoon ? null : "avtomatik göndərildi"}
+          subline={waComingSoon ? null : t("cards.waSent")}
         />
 
         <TopServices rows={topServiceRows} />
@@ -410,14 +414,14 @@ export default async function AnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <RankedBars
-          title="Ən sadiq müştərilər"
+          title={t("leaderboards.topCustomers")}
           rows={topCustomerRank}
-          empty="Hələ məlumat yoxdur"
+          empty={t("leaderboards.empty")}
         />
         <RankedBars
-          title="Ən çox görüş alan ustalar"
+          title={t("leaderboards.topMasters")}
           rows={topMasterRank}
-          empty="Hələ məlumat yoxdur"
+          empty={t("leaderboards.empty")}
         />
       </div>
     </div>

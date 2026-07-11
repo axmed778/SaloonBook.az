@@ -2,7 +2,9 @@
 // the core "this wouldn't exist without SalonBook" argument. share === null when
 // there are no bookings yet (guards divide-by-zero upstream).
 
-export function OnlineShareCard({
+import { getTranslations } from "next-intl/server";
+
+export async function OnlineShareCard({
   share,
   publicCount,
   totalCount,
@@ -11,9 +13,10 @@ export function OnlineShareCard({
   publicCount: number;
   totalCount: number;
 }) {
+  const t = await getTranslations("Analytics.onlineShare");
   return (
     <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-      <p className="text-xs font-medium text-zinc-500">Onlayn pay</p>
+      <p className="text-xs font-medium text-zinc-500">{t("title")}</p>
       <p className="mt-2 text-2xl font-semibold text-rose-400 sm:text-3xl">
         {share === null ? "—" : `${share}%`}
       </p>
@@ -23,7 +26,7 @@ export function OnlineShareCard({
         </div>
       )}
       <p className="mt-2 text-sm text-zinc-400">
-        {publicCount} onlayn / {totalCount} ümumi görüş
+        {t("detail", { publicCount, totalCount })}
       </p>
     </div>
   );
