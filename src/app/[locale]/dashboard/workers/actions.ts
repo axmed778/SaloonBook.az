@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { assertEmployeeSeatAvailable } from "@/lib/subscription";
@@ -69,9 +70,10 @@ const employeeSchema = z
 
 export async function saveEmployee(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Workers.errors");
   const parsed = employeeSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
 
@@ -104,7 +106,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
             audience: d.audience,
           },
         });
-        if (res.count === 0) throw new Error("İşçi tapılmadı.");
+        if (res.count === 0) throw new Error(t("notFound"));
         employeeId = d.id;
       } else {
         const emp = await tx.employee.create({
@@ -143,7 +145,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
       }
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Yadda saxlanmadı." };
+    return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
   }
 
   revalidatePath("/dashboard/workers");
@@ -153,6 +155,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
 
 export async function setEmployeeActive(id: string, isActive: boolean): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Workers.errors");
   try {
     await prisma.$transaction(async (tx) => {
       // Re-activating consumes a plan seat — same check as saveEmployee.
@@ -160,7 +163,7 @@ export async function setEmployeeActive(id: string, isActive: boolean): Promise<
       await tx.employee.updateMany({ where: { id, salonId }, data: { isActive } });
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Yadda saxlanmadı." };
+    return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
   }
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");
@@ -185,14 +188,15 @@ const timeOffSchema = z
 
 export async function addTimeOff(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Workers.errors");
   const parsed = timeOffSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
 
   if (d.to < bakuToday()) {
-    return { ok: false, error: "Keçmiş tarix üçün məzuniyyət əlavə edilə bilməz." };
+    return { ok: false, error: t("timeOffPast") };
   }
 
   // Tenant guard: the employee must belong to this salon.
@@ -200,14 +204,14 @@ export async function addTimeOff(input: unknown): Promise<ActionResult> {
     where: { id: d.employeeId, salonId },
     select: { id: true },
   });
-  if (!employee) return { ok: false, error: "İşçi tapılmadı." };
+  if (!employee) return { ok: false, error: t("notFound") };
 
   const startsAt = bakuDayBoundsUtc(d.from).startUtc;
   const endsAt = bakuDayBoundsUtc(d.to).endUtc; // exclusive: start of the day after `to`
 
   // Cap the range so a typo (e.g. year 2062) can't block the calendar forever.
   if (endsAt.getTime() - startsAt.getTime() > 366 * 86_400_000) {
-    return { ok: false, error: "Məzuniyyət 1 ildən uzun ola bilməz." };
+    return { ok: false, error: t("timeOffTooLong") };
   }
 
   await prisma.timeOff.create({
@@ -221,12 +225,13 @@ export async function addTimeOff(input: unknown): Promise<ActionResult> {
 
 export async function deleteTimeOff(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
-  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Yanlış məlumat." };
+  const t = await getTranslations("Workers.errors");
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
   const res = await prisma.timeOff.deleteMany({
     where: { id, employee: { salonId } },
   });
-  if (res.count === 0) return { ok: false, error: "Qeyd tapılmadı." };
+  if (res.count === 0) return { ok: false, error: t("recordNotFound") };
 
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");
@@ -235,16 +240,14 @@ export async function deleteTimeOff(id: string): Promise<ActionResult> {
 
 export async function deleteEmployee(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Workers.errors");
   try {
     const res = await prisma.employee.deleteMany({ where: { id, salonId } });
-    if (res.count === 0) return { ok: false, error: "İşçi tapılmadı." };
+    if (res.count === 0) return { ok: false, error: t("notFound") };
   } catch {
     // FK violation: appointments reference this employee. Keep history — steer to
     // deactivate instead of destroying it.
-    return {
-      ok: false,
-      error: "Bu işçidə görüşlər var. Silmək əvəzinə onu deaktiv edin.",
-    };
+    return { ok: false, error: t("hasAppointments") };
   }
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");

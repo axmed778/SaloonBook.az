@@ -1,4 +1,5 @@
 import type { Plan, Prisma, SubStatus } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { PLAN_LIMITS, type PlanLimits } from "./plans";
 
 // Centralized subscription resolution. Every enforcement point (booking limit,
@@ -98,8 +99,7 @@ export async function assertEmployeeSeatAvailable(
     },
   });
   if (active >= max) {
-    throw new Error(
-      `Planınız ən çox ${max} aktiv işçiyə icazə verir. Daha çox işçi üçün planı yüksəldin (Tariflər səhifəsi).`,
-    );
+    const t = await getTranslations("Workers.errors");
+    throw new Error(t("seatLimit", { max }));
   }
 }

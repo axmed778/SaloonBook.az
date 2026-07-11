@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   saveEmployee,
   setEmployeeActive,
@@ -9,7 +10,7 @@ import {
   addTimeOff,
   deleteTimeOff,
 } from "./actions";
-import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
+import { type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { ErrorToast } from "../_components/toast";
@@ -30,16 +31,9 @@ export type EmployeeRow = {
 };
 
 // weekday: 0=Sunday..6=Saturday (matches the schema + availability engine).
-// Displayed Monday-first, as is conventional in Azerbaijan.
-const WEEKDAYS: { weekday: number; label: string }[] = [
-  { weekday: 1, label: "Bazar ertəsi" },
-  { weekday: 2, label: "Çərşənbə axşamı" },
-  { weekday: 3, label: "Çərşənbə" },
-  { weekday: 4, label: "Cümə axşamı" },
-  { weekday: 5, label: "Cümə" },
-  { weekday: 6, label: "Şənbə" },
-  { weekday: 0, label: "Bazar" },
-];
+// Displayed Monday-first, as is conventional in Azerbaijan. Labels come from
+// the Weekdays message namespace.
+const WEEKDAYS: number[] = [1, 2, 3, 4, 5, 6, 0];
 
 const inputCls =
   "rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
@@ -57,7 +51,7 @@ type HoursState = Record<number, DayState>;
 
 function buildHours(existing: HourRow[]): HoursState {
   const state: HoursState = {};
-  for (const { weekday } of WEEKDAYS) {
+  for (const weekday of WEEKDAYS) {
     const found = existing.find((h) => h.weekday === weekday);
     state[weekday] = found
       ? { on: true, start: toHHMM(found.startMin), end: toHHMM(found.endMin) }
@@ -69,7 +63,7 @@ function buildHours(existing: HourRow[]): HoursState {
 // New employee default: Mon–Sat 10:00–19:00, Sunday off.
 function defaultHours(): HoursState {
   const state: HoursState = {};
-  for (const { weekday } of WEEKDAYS) {
+  for (const weekday of WEEKDAYS) {
     state[weekday] = { on: weekday !== 0, start: "10:00", end: "19:00" };
   }
   return state;
@@ -91,6 +85,10 @@ export function WorkersManager({
   employees: EmployeeRow[];
   services: Svc[];
 }) {
+  const t = useTranslations("Workers");
+  const tc = useTranslations("Common");
+  const tWeekday = useTranslations("Weekdays");
+  const tAudience = useTranslations("Audience");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -144,23 +142,23 @@ export function WorkersManager({
   }
 
   function submit() {
-    if (!form.name.trim()) return setError("Ad tələb olunur.");
+    if (!form.name.trim()) return setError(t("errors.nameRequired"));
 
     const TIME_RE = /^\d{2}:\d{2}$/;
     const hoursPayload: HourRow[] = [];
-    for (const { weekday, label } of WEEKDAYS) {
+    for (const weekday of WEEKDAYS) {
       const d = hours[weekday];
       if (!d.on) continue;
       // A cleared <input type="time"> reports "" — reject it (and any partial
       // value) explicitly, otherwise toMin() yields NaN and slips past the
       // comparison below.
       if (!TIME_RE.test(d.start) || !TIME_RE.test(d.end)) {
-        return setError(`${label}: iş saatlarını doldurun.`);
+        return setError(t("errors.fillHours", { day: tWeekday(String(weekday)) }));
       }
       const startMin = toMin(d.start);
       const endMin = toMin(d.end);
       if (!Number.isFinite(startMin) || !Number.isFinite(endMin) || endMin <= startMin) {
-        return setError(`${label}: bitmə vaxtı başlanğıcdan sonra olmalıdır.`);
+        return setError(t("errors.endAfterStart", { day: tWeekday(String(weekday)) }));
       }
       hoursPayload.push({ weekday, startMin, endMin });
     }
@@ -207,9 +205,9 @@ export function WorkersManager({
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">İşçilər</h1>
+          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Mütəxəssislər, onların xidmətləri və iş qrafiki.
+            {t("subtitle")}
           </p>
         </div>
         {!open && (
@@ -218,7 +216,7 @@ export function WorkersManager({
             className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            Yeni işçi
+            {t("new")}
           </button>
         )}
       </div>
@@ -227,32 +225,32 @@ export function WorkersManager({
       {open && (
         <div className="mb-6 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {form.id ? "İşçini redaktə et" : "Yeni işçi"}
+            {form.id ? t("edit") : t("new")}
           </h2>
 
           {/* Basic fields */}
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
-              <label className={labelCls}>Ad</label>
+              <label className={labelCls}>{t("name")}</label>
               <input
                 className={inputCls + " w-full"}
-                placeholder="Ayan"
+                placeholder={t("namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 autoFocus
               />
             </div>
             <div>
-              <label className={labelCls}>Vəzifə</label>
+              <label className={labelCls}>{t("position")}</label>
               <input
                 className={inputCls + " w-full"}
-                placeholder="Bərbər"
+                placeholder={t("positionPlaceholder")}
                 value={form.position}
                 onChange={(e) => setForm({ ...form, position: e.target.value })}
               />
             </div>
             <div>
-              <label className={labelCls}>Telefon</label>
+              <label className={labelCls}>{t("phone")}</label>
               <input
                 className={inputCls + " w-full"}
                 placeholder="+994..."
@@ -266,16 +264,16 @@ export function WorkersManager({
             <AudienceSelect
               value={form.audience}
               onChange={(a) => setForm({ ...form, audience: a })}
-              label="Kimlərlə işləyir"
+              label={t("worksWith")}
             />
           </div>
 
           {/* Services */}
           <div className="mt-5">
-            <label className={labelCls}>Xidmətlər</label>
+            <label className={labelCls}>{t("services")}</label>
             {activeServices.length === 0 ? (
               <p className="text-sm text-zinc-500">
-                Əvvəlcə «Xidmətlər» bölməsindən xidmət əlavə edin.
+                {t("noServices")}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -303,9 +301,9 @@ export function WorkersManager({
 
           {/* Working hours */}
           <div className="mt-5">
-            <label className={labelCls}>İş qrafiki</label>
+            <label className={labelCls}>{t("schedule")}</label>
             <div className="space-y-2">
-              {WEEKDAYS.map(({ weekday, label }) => {
+              {WEEKDAYS.map((weekday) => {
                 const d = hours[weekday];
                 return (
                   <div key={weekday} className="flex flex-wrap items-center gap-3">
@@ -316,7 +314,7 @@ export function WorkersManager({
                         onChange={(e) => setDay(weekday, { on: e.target.checked })}
                         className="h-4 w-4 accent-rose-500"
                       />
-                      {label}
+                      {tWeekday(String(weekday))}
                     </label>
                     {d.on ? (
                       <div className="flex items-center gap-2">
@@ -337,7 +335,7 @@ export function WorkersManager({
                         />
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-600">İstirahət günü</span>
+                      <span className="text-sm text-zinc-600">{t("dayOff")}</span>
                     )}
                   </div>
                 );
@@ -353,7 +351,7 @@ export function WorkersManager({
               onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
               className="h-4 w-4 accent-rose-500"
             />
-            Aktiv (təqvimdə və qeydiyyatda görünür)
+            {t("activeLabel")}
           </label>
 
           {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
@@ -364,14 +362,14 @@ export function WorkersManager({
               disabled={pending}
               className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
             >
-              {pending ? "Saxlanılır…" : "Saxla"}
+              {pending ? t("saving") : t("save")}
             </button>
             <button
               onClick={close}
               disabled={pending}
               className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60 disabled:opacity-60"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
           </div>
         </div>
@@ -380,9 +378,9 @@ export function WorkersManager({
       {/* List */}
       {employees.length === 0 ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 text-center">
-          <p className="text-sm font-medium text-zinc-300">Hələ işçi yoxdur</p>
+          <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
           <p className="mt-1 max-w-xs text-sm text-zinc-500">
-            «Yeni işçi» düyməsi ilə ilk mütəxəssisinizi əlavə edin — o, dərhal təqvimdə görünəcək.
+            {t("emptyBody")}
           </p>
         </div>
       ) : (
@@ -400,20 +398,20 @@ export function WorkersManager({
                   <div className="flex items-center gap-2">
                     <p className="truncate font-medium text-zinc-100">{e.name}</p>
                     <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-                      {AUDIENCE_LABEL[e.audience]}
+                      {tAudience(e.audience)}
                     </span>
                     {!e.isActive && (
                       <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-                        Deaktiv
+                        {t("inactive")}
                       </span>
                     )}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-zinc-500">
                     {e.position || "—"}
                     <span className="text-zinc-700"> · </span>
-                    {e.serviceIds.length} xidmət
+                    {t("servicesCount", { count: e.serviceIds.length })}
                     <span className="text-zinc-700"> · </span>
-                    {e.hours.length} iş günü
+                    {t("workDaysCount", { count: e.hours.length })}
                   </p>
                 </div>
               </div>
@@ -424,7 +422,7 @@ export function WorkersManager({
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
                 >
-                  Məzuniyyət
+                  {t("timeOff")}
                   {e.timeOff.length > 0 && (
                     <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium text-amber-300">
                       {e.timeOff.length}
@@ -436,21 +434,21 @@ export function WorkersManager({
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
                 >
-                  Redaktə
+                  {t("editAction")}
                 </button>
                 <button
                   onClick={() => toggleActive(e)}
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
                 >
-                  {e.isActive ? "Deaktiv et" : "Aktiv et"}
+                  {e.isActive ? t("deactivate") : t("activate")}
                 </button>
                 <button
                   onClick={() => setConfirmRemove(e)}
                   disabled={pending}
                   className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
-                  Sil
+                  {t("delete")}
                 </button>
               </div>
             </li>
@@ -468,13 +466,11 @@ export function WorkersManager({
       )}
       {confirmRemove && (
         <ConfirmDialog
-          title="İşçini sil"
-          body={
-            <>
-              <span className="font-medium text-zinc-200">{confirmRemove.name}</span> silinsin?
-              Görüşləri olan işçi silinə bilməz — onu deaktiv edin.
-            </>
-          }
+          title={t("deleteTitle")}
+          body={t.rich("deleteConfirm", {
+            name: confirmRemove.name,
+            b: (chunks) => <span className="font-medium text-zinc-200">{chunks}</span>,
+          })}
           pending={pending}
           onConfirm={() => remove(confirmRemove)}
           onClose={() => setConfirmRemove(null)}
@@ -496,6 +492,8 @@ function TimeOffModal({
   employee: EmployeeRow;
   onClose: () => void;
 }) {
+  const t = useTranslations("Workers");
+  const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
@@ -507,8 +505,8 @@ function TimeOffModal({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!from || !to) return setError("Tarixləri seçin.");
-    if (to < from) return setError("Bitmə tarixi başlanğıcdan əvvəl ola bilməz.");
+    if (!from || !to) return setError(t("timeOffModal.errors.selectDates"));
+    if (to < from) return setError(t("timeOffModal.errors.endBeforeStart"));
     startTransition(async () => {
       const res = await addTimeOff({
         employeeId: employee.id,
@@ -543,12 +541,12 @@ function TimeOffModal({
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-zinc-100">
-            Məzuniyyət — {employee.name}
+            {t("timeOffModal.titleFor", { name: employee.name })}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Bağla" title="Bağla"
+            aria-label={tc("close")} title={tc("close")}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -558,7 +556,7 @@ function TimeOffModal({
         <form onSubmit={submit} className="mt-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Başlanğıc</label>
+              <label className={labelCls}>{t("timeOffModal.start")}</label>
               <input
                 type="date"
                 className={inputCls + " w-full [color-scheme:dark]"}
@@ -571,7 +569,7 @@ function TimeOffModal({
               />
             </div>
             <div>
-              <label className={labelCls}>Son gün (daxil)</label>
+              <label className={labelCls}>{t("timeOffModal.endInclusive")}</label>
               <input
                 type="date"
                 className={inputCls + " w-full [color-scheme:dark]"}
@@ -582,10 +580,10 @@ function TimeOffModal({
             </div>
           </div>
           <div>
-            <label className={labelCls}>Səbəb (istəyə bağlı)</label>
+            <label className={labelCls}>{t("timeOffModal.reason")}</label>
             <input
               className={inputCls + " w-full"}
-              placeholder="məs., məzuniyyət, təlim"
+              placeholder={t("timeOffModal.reasonPlaceholder")}
               maxLength={200}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -597,39 +595,38 @@ function TimeOffModal({
             disabled={pending}
             className="w-full rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
           >
-            {pending ? "Əlavə edilir…" : "Əlavə et"}
+            {pending ? t("timeOffModal.adding") : t("timeOffModal.add")}
           </button>
         </form>
 
         <div className="mt-5 border-t border-zinc-800 pt-4">
-          <p className="text-xs font-medium text-zinc-500">Cari və qarşıdakı məzuniyyətlər</p>
+          <p className="text-xs font-medium text-zinc-500">{t("timeOffModal.current")}</p>
           {employee.timeOff.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">Qeyd yoxdur.</p>
+            <p className="mt-2 text-sm text-zinc-500">{t("timeOffModal.none")}</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
-              {employee.timeOff.map((t) => (
+              {employee.timeOff.map((row) => (
                 <li
-                  key={t.id}
+                  key={row.id}
                   className="flex items-center justify-between gap-3 rounded-lg bg-zinc-900/50 px-3 py-2 text-sm"
                 >
                   <span className="min-w-0 truncate text-zinc-200">
-                    {t.label}
-                    {t.reason && <span className="text-zinc-500"> · {t.reason}</span>}
+                    {row.label}
+                    {row.reason && <span className="text-zinc-500"> · {row.reason}</span>}
                   </span>
                   <button
-                    onClick={() => remove(t.id)}
+                    onClick={() => remove(row.id)}
                     disabled={pending}
                     className="shrink-0 text-xs text-zinc-500 transition hover:text-rose-400"
                   >
-                    Sil
+                    {t("delete")}
                   </button>
                 </li>
               ))}
             </ul>
           )}
           <p className="mt-3 text-xs text-zinc-600">
-            Bu günlərdə onlayn qeydiyyat üçün boş vaxt göstərilmir. Artıq təsdiqlənmiş
-            görüşlər avtomatik ləğv olunmur.
+            {t("timeOffModal.note")}
           </p>
         </div>
       </div>

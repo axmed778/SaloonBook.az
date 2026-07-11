@@ -1,6 +1,8 @@
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate, shiftYmd } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
 import { WorkersManager } from "./workers-manager";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function WorkersPage() {
   const session = (await getSession())!;
   if (!session.salonId) {
-    return <p className="text-sm text-zinc-400">Bu hesaba salon bağlanmayıb.</p>;
+    const t = await getTranslations("Dashboard");
+    return <p className="text-sm text-zinc-400">{t("noSalonLinked")}</p>;
   }
   const salonId = session.salonId;
+  const df = intlLocale(await getLocale());
 
   const [employees, services] = await Promise.all([
     prisma.employee.findMany({
@@ -61,8 +65,8 @@ export default async function WorkersPage() {
         id: t.id,
         label:
           fromYmd === toYmd
-            ? formatBakuDate(fromYmd)
-            : `${formatBakuDate(fromYmd)} – ${formatBakuDate(toYmd)}`,
+            ? formatBakuDate(fromYmd, df)
+            : `${formatBakuDate(fromYmd, df)} – ${formatBakuDate(toYmd, df)}`,
         reason: t.reason,
       };
     }),
