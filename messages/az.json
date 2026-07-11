@@ -120,7 +120,87 @@
   },
   "Dashboard": {
     "noSalonTitle": "Salon tapılmadı",
-    "noSalonBody": "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın."
+    "noSalonBody": "Hesabınıza salon bağlanmayıb. Zəhmət olmasa dəstək ilə əlaqə saxlayın.",
+    "noSalonLinked": "Bu hesaba salon bağlanmayıb."
+  },
+  "Services": {
+    "title": "Xidmətlər",
+    "subtitle": "Salonunuzun xidmətləri, qiymət və müddət.",
+    "new": "Yeni xidmət",
+    "edit": "Xidməti redaktə et",
+    "name": "Ad",
+    "namePlaceholder": "Saç kəsimi",
+    "price": "Qiymət (₼)",
+    "duration": "Müddət (dəq)",
+    "buffer": "Buffer (dəq)",
+    "save": "Saxla",
+    "saving": "Saxlanılır…",
+    "emptyTitle": "Hələ xidmət yoxdur",
+    "emptyBody": "«Yeni xidmət» düyməsi ilə ilk xidmətinizi əlavə edin.",
+    "inactive": "Deaktiv",
+    "minutesShort": "{min} dəq",
+    "bufferSuffix": "+{min} buffer",
+    "editAction": "Redaktə",
+    "deactivate": "Deaktiv et",
+    "activate": "Aktiv et",
+    "delete": "Sil",
+    "deleteTitle": "Xidməti sil",
+    "deleteConfirm": "<b>{name}</b> xidməti silinsin? Bu əməliyyat geri qaytarıla bilməz.",
+    "errors": {
+      "nameRequired": "Ad tələb olunur.",
+      "priceInvalid": "Qiymət düzgün deyil.",
+      "durationInvalid": "Müddət düzgün deyil.",
+      "invalidData": "Yanlış məlumat.",
+      "notFound": "Xidmət tapılmadı.",
+      "hasAppointments": "Bu xidmətlə bağlı görüşlər var. Silmək əvəzinə onu deaktiv edin."
+    }
+  },
+  "Settings": {
+    "title": "Tənzimləmələr",
+    "subtitle": "Salon məlumatları, link və iş saatları.",
+    "saved": "Yadda saxlanıldı.",
+    "save": "Saxla",
+    "saving": "Saxlanılır…",
+    "profile": {
+      "title": "Salon məlumatları",
+      "name": "Ad",
+      "description": "Təsvir",
+      "descriptionPlaceholder": "Salon haqqında qısa məlumat",
+      "address": "Ünvan",
+      "phone": "Telefon"
+    },
+    "link": {
+      "title": "Qeydiyyat linki",
+      "subtitle": "Müştəriləriniz bu ünvanla özləri qeydiyyatdan keçir.",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "open": "Aç",
+      "newLinkLabel": "Yeni link (yalnız hərf, rəqəm, defis)",
+      "change": "Linki dəyiş"
+    },
+    "hours": {
+      "title": "İş saatları",
+      "subtitle": "Salonun açıq olduğu günlər və saatlar (qeydiyyat səhifəsində görünür).",
+      "closed": "Bağlı",
+      "fillHours": "{day}: saatları doldurun.",
+      "closeAfterOpen": "{day}: bağlanma açılışdan sonra olmalıdır."
+    },
+    "errors": {
+      "invalidData": "Yanlış məlumat.",
+      "invalidLink": "Yanlış link.",
+      "slugTooShort": "Link ən az 2 hərf və ya rəqəmdən ibarət olmalıdır.",
+      "slugTaken": "Bu link artıq istifadə olunur. Başqasını seçin.",
+      "invalidHours": "Yanlış saatlar."
+    }
+  },
+  "Weekdays": {
+    "0": "Bazar",
+    "1": "Bazar ertəsi",
+    "2": "Çərşənbə axşamı",
+    "3": "Çərşənbə",
+    "4": "Cümə axşamı",
+    "5": "Cümə",
+    "6": "Şənbə"
   },
   "Audience": {
     "ALL": "Hamı",

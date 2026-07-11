@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { parseBusinessHours } from "@/lib/business-hours";
@@ -7,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const session = (await getSession())!;
+  const t = await getTranslations("Dashboard");
   if (!session.salonId) {
-    return <p className="text-sm text-zinc-400">Bu hesaba salon bağlanmayıb.</p>;
+    return <p className="text-sm text-zinc-400">{t("noSalonLinked")}</p>;
   }
 
   const salon = await prisma.salon.findUnique({
@@ -22,7 +24,7 @@ export default async function SettingsPage() {
       businessHours: true,
     },
   });
-  if (!salon) return <p className="text-sm text-zinc-400">Salon tapılmadı.</p>;
+  if (!salon) return <p className="text-sm text-zinc-400">{t("noSalonTitle")}</p>;
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
 

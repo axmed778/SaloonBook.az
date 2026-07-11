@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   createService,
   updateService,
   setServiceActive,
   deleteService,
 } from "./actions";
-import { AUDIENCE_LABEL, type Audience } from "@/lib/audience";
+import { type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { ErrorToast } from "../_components/toast";
@@ -41,6 +42,9 @@ const emptyForm = {
 };
 
 export function ServicesManager({ services }: { services: ServiceRow[] }) {
+  const t = useTranslations("Services");
+  const tc = useTranslations("Common");
+  const tAudience = useTranslations("Audience");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -84,11 +88,11 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       bufferMin: parseInt(form.buffer || "0", 10),
       audience: form.audience,
     };
-    if (!payload.name) return setError("Ad tələb olunur.");
+    if (!payload.name) return setError(t("errors.nameRequired"));
     if (!Number.isFinite(payload.priceAzn) || payload.priceAzn < 0)
-      return setError("Qiymət düzgün deyil.");
+      return setError(t("errors.priceInvalid"));
     if (!Number.isFinite(payload.durationMin) || payload.durationMin <= 0)
-      return setError("Müddət düzgün deyil.");
+      return setError(t("errors.durationInvalid"));
     if (!Number.isFinite(payload.bufferMin) || payload.bufferMin < 0) payload.bufferMin = 0;
 
     startTransition(async () => {
@@ -125,9 +129,9 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Xidmətlər</h1>
+          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Salonunuzun xidmətləri, qiymət və müddət.
+            {t("subtitle")}
           </p>
         </div>
         {!open && (
@@ -136,7 +140,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            Yeni xidmət
+            {t("new")}
           </button>
         )}
       </div>
@@ -145,21 +149,21 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       {open && (
         <div className="mb-6 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {editingId ? "Xidməti redaktə et" : "Yeni xidmət"}
+            {editingId ? t("edit") : t("new")}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className={labelCls}>Ad</label>
+              <label className={labelCls}>{t("name")}</label>
               <input
                 className={inputCls}
-                placeholder="Saç kəsimi"
+                placeholder={t("namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 autoFocus
               />
             </div>
             <div>
-              <label className={labelCls}>Qiymət (₼)</label>
+              <label className={labelCls}>{t("price")}</label>
               <input
                 className={inputCls}
                 inputMode="decimal"
@@ -170,7 +174,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Müddət (dəq)</label>
+                <label className={labelCls}>{t("duration")}</label>
                 <input
                   className={inputCls}
                   inputMode="numeric"
@@ -180,7 +184,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                 />
               </div>
               <div>
-                <label className={labelCls}>Buffer (dəq)</label>
+                <label className={labelCls}>{t("buffer")}</label>
                 <input
                   className={inputCls}
                   inputMode="numeric"
@@ -207,14 +211,14 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
               disabled={pending}
               className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
             >
-              {pending ? "Saxlanılır…" : "Saxla"}
+              {pending ? t("saving") : t("save")}
             </button>
             <button
               onClick={close}
               disabled={pending}
               className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60 disabled:opacity-60"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
           </div>
         </div>
@@ -223,9 +227,9 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       {/* List */}
       {services.length === 0 ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 text-center">
-          <p className="text-sm font-medium text-zinc-300">Hələ xidmət yoxdur</p>
+          <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
           <p className="mt-1 max-w-xs text-sm text-zinc-500">
-            «Yeni xidmət» düyməsi ilə ilk xidmətinizi əlavə edin.
+            {t("emptyBody")}
           </p>
         </div>
       ) : (
@@ -239,17 +243,17 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                 <div className="flex items-center gap-2">
                   <p className="truncate font-medium text-zinc-100">{s.name}</p>
                   <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-                    {AUDIENCE_LABEL[s.audience]}
+                    {tAudience(s.audience)}
                   </span>
                   {!s.isActive && (
                     <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-                      Deaktiv
+                      {t("inactive")}
                     </span>
                   )}
                 </div>
                 <p className="mt-0.5 text-sm text-zinc-500">
-                  {s.durationMin} dəq
-                  {s.bufferMin > 0 && <span className="text-zinc-600"> +{s.bufferMin} buffer</span>}
+                  {t("minutesShort", { min: s.durationMin })}
+                  {s.bufferMin > 0 && <span className="text-zinc-600"> {t("bufferSuffix", { min: s.bufferMin })}</span>}
                 </p>
               </div>
 
@@ -262,21 +266,21 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
                 >
-                  Redaktə
+                  {t("editAction")}
                 </button>
                 <button
                   onClick={() => toggleActive(s)}
                   disabled={pending}
                   className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
                 >
-                  {s.isActive ? "Deaktiv et" : "Aktiv et"}
+                  {s.isActive ? t("deactivate") : t("activate")}
                 </button>
                 <button
                   onClick={() => setConfirmRemove(s)}
                   disabled={pending}
                   className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
-                  Sil
+                  {t("delete")}
                 </button>
               </div>
             </li>
@@ -286,13 +290,11 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
 
       {confirmRemove && (
         <ConfirmDialog
-          title="Xidməti sil"
-          body={
-            <>
-              <span className="font-medium text-zinc-200">{confirmRemove.name}</span> xidməti
-              silinsin? Bu əməliyyat geri qaytarıla bilməz.
-            </>
-          }
+          title={t("deleteTitle")}
+          body={t.rich("deleteConfirm", {
+            name: confirmRemove.name,
+            b: (chunks) => <span className="font-medium text-zinc-200">{chunks}</span>,
+          })}
           pending={pending}
           onConfirm={() => remove(confirmRemove)}
           onClose={() => setConfirmRemove(null)}

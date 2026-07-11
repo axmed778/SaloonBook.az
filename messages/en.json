@@ -120,7 +120,87 @@
   },
   "Dashboard": {
     "noSalonTitle": "Salon not found",
-    "noSalonBody": "No salon is linked to your account. Please contact support."
+    "noSalonBody": "No salon is linked to your account. Please contact support.",
+    "noSalonLinked": "No salon is linked to this account."
+  },
+  "Services": {
+    "title": "Services",
+    "subtitle": "Your salon's services, price and duration.",
+    "new": "New service",
+    "edit": "Edit service",
+    "name": "Name",
+    "namePlaceholder": "Haircut",
+    "price": "Price (₼)",
+    "duration": "Duration (min)",
+    "buffer": "Buffer (min)",
+    "save": "Save",
+    "saving": "Saving…",
+    "emptyTitle": "No services yet",
+    "emptyBody": "Add your first service with the “New service” button.",
+    "inactive": "Inactive",
+    "minutesShort": "{min} min",
+    "bufferSuffix": "+{min} buffer",
+    "editAction": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "delete": "Delete",
+    "deleteTitle": "Delete service",
+    "deleteConfirm": "Delete the <b>{name}</b> service? This action cannot be undone.",
+    "errors": {
+      "nameRequired": "Name is required.",
+      "priceInvalid": "The price is invalid.",
+      "durationInvalid": "The duration is invalid.",
+      "invalidData": "Invalid data.",
+      "notFound": "Service not found.",
+      "hasAppointments": "There are appointments linked to this service. Deactivate it instead of deleting."
+    }
+  },
+  "Settings": {
+    "title": "Settings",
+    "subtitle": "Salon details, link and business hours.",
+    "saved": "Saved.",
+    "save": "Save",
+    "saving": "Saving…",
+    "profile": {
+      "title": "Salon details",
+      "name": "Name",
+      "description": "Description",
+      "descriptionPlaceholder": "A short description of the salon",
+      "address": "Address",
+      "phone": "Phone"
+    },
+    "link": {
+      "title": "Booking link",
+      "subtitle": "Your clients book themselves at this address.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "open": "Open",
+      "newLinkLabel": "New link (letters, digits and hyphens only)",
+      "change": "Change link"
+    },
+    "hours": {
+      "title": "Business hours",
+      "subtitle": "The days and hours the salon is open (shown on the booking page).",
+      "closed": "Closed",
+      "fillHours": "{day}: fill in the hours.",
+      "closeAfterOpen": "{day}: closing must be after opening."
+    },
+    "errors": {
+      "invalidData": "Invalid data.",
+      "invalidLink": "Invalid link.",
+      "slugTooShort": "The link must be at least 2 letters or digits.",
+      "slugTaken": "This link is already in use. Choose another.",
+      "invalidHours": "Invalid hours."
+    }
+  },
+  "Weekdays": {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
   },
   "Audience": {
     "ALL": "Everyone",

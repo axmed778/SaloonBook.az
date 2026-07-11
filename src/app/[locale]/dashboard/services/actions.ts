@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -31,9 +32,10 @@ function toMinor(priceAzn: number): number {
 
 export async function createService(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
   await prisma.service.create({
@@ -45,16 +47,17 @@ export async function createService(input: unknown): Promise<ActionResult> {
 
 export async function updateService(id: string, input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
   const res = await prisma.service.updateMany({
     where: { id, salonId }, // salonId in the filter = tenant guard
     data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience },
   });
-  if (res.count === 0) return { ok: false, error: "Xidmət tapılmadı." };
+  if (res.count === 0) return { ok: false, error: t("notFound") };
   revalidatePath("/dashboard/services");
   return { ok: true };
 }
@@ -68,16 +71,14 @@ export async function setServiceActive(id: string, isActive: boolean): Promise<A
 
 export async function deleteService(id: string): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Services.errors");
   try {
     const res = await prisma.service.deleteMany({ where: { id, salonId } });
-    if (res.count === 0) return { ok: false, error: "Xidmət tapılmadı." };
+    if (res.count === 0) return { ok: false, error: t("notFound") };
   } catch {
     // FK violation: appointments reference this service. Don't destroy history —
     // steer the owner to deactivate instead.
-    return {
-      ok: false,
-      error: "Bu xidmətlə bağlı görüşlər var. Silmək əvəzinə onu deaktiv edin.",
-    };
+    return { ok: false, error: t("hasAppointments") };
   }
   revalidatePath("/dashboard/services");
   return { ok: true };

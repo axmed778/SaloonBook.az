@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
@@ -27,9 +28,10 @@ const profileSchema = z.object({
 
 export async function updateProfile(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Settings.errors");
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
   await prisma.salon.update({
@@ -62,17 +64,18 @@ const slugSchema = z.object({ slug: z.string().trim().min(1).max(60) });
 
 export async function updateSlug(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Settings.errors");
   const parsed = slugSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış link." };
+  if (!parsed.success) return { ok: false, error: t("invalidLink") };
 
   const slug = slugify(parsed.data.slug);
   if (slug.length < 2) {
-    return { ok: false, error: "Link ən az 2 hərf və ya rəqəmdən ibarət olmalıdır." };
+    return { ok: false, error: t("slugTooShort") };
   }
 
   const existing = await prisma.salon.findUnique({ where: { slug }, select: { id: true } });
   if (existing && existing.id !== salonId) {
-    return { ok: false, error: "Bu link artıq istifadə olunur. Başqasını seçin." };
+    return { ok: false, error: t("slugTaken") };
   }
 
   await prisma.salon.update({ where: { id: salonId }, data: { slug } });
@@ -111,9 +114,10 @@ const businessHoursSchema = z
 
 export async function updateBusinessHours(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Settings.errors");
   const parsed = businessHoursSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış saatlar." };
+    return { ok: false, error: t("invalidHours") };
   }
   await prisma.salon.update({
     where: { id: salonId },

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { ServicesManager } from "./services-manager";
@@ -7,11 +8,8 @@ export const dynamic = "force-dynamic";
 export default async function ServicesPage() {
   const session = (await getSession())!;
   if (!session.salonId) {
-    return (
-      <p className="text-sm text-zinc-400">
-        Bu hesaba salon bağlanmayıb.
-      </p>
-    );
+    const t = await getTranslations("Dashboard");
+    return <p className="text-sm text-zinc-400">{t("noSalonLinked")}</p>;
   }
 
   const services = await prisma.service.findMany({

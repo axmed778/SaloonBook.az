@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   WEEKDAYS_ORDER,
-  WEEKDAY_LABEL,
   minToHHMM,
   hhmmToMin,
   type BusinessHour,
@@ -50,13 +50,14 @@ export function SettingsManager({
   salon: SalonData;
   appUrl: string;
 }) {
+  const t = useTranslations("Settings");
   const router = useRouter();
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">Tənzimləmələr</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">Salon məlumatları, link və iş saatları.</p>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
+        <p className="mt-0.5 text-sm text-zinc-500">{t("subtitle")}</p>
       </div>
 
       <ProfileCard salon={salon} onSaved={() => router.refresh()} />
@@ -69,6 +70,7 @@ export function SettingsManager({
 // --- Profile ---------------------------------------------------------------
 
 function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void }) {
+  const t = useTranslations("Settings");
   const [pending, start] = useTransition();
   const [form, setForm] = useState({
     name: salon.name,
@@ -88,7 +90,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
         phone: form.phone.trim() || null,
       });
       if (res.ok) {
-        setMsg({ ok: true, text: "Yadda saxlanıldı." });
+        setMsg({ ok: true, text: t("saved") });
         onSaved();
       } else {
         setMsg({ ok: false, text: res.error });
@@ -98,35 +100,35 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">Salon məlumatları</h2>
+      <h2 className="text-sm font-semibold text-zinc-100">{t("profile.title")}</h2>
       <div className="mt-4 space-y-4">
         <div>
-          <label className={labelCls}>Ad</label>
+          <label className={labelCls}>{t("profile.name")}</label>
           <input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </div>
         <div>
-          <label className={labelCls}>Təsvir</label>
+          <label className={labelCls}>{t("profile.description")}</label>
           <textarea
             className={inputCls + " min-h-[72px] resize-y"}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Salon haqqında qısa məlumat"
+            placeholder={t("profile.descriptionPlaceholder")}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className={labelCls}>Ünvan</label>
+            <label className={labelCls}>{t("profile.address")}</label>
             <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </div>
           <div>
-            <label className={labelCls}>Telefon</label>
+            <label className={labelCls}>{t("profile.phone")}</label>
             <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994..." />
           </div>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">
         <button onClick={save} disabled={pending} className={saveBtn}>
-          {pending ? "Saxlanılır…" : "Saxla"}
+          {pending ? t("saving") : t("save")}
         </button>
         {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-400" : "text-rose-400")}>{msg.text}</span>}
       </div>
@@ -137,6 +139,8 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
 // --- Booking link ----------------------------------------------------------
 
 function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onSaved: () => void }) {
+  const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(slug);
@@ -167,8 +171,8 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">Qeydiyyat linki</h2>
-      <p className="mt-1 text-sm text-zinc-500">Müştəriləriniz bu ünvanla özləri qeydiyyatdan keçir.</p>
+      <h2 className="text-sm font-semibold text-zinc-100">{t("link.title")}</h2>
+      <p className="mt-1 text-sm text-zinc-500">{t("link.subtitle")}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
@@ -178,7 +182,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           onClick={copy}
           className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
         >
-          {copied ? "Kopyalandı" : "Kopyala"}
+          {copied ? t("link.copied") : t("link.copy")}
         </button>
         <a
           href={`/${slug}`}
@@ -186,13 +190,13 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           rel="noreferrer"
           className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
         >
-          Aç
+          {t("link.open")}
         </a>
       </div>
 
       {editing ? (
         <div className="mt-4">
-          <label className={labelCls}>Yeni link (yalnız hərf, rəqəm, defis)</label>
+          <label className={labelCls}>{t("link.newLinkLabel")}</label>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-zinc-500">{appUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}/</span>
             <input
@@ -205,7 +209,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
             <button onClick={save} disabled={pending} className={saveBtn}>
-              {pending ? "Saxlanılır…" : "Saxla"}
+              {pending ? t("saving") : t("save")}
             </button>
             <button
               onClick={() => {
@@ -216,7 +220,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
               disabled={pending}
               className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
             >
-              Ləğv et
+              {tc("cancel")}
             </button>
           </div>
         </div>
@@ -225,7 +229,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           onClick={() => setEditing(true)}
           className="mt-3 text-sm text-zinc-400 transition hover:text-zinc-100"
         >
-          Linki dəyiş
+          {t("link.change")}
         </button>
       )}
     </section>
@@ -235,6 +239,8 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
 // --- Business hours --------------------------------------------------------
 
 function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; onSaved: () => void }) {
+  const t = useTranslations("Settings");
+  const tWeekday = useTranslations("Weekdays");
   const [pending, start] = useTransition();
   const [hours, setHours] = useState<HoursState>(buildHours(businessHours));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -250,19 +256,19 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
       const d = hours[weekday];
       if (!d.on) continue;
       if (!TIME_RE.test(d.open) || !TIME_RE.test(d.close)) {
-        return setMsg({ ok: false, text: `${WEEKDAY_LABEL[weekday]}: saatları doldurun.` });
+        return setMsg({ ok: false, text: t("hours.fillHours", { day: tWeekday(String(weekday)) }) });
       }
       const openMin = hhmmToMin(d.open);
       const closeMin = hhmmToMin(d.close);
       if (!Number.isFinite(openMin) || !Number.isFinite(closeMin) || closeMin <= openMin) {
-        return setMsg({ ok: false, text: `${WEEKDAY_LABEL[weekday]}: bağlanma açılışdan sonra olmalıdır.` });
+        return setMsg({ ok: false, text: t("hours.closeAfterOpen", { day: tWeekday(String(weekday)) }) });
       }
       payload.push({ weekday, openMin, closeMin });
     }
     start(async () => {
       const res = await updateBusinessHours(payload);
       if (res.ok) {
-        setMsg({ ok: true, text: "Yadda saxlanıldı." });
+        setMsg({ ok: true, text: t("saved") });
         onSaved();
       } else {
         setMsg({ ok: false, text: res.error });
@@ -272,8 +278,8 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">İş saatları</h2>
-      <p className="mt-1 text-sm text-zinc-500">Salonun açıq olduğu günlər və saatlar (qeydiyyat səhifəsində görünür).</p>
+      <h2 className="text-sm font-semibold text-zinc-100">{t("hours.title")}</h2>
+      <p className="mt-1 text-sm text-zinc-500">{t("hours.subtitle")}</p>
 
       <div className="mt-4 space-y-2">
         {WEEKDAYS_ORDER.map((weekday) => {
@@ -287,7 +293,7 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
                   onChange={(e) => setDay(weekday, { on: e.target.checked })}
                   className="h-4 w-4 accent-rose-500"
                 />
-                {WEEKDAY_LABEL[weekday]}
+                {tWeekday(String(weekday))}
               </label>
               {d.on ? (
                 <div className="flex items-center gap-2">
@@ -296,7 +302,7 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
                   <input type="time" step={900} value={d.close} onChange={(e) => setDay(weekday, { close: e.target.value })} className={inputCls + " w-auto [color-scheme:dark]"} />
                 </div>
               ) : (
-                <span className="text-sm text-zinc-600">Bağlı</span>
+                <span className="text-sm text-zinc-600">{t("hours.closed")}</span>
               )}
             </div>
           );
