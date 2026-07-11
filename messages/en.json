@@ -522,6 +522,22 @@
       "payoutNotFound": "Payout not found."
     }
   },
+  "Actions": {
+    "invalidData": "Invalid data.",
+    "serviceNotOffered": "This staff member doesn't offer this service.",
+    "slotTaken": "This time is already taken. Choose another time.",
+    "slotUnavailable": "This time isn't available.",
+    "planLimit": "You've reached the monthly booking limit.",
+    "bookingFailed": "The appointment couldn't be created. Please try again.",
+    "apptNotFound": "Appointment not found.",
+    "slotReason": {
+      "service": "Service not found.",
+      "past": "This time is in the past.",
+      "hours": "The staff member isn't working at this time.",
+      "timeoff": "The staff member is on time off then.",
+      "overlap": "This time is already taken."
+    }
+  },
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",

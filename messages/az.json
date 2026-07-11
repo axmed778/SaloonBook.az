@@ -522,6 +522,22 @@
       "payoutNotFound": "Ödəniş tapılmadı."
     }
   },
+  "Actions": {
+    "invalidData": "Yanlış məlumat.",
+    "serviceNotOffered": "Bu işçi bu xidməti göstərmir.",
+    "slotTaken": "Bu vaxt artıq tutulub. Başqa vaxt seçin.",
+    "slotUnavailable": "Bu vaxt uyğun deyil.",
+    "planLimit": "Aylıq qeydiyyat limitinə çatmısınız.",
+    "bookingFailed": "Görüş yaradıla bilmədi. Yenidən cəhd edin.",
+    "apptNotFound": "Görüş tapılmadı.",
+    "slotReason": {
+      "service": "Xidmət tapılmadı.",
+      "past": "Bu vaxt keçmişdə qalıb.",
+      "hours": "İşçi bu vaxt işləmir.",
+      "timeoff": "İşçi bu vaxt məzuniyyətdədir.",
+      "overlap": "Bu vaxt artıq tutulub."
+    }
+  },
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",

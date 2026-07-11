@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { enqueueNotification } from "@/lib/queue";
@@ -27,15 +28,6 @@ async function requireSalonId(): Promise<string> {
 }
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// AZ copy for the slot-rejection reasons surfaced by the availability check.
-const SLOT_REASON_AZ: Record<string, string> = {
-  service: "Xidmət tapılmadı.",
-  past: "Bu vaxt keçmişdə qalıb.",
-  hours: "İşçi bu vaxt işləmir.",
-  timeoff: "İşçi bu vaxt məzuniyyətdədir.",
-  overlap: "Bu vaxt artıq tutulub.",
-};
 
 /** The (employee, service) pair must belong to this salon and be linked/active. */
 async function assertServiceLink(
@@ -69,13 +61,14 @@ export type SlotsResult =
 
 export async function availableSlots(input: unknown): Promise<SlotsResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Actions");
   const parsed = slotsSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
   const { employeeId, serviceId, day } = parsed.data;
 
   // Never expose availability for a pair that isn't this tenant's.
   if (!(await assertServiceLink(salonId, serviceId, employeeId))) {
-    return { ok: false, error: "Bu işçi bu xidməti göstərmir." };
+    return { ok: false, error: t("serviceNotOffered") };
   }
 
   const slots = await getAvailableSlots({ employeeId, serviceId, dayYmd: day });
@@ -101,14 +94,15 @@ const bookingSchema = z.object({
 
 export async function createManualBooking(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Actions");
   const parsed = bookingSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Yanlış məlumat." };
+    return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
 
   if (!(await assertServiceLink(salonId, d.serviceId, d.employeeId))) {
-    return { ok: false, error: "Bu işçi bu xidməti göstərmir." };
+    return { ok: false, error: t("serviceNotOffered") };
   }
 
   try {
@@ -126,16 +120,19 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
     });
   } catch (e) {
     if (e instanceof SlotTakenError) {
-      return { ok: false, error: "Bu vaxt artıq tutulub. Başqa vaxt seçin." };
+      return { ok: false, error: t("slotTaken") };
     }
     if (e instanceof SlotUnavailableError) {
-      return { ok: false, error: SLOT_REASON_AZ[e.reason] ?? "Bu vaxt uyğun deyil." };
+      return {
+        ok: false,
+        error: t.has(`slotReason.${e.reason}`) ? t(`slotReason.${e.reason}`) : t("slotUnavailable"),
+      };
     }
     if (e instanceof PlanLimitError) {
-      return { ok: false, error: "Aylıq qeydiyyat limitinə çatmısınız." };
+      return { ok: false, error: t("planLimit") };
     }
     console.error("[manual-booking] error", e);
-    return { ok: false, error: "Görüş yaradıla bilmədi. Yenidən cəhd edin." };
+    return { ok: false, error: t("bookingFailed") };
   }
 
   revalidatePath("/dashboard");
@@ -151,8 +148,9 @@ const statusSchema = z.object({
 
 export async function setAppointmentStatus(input: unknown): Promise<ActionResult> {
   const salonId = await requireSalonId();
+  const t = await getTranslations("Actions");
   const parsed = statusSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Yanlış məlumat." };
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
   const { id, status } = parsed.data;
 
   // Pre-read for the cancellation notice below (previous status, phone, names).
@@ -166,7 +164,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       salon: { select: { name: true } },
     },
   });
-  if (!appt) return { ok: false, error: "Görüş tapılmadı." };
+  if (!appt) return { ok: false, error: t("apptNotFound") };
 
   // salonId in the filter is the tenant guard; only CONFIRMED/COMPLETED/NO_SHOW
   // appointments are shown, so any of them is a valid transition target.
@@ -174,7 +172,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
     where: { id, salonId },
     data: { status },
   });
-  if (res.count === 0) return { ok: false, error: "Görüş tapılmadı." };
+  if (res.count === 0) return { ok: false, error: t("apptNotFound") };
 
   // A cancelled/no-showed appointment must not message the customer: cancel any
   // still-queued notifications (e.g. the T-24h reminder). The worker re-checks
