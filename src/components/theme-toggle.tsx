@@ -12,7 +12,20 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+    // Read from localStorage (the source of truth), not the <html> class, so the
+    // toggle stays correct regardless of when ThemeSync re-applies the class on a
+    // navigation.
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch {
+      /* storage disabled — fall back to the class below */
+    }
+    if (saved === "light" || saved === "dark") {
+      setTheme(saved);
+    } else {
+      setTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
+    }
     setMounted(true);
   }, []);
 
