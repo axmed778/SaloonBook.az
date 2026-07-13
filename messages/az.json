@@ -676,7 +676,13 @@
       "resetHeading": "Şifrənin bərpası",
       "resetBody": "SalonBook.az hesabınız üçün şifrə bərpası tələb olunub. Yeni şifrə təyin etmək üçün aşağıdakı düyməyə klikləyin — link {minutes} dəqiqə etibarlıdır.",
       "resetButton": "Yeni şifrə təyin et",
-      "resetIgnore": "Əgər bu tələbi siz göndərməmisinizsə, bu e-poçtu nəzərə almayın — şifrəniz dəyişməyəcək."
+      "resetIgnore": "Əgər bu tələbi siz göndərməmisinizsə, bu e-poçtu nəzərə almayın — şifrəniz dəyişməyəcək.",
+      "noAccountSubject": "SalonBook.az — hesab tapılmadı",
+      "noAccountHeading": "Hesab tapılmadı",
+      "noAccountBody": "Bu e-poçt ünvanı üçün şifrə bərpası tələb olunub, lakin bu ünvanla qeydiyyatdan keçmiş SalonBook.az hesabı yoxdur. Ola bilsin ki, başqa e-poçt ünvanı ilə qeydiyyatdan keçmisiniz — həmin ünvanı yoxlayın.",
+      "noAccountRegister": "Hesab yaratmaq istəyirsinizsə, aşağıdakı düymə ilə qeydiyyatdan keçin.",
+      "noAccountButton": "Qeydiyyatdan keç",
+      "noAccountIgnore": "Bu tələbi siz göndərməmisinizsə, bu e-poçtu nəzərə almaya bilərsiniz."
     },
     "login": {
       "title": "Daxil ol",
@@ -704,7 +710,7 @@
     "forgot": {
       "title": "Şifrənin bərpası",
       "subtitle": "E-poçt ünvanınızı yazın — bərpa linki göndərək.",
-      "sent": "Əgər bu e-poçt qeydiyyatdadırsa, bərpa linki göndərildi. Gələnlər qutusunu (və spam qovluğunu) yoxlayın — link 60 dəqiqə etibarlıdır.",
+      "sent": "Bu ünvana e-poçt göndərdik — gələnlər qutusunu (və spam qovluğunu) yoxlayın. Hesabınız varsa, bərpa linki 60 dəqiqə etibarlıdır; hesab tapılmasa, necə davam edəcəyinizi sizə bildirdik.",
       "submit": "Bərpa linki göndər",
       "submitting": "Göndərilir…",
       "remembered": "Şifrəniz yadınıza düşdü?"

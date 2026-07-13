@@ -55,8 +55,42 @@ export async function POST(req: NextRequest) {
     where: { email },
     select: { id: true, passwordHash: true },
   });
-  // SSO-only users (passwordHash null) have no password to reset.
-  if (!user || !user.passwordHash) return generic;
+
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+
+  // No account with this email: send an informational "no account" email to the
+  // address the user typed. The HTTP response below stays identical to the
+  // success case, so the endpoint still can't be used to enumerate accounts —
+  // the existence signal reaches only the inbox owner, who is exactly the person
+  // who needs it (e.g. they registered with a different address and are confused
+  // about why no reset link arrived).
+  if (!user) {
+    await sendEmail({
+      to: email,
+      subject: t("email.noAccountSubject"),
+      html: `
+        <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto">
+          <h2 style="font-size:18px">${t("email.noAccountHeading")}</h2>
+          <p style="color:#444;line-height:1.5">${t("email.noAccountBody")}</p>
+          <p style="color:#444;line-height:1.5">${t("email.noAccountRegister")}</p>
+          <p style="margin:24px 0">
+            <a href="${appUrl}/register"
+               style="background:#e11d48;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">
+              ${t("email.noAccountButton")}
+            </a>
+          </p>
+          <p style="color:#888;font-size:13px;line-height:1.5">
+            ${t("email.noAccountIgnore")}
+          </p>
+        </div>`,
+    });
+    return generic;
+  }
+
+  // SSO-only users (passwordHash null) have no password to reset. Stay silent
+  // rather than send a "no account" email, which would be misleading for an
+  // account that does exist.
+  if (!user.passwordHash) return generic;
 
   const raw = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(raw).digest("hex");
@@ -68,7 +102,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const link = `${appUrl}/reset-password?token=${raw}`;
   await sendEmail({
     to: email,

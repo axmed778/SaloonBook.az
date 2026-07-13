@@ -676,7 +676,13 @@
       "resetHeading": "Password reset",
       "resetBody": "A password reset was requested for your SalonBook.az account. Click the button below to set a new password — the link is valid for {minutes} minutes.",
       "resetButton": "Set a new password",
-      "resetIgnore": "If you didn't request this, ignore this email — your password won't change."
+      "resetIgnore": "If you didn't request this, ignore this email — your password won't change.",
+      "noAccountSubject": "SalonBook.az — no account found",
+      "noAccountHeading": "No account found",
+      "noAccountBody": "A password reset was requested for this email address, but there is no SalonBook.az account registered with it. You may have signed up with a different email address — try that one.",
+      "noAccountRegister": "If you'd like to create an account, use the button below to register.",
+      "noAccountButton": "Register",
+      "noAccountIgnore": "If you didn't request this, you can safely ignore this email."
     },
     "login": {
       "title": "Log in",
@@ -704,7 +710,7 @@
     "forgot": {
       "title": "Reset password",
       "subtitle": "Enter your email — we'll send a reset link.",
-      "sent": "If this email is registered, a reset link has been sent. Check your inbox (and spam folder) — the link is valid for 60 minutes.",
+      "sent": "We've sent an email to this address — check your inbox (and spam folder). If you have an account, the reset link is valid for 60 minutes; if not, we've emailed you what to do next.",
       "submit": "Send reset link",
       "submitting": "Sending…",
       "remembered": "Remembered your password?"
