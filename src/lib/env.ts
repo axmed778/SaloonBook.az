@@ -78,7 +78,7 @@ export function assertEnv(): void {
     failures.push(
       `APP_URL is ${appUrl === "" ? "unset" : `"${appUrl}"`} — customer-facing links ` +
         "(booking manage links, password-reset emails, the salon link in Settings) " +
-        "would point at localhost. Set it to the public origin, e.g. https://saloonbook.az",
+        "would point at localhost. Set it to the public origin, e.g. https://salonbook.az",
     );
   }
   for (const [value, message] of warnings) {
