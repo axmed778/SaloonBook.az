@@ -3,8 +3,6 @@
 import { Link } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
 import {
-  DAY_START_MIN,
-  DAY_END_MIN,
   STATUS_STYLES,
   packLanes,
   type CalendarBlock,
@@ -22,14 +20,18 @@ export function WeekGrid({
   weekDays,
   blocks,
   onSelect,
+  windowStartMin,
+  windowEndMin,
 }: {
   weekDays: WeekDay[];
   blocks: CalendarBlock[];
   onSelect: (b: CalendarBlock) => void;
+  windowStartMin: number;
+  windowEndMin: number;
 }) {
   const hours: number[] = [];
-  for (let m = DAY_START_MIN; m < DAY_END_MIN; m += 60) hours.push(m);
-  const bodyHeight = ((DAY_END_MIN - DAY_START_MIN) / 60) * ROW_H;
+  for (let m = windowStartMin; m < windowEndMin; m += 60) hours.push(m);
+  const bodyHeight = ((windowEndMin - windowStartMin) / 60) * ROW_H;
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-[#0d0d0f]">
@@ -91,7 +93,7 @@ export function WeekGrid({
                   />
                 ))}
                 {packed.map(({ item: b, lane, lanes }) => {
-                  const top = (b.startMin - DAY_START_MIN) * PX_PER_MIN;
+                  const top = (b.startMin - windowStartMin) * PX_PER_MIN;
                   const height = Math.max((b.endMin - b.startMin) * PX_PER_MIN - 2, 18);
                   return (
                     <button

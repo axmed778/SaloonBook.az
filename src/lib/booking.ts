@@ -7,6 +7,14 @@ import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
 import { sanitizeTemplateParam } from "./whatsapp";
 
+/**
+ * How far ahead a PUBLIC booking may land. Bounds calendar-stuffing abuse via
+ * direct /book calls (unauthenticated + client-supplied phone). The reschedule
+ * path enforces the same cap. Dashboard (staff) bookings are NOT capped — a
+ * salon can legitimately book itself further out.
+ */
+export const MAX_BOOKING_AHEAD_DAYS = 60;
+
 export class SlotTakenError extends Error {
   constructor() {
     super("That time was just booked. Please pick another slot.");

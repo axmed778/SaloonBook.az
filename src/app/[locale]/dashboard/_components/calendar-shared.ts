@@ -2,6 +2,9 @@
 // "use client" component files so the server page can import the constants and
 // types without pulling in a client module.
 
+// DEFAULT visible window. The grids expand it from the data so bookings outside
+// these hours (a barber working till 23:00) still render — these are just the
+// minimum window shown when everything falls inside.
 export const DAY_START_MIN = 8 * 60; // 08:00
 export const DAY_END_MIN = 22 * 60; // 22:00
 
@@ -10,14 +13,21 @@ export const inputCls =
   "rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
 export const labelCls = "mb-1 block text-xs font-medium text-zinc-400";
 
-export type CalendarColumn = { id: string; name: string; position: string | null };
+export type CalendarColumn = {
+  id: string;
+  name: string;
+  position: string | null;
+  // Day view only: the employee is deactivated but still has appointments on
+  // this day, so the column is shown (greyed) to keep those bookings visible.
+  inactive?: boolean;
+};
 
 export type CalendarBlock = {
   id: string;
   // Day view: employeeId. Week view: the appointment's Baku day, "YYYY-MM-DD".
   columnId: string;
-  startMin: number; // minutes from Baku midnight (clamped to the visible window)
-  endMin: number; // includes service buffer
+  startMin: number; // real minutes from the start day's Baku midnight (unclamped)
+  endMin: number; // includes service buffer; capped at 1440 if it runs to midnight
   title: string; // service name
   subtitle: string; // customer name
   status: "CONFIRMED" | "COMPLETED" | "NO_SHOW";

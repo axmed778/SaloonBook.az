@@ -6,7 +6,7 @@
   },
   "deploy": {
     "startCommand": "pnpm start",
-    "preDeployCommand": "pnpm db:setup && pnpm db:rls",
+    "preDeployCommand": "pnpm db:setup",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",

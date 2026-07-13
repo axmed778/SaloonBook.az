@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots, isSlotBookable } from "@/lib/availability";
-import { isOverlapError } from "@/lib/booking";
+import { isOverlapError, MAX_BOOKING_AHEAD_DAYS } from "@/lib/booking";
 import { enqueueNotification } from "@/lib/queue";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
@@ -17,10 +17,6 @@ export const dynamic = "force-dynamic";
 
 const TOKEN_RE = /^[0-9a-f-]{36}$/i;
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// How far ahead a reschedule may land (same horizon as the booking widget +
-// slack) — bounds abuse and typos.
-const MAX_AHEAD_DAYS = 60;
 
 async function loadByToken(token: string) {
   if (!TOKEN_RE.test(token)) return null;
@@ -174,7 +170,7 @@ export async function POST(
   }
 
   const startUtc = new Date(parsed.data.startUtc);
-  if (startUtc.getTime() > now.getTime() + MAX_AHEAD_DAYS * 86_400_000) {
+  if (startUtc.getTime() > now.getTime() + MAX_BOOKING_AHEAD_DAYS * 86_400_000) {
     return NextResponse.json({ error: t("dateTooFar") }, { status: 400 });
   }
 
@@ -243,6 +239,27 @@ export async function POST(
           select: { id: true },
         });
         toEnqueue.push({ id: reminder.id, delayMs: reminderAt.getTime() - Date.now() });
+      }
+
+      // Tell the salon the customer MOVED the appointment (parity with the new
+      // booking + cancel alerts, which both notify the owner). Carries the NEW
+      // time so the owner can update their own records.
+      if (appt.salon.phone) {
+        const ownerAlert = await tx.notification.create({
+          data: {
+            salonId: appt.salonId,
+            appointmentId: appt.id,
+            template: "appointment_rescheduled_alert",
+            toPhone: appt.salon.phone,
+            payload: {
+              customer: appt.customer.name,
+              service: appt.service.name,
+              startsAt: startUtc.toISOString(),
+            },
+          },
+          select: { id: true },
+        });
+        toEnqueue.push({ id: ownerAlert.id });
       }
       return toEnqueue;
     });

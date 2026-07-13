@@ -34,6 +34,7 @@ function buildComponents(
     // To owner — {{1}} customer, {{2}} service, {{3}} when
     case "new_booking_alert":
     case "booking_cancelled_alert": // customer cancelled via the manage link
+    case "appointment_rescheduled_alert": // customer moved the appointment via the manage link
       params = [String(p.customer ?? ""), String(p.service ?? ""), when];
       break;
     default:

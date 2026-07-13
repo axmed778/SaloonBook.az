@@ -7,7 +7,7 @@ import {
   BAKU_TZ,
   bakuToday,
   bakuDayBoundsUtc,
-  bakuMinutesOfDay,
+  bakuMinutesOfDayOn,
   bakuYmd,
   bakuWeekday,
   shiftYmd,
@@ -38,7 +38,7 @@ const APPT_SELECT = {
   source: true,
   manageToken: true,
   service: { select: { name: true } },
-  employee: { select: { name: true } },
+  employee: { select: { name: true, position: true } },
   customer: { select: { name: true, phone: true } },
 } as const;
 
@@ -52,17 +52,25 @@ type ApptRow = {
   source: string;
   manageToken: string;
   service: { name: string };
-  employee: { name: string };
+  employee: { name: string; position: string | null };
   customer: { name: string; phone: string };
 };
 
+const MINUTES_IN_DAY = 24 * 60;
+
 function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock {
+  // Keep the REAL, unclamped minutes so labels/popup show the true times; the
+  // grid derives its visible window from the data. Both ends are measured
+  // against the START day's midnight so a booking that runs to/past midnight
+  // keeps its real height (bakuMinutesOfDay would wrap the end back to ~0).
+  const startYmd = bakuYmd(a.startsAt);
+  const startMin = bakuMinutesOfDayOn(a.startsAt, startYmd);
+  const endMin = Math.min(bakuMinutesOfDayOn(a.endsAt, startYmd), MINUTES_IN_DAY);
   return {
     id: a.id,
     columnId,
-    // Clamp to the visible window so long/edge bookings still render sensibly.
-    startMin: Math.max(bakuMinutesOfDay(a.startsAt), DAY_START_MIN),
-    endMin: Math.min(bakuMinutesOfDay(a.endsAt), DAY_END_MIN),
+    startMin,
+    endMin,
     title: a.service.name,
     subtitle: a.customer.name,
     status: a.status as CalendarBlock["status"],
@@ -95,6 +103,22 @@ function weekDayLabels(ymd: string, df: string): { weekdayLabel: string; dayLabe
 function weekStartOf(ymd: string): string {
   const offset = (bakuWeekday(ymd) + 6) % 7;
   return shiftYmd(ymd, -offset);
+}
+
+// Visible time window for the grid: the default 08:00–22:00, widened (snapped to
+// the hour) to include any booking that falls outside it — so late/early
+// appointments stay visible instead of being clamped away.
+function visibleWindow(blocks: CalendarBlock[]): { startMin: number; endMin: number } {
+  let startMin = DAY_START_MIN;
+  let endMin = DAY_END_MIN;
+  for (const b of blocks) {
+    if (b.startMin < startMin) startMin = b.startMin;
+    if (b.endMin > endMin) endMin = b.endMin;
+  }
+  return {
+    startMin: Math.max(0, Math.floor(startMin / 60) * 60),
+    endMin: Math.min(MINUTES_IN_DAY, Math.ceil(endMin / 60) * 60),
+  };
 }
 
 export default async function DashboardPage({
@@ -185,6 +209,7 @@ export default async function DashboardPage({
         return toBlock(a, ymd, formatBakuDate(ymd, df));
       })
       .filter((b) => b.endMin > b.startMin);
+    const win = visibleWindow(blocks);
 
     return (
       <Calendar
@@ -196,6 +221,8 @@ export default async function DashboardPage({
         weekDays={weekDays}
         blocks={blocks}
         catalog={catalog}
+        windowStartMin={win.startMin}
+        windowEndMin={win.endMin}
       />
     );
   }
@@ -216,6 +243,26 @@ export default async function DashboardPage({
   const blocks = appts
     .map((a) => toBlock(a, a.employeeId, dateLabel))
     .filter((b) => b.endMin > b.startMin);
+  const win = visibleWindow(blocks);
+
+  // Deactivated employees are excluded from the column list, but their existing
+  // appointments still occupy the day. Surface those employees as greyed columns
+  // so their confirmed customers stay visible (they'd otherwise vanish from the
+  // day view while still getting reminders and showing up). The catalog above
+  // stays active-only — you can't book NEW appointments for a deactivated one.
+  const activeIds = new Set(columns.map((c) => c.id));
+  const inactiveCols = new Map<string, CalendarColumn>();
+  for (const a of appts) {
+    if (!activeIds.has(a.employeeId) && !inactiveCols.has(a.employeeId)) {
+      inactiveCols.set(a.employeeId, {
+        id: a.employeeId,
+        name: a.employee.name,
+        position: a.employee.position,
+        inactive: true,
+      });
+    }
+  }
+  const dayColumns = inactiveCols.size ? [...columns, ...inactiveCols.values()] : columns;
 
   return (
     <Calendar
@@ -223,10 +270,12 @@ export default async function DashboardPage({
       day={day}
       today={today}
       periodLabel={dateLabel}
-      columns={columns}
+      columns={dayColumns}
       weekDays={[]}
       blocks={blocks}
       catalog={catalog}
+      windowStartMin={win.startMin}
+      windowEndMin={win.endMin}
     />
   );
 }

@@ -6,6 +6,7 @@ import {
   SlotTakenError,
   SlotUnavailableError,
   PlanLimitError,
+  MAX_BOOKING_AHEAD_DAYS,
 } from "@/lib/booking";
 import { rateLimit, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -66,6 +67,16 @@ export async function POST(
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid body", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  // Booking horizon: reject dates beyond the public window (mirrors the
+  // reschedule cap) so a hostile caller can't stuff a calendar months out.
+  const startUtc = new Date(parsed.data.startUtc);
+  if (startUtc.getTime() > Date.now() + MAX_BOOKING_AHEAD_DAYS * 86_400_000) {
+    return NextResponse.json(
+      { error: "That date is too far ahead.", code: "TOO_FAR" },
+      { status: 400 },
+    );
   }
 
   // 2) CAPTCHA / Turnstile (no-op unless TURNSTILE_SECRET_KEY is set).
@@ -133,7 +144,7 @@ export async function POST(
       salonId: salon.id,
       serviceId: parsed.data.serviceId,
       employeeId: parsed.data.employeeId,
-      startUtc: new Date(parsed.data.startUtc),
+      startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: parsed.data.waOptIn },
       source: "PUBLIC",
     });

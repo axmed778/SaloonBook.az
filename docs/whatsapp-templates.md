@@ -7,7 +7,7 @@ the URL-button suffixes in this exact order — **create the templates exactly a
 written here (including the buttons), or every send will fail with a component
 mismatch.**
 
-Shared settings for all five templates:
+Shared settings for all six templates:
 
 - **Category:** Utility
 - **Language:** Azerbaijani (`az`)
@@ -111,6 +111,25 @@ Variables: {{1}} customer, {{2}} service, {{3}} when (same order as
 `new_booking_alert`).
 
 No buttons.
+
+---
+
+## 6. `appointment_rescheduled_alert` — to the salon owner, when the **customer** reschedules
+
+**Body**
+
+```
+Vaxt dəyişdi: {{1}} — {{2}} görüşünü yeni vaxta keçirdi: {{3}}.
+```
+
+| Var | Meaning | Sample value |
+| --- | --- | --- |
+| {{1}} | customer name | Aysel Məmmədova |
+| {{2}} | service name | Manikür |
+| {{3}} | new date & time (Baku) | 16 iyul 2026, 11:00 |
+
+Variables: same order as `new_booking_alert` ({{1}} customer, {{2}} service,
+{{3}} the NEW time). No buttons.
 
 ---
 

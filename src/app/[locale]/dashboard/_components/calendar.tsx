@@ -32,6 +32,8 @@ export function Calendar({
   weekDays,
   blocks,
   catalog,
+  windowStartMin,
+  windowEndMin,
 }: {
   view: "day" | "week";
   day: string;
@@ -41,6 +43,8 @@ export function Calendar({
   weekDays: WeekDay[];
   blocks: CalendarBlock[];
   catalog: CatalogEmployee[];
+  windowStartMin: number;
+  windowEndMin: number;
 }) {
   const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
@@ -133,9 +137,21 @@ export function Calendar({
       </div>
 
       {isWeek ? (
-        <WeekGrid weekDays={weekDays} blocks={blocks} onSelect={setSelected} />
+        <WeekGrid
+          weekDays={weekDays}
+          blocks={blocks}
+          onSelect={setSelected}
+          windowStartMin={windowStartMin}
+          windowEndMin={windowEndMin}
+        />
       ) : (
-        <DayGrid columns={columns} blocks={blocks} onSelect={setSelected} />
+        <DayGrid
+          columns={columns}
+          blocks={blocks}
+          onSelect={setSelected}
+          windowStartMin={windowStartMin}
+          windowEndMin={windowEndMin}
+        />
       )}
 
       {selected && (

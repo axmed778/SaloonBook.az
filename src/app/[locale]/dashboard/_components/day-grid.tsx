@@ -3,8 +3,6 @@
 import { useTranslations } from "next-intl";
 import { minutesToHHMM } from "@/lib/time";
 import {
-  DAY_START_MIN,
-  DAY_END_MIN,
   STATUS_STYLES,
   type CalendarColumn,
   type CalendarBlock,
@@ -21,15 +19,19 @@ export function DayGrid({
   columns,
   blocks,
   onSelect,
+  windowStartMin,
+  windowEndMin,
 }: {
   columns: CalendarColumn[];
   blocks: CalendarBlock[];
   onSelect: (b: CalendarBlock) => void;
+  windowStartMin: number;
+  windowEndMin: number;
 }) {
   const t = useTranslations("Calendar");
   const hours: number[] = [];
-  for (let m = DAY_START_MIN; m < DAY_END_MIN; m += 60) hours.push(m);
-  const bodyHeight = ((DAY_END_MIN - DAY_START_MIN) / 60) * ROW_H;
+  for (let m = windowStartMin; m < windowEndMin; m += 60) hours.push(m);
+  const bodyHeight = ((windowEndMin - windowStartMin) / 60) * ROW_H;
 
   if (columns.length === 0) {
     return (
@@ -70,10 +72,19 @@ export function DayGrid({
               className="min-w-[180px] flex-1 border-r border-zinc-800 last:border-r-0"
             >
               <div className="flex h-12 flex-col items-center justify-center border-b border-zinc-800 px-2">
-                <span className="text-sm font-medium text-zinc-100">{col.name}</span>
-                {col.position && (
+                <span
+                  className={
+                    "text-sm font-medium " +
+                    (col.inactive ? "text-zinc-500" : "text-zinc-100")
+                  }
+                >
+                  {col.name}
+                </span>
+                {col.inactive ? (
+                  <span className="text-[11px] text-amber-500/80">{t("inactiveTag")}</span>
+                ) : col.position ? (
                   <span className="text-[11px] text-zinc-500">{col.position}</span>
-                )}
+                ) : null}
               </div>
               <div className="relative" style={{ height: bodyHeight }}>
                 {hours.map((m, i) => (
@@ -84,7 +95,7 @@ export function DayGrid({
                   />
                 ))}
                 {colBlocks.map((b) => {
-                  const top = (b.startMin - DAY_START_MIN) * PX_PER_MIN;
+                  const top = (b.startMin - windowStartMin) * PX_PER_MIN;
                   const height = Math.max((b.endMin - b.startMin) * PX_PER_MIN - 2, 20);
                   return (
                     <button

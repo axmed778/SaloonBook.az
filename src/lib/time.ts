@@ -36,6 +36,18 @@ export function bakuMinutesOfDay(date: Date): number {
   return Math.round((date.getTime() - midnightUtc) / 60_000);
 }
 
+/**
+ * Minutes from a SPECIFIC Baku day's midnight to `date`. Unlike
+ * bakuMinutesOfDay (which measures against the instant's own Baku day), this
+ * measures against `dayYmd`, so an end instant that runs to or past midnight
+ * returns a value >= 1440 instead of wrapping back to a small number. Lets the
+ * calendar keep an appointment's real height on its start day.
+ */
+export function bakuMinutesOfDayOn(date: Date, dayYmd: string): number {
+  const midnightUtc = bakuWallClockToUtc(dayYmd, 0).getTime();
+  return Math.round((date.getTime() - midnightUtc) / 60_000);
+}
+
 /** Weekday for a Baku calendar date: 0=Sunday .. 6=Saturday. */
 export function bakuWeekday(dayYmd: string): number {
   const [y, m, d] = dayYmd.split("-").map(Number);

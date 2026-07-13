@@ -3,6 +3,7 @@ import { connection } from "../src/lib/redis";
 import { QUEUE_NAMES, type NotificationJob } from "../src/lib/queue";
 import { processNotification } from "./processors/notifications";
 import { sweepSubscriptions } from "./processors/subscriptions";
+import { sweepNotifications } from "./processors/notification-sweep";
 
 // The worker is a separate long-lived process (Railway "worker" service). It
 // handles WhatsApp sending, scheduled reminders, and the nightly subscription
@@ -38,8 +39,24 @@ void (async () => {
   }
 })();
 
+// Notification sweep: re-enqueue stuck QUEUED rows every 10 min (self-heals a
+// Redis hiccup at enqueue time or a lost delayed reminder job). Runs in-process
+// on a timer rather than as a delayed job, so triggering it doesn't itself
+// depend on Redis scheduling surviving. One run at startup catches up quickly.
+const SWEEP_INTERVAL_MS = 10 * 60_000;
+void sweepNotifications().catch((e) =>
+  console.error("[worker] initial notification sweep failed", e),
+);
+const sweepTimer = setInterval(() => {
+  void sweepNotifications().catch((e) =>
+    console.error("[worker] notification sweep failed", e),
+  );
+}, SWEEP_INTERVAL_MS);
+console.log("[worker] notification sweep scheduled (every 10 min)");
+
 async function shutdown(signal: string) {
   console.log(`[worker] ${signal} received, shutting down...`);
+  clearInterval(sweepTimer);
   await Promise.all([worker.close(), subsWorker.close(), subsQueue.close()]);
   await connection.quit();
   process.exit(0);

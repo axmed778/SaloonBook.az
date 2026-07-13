@@ -1,5 +1,6 @@
--- SalonBook.az — Row-Level Security tenant isolation (optional, recommended).
--- Apply with:  pnpm db:rls
+-- SalonBook.az — Row-Level Security tenant isolation (OPTIONAL, NOT enabled).
+-- Apply MANUALLY (deliberately, not on deploy) with:  pnpm db:rls
+-- Revert with:  npx tsx scripts/apply-sql.ts prisma/security/rls-disable.sql
 --
 -- HOW IT WORKS
 --   The app sets a per-transaction setting `app.current_salon` to the caller's
@@ -7,25 +8,29 @@
 --   transparently scoped to that salon, so a query bug cannot leak another
 --   tenant's data.
 --
--- IMPORTANT
---   RLS is bypassed by the table OWNER and by superusers. For RLS to actually
---   bite, the application must connect as a NON-owner role. Create one, e.g.:
+-- IMPORTANT — read before enabling
+--   This script uses FORCE ROW LEVEL SECURITY (below), which subjects the table
+--   OWNER to the policies too. Only a SUPERUSER / BYPASSRLS role bypasses them.
+--   So the moment DATABASE_URL points at ANY role that lacks BYPASSRLS (even the
+--   plain table owner), every read returns ZERO rows unless the caller has set
+--   `app.current_salon` — which today only the booking write path does. The
+--   dashboard, clients, manage flow, admin, payroll, and analytics would all
+--   silently go blank. Before enabling for real: create a dedicated app role
+--   AND wrap EVERY read/write path in withTenantScope (or an equivalent
+--   app.current_salon setter), then point DATABASE_URL at that role.
 --
 --     CREATE ROLE salonbook_app LOGIN PASSWORD '...';
 --     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salonbook_app;
 --     GRANT USAGE ON SCHEMA public TO salonbook_app;
 --
---   ...and point DATABASE_URL at that role. Run migrations as the owner.
---
 -- CURRENT STATUS (decision, 2026-07-08) — NOT ENABLED IN PRODUCTION.
---   The app connects as the DB owner, so these policies do not bite; tenant
---   isolation currently relies on the salonId filter applied in every query in
---   application code. Only the booking write path sets `app.current_salon` (via
---   withTenantScope, src/lib/tenant.ts). DO NOT point DATABASE_URL at a non-owner
---   role until withTenantScope (or an equivalent app.current_salon setter) wraps
---   EVERY read/write path — otherwise the dashboard, clients, manage flow, admin,
---   payroll, and analytics would all silently return zero rows. This file is kept
---   complete and correct so enabling RLS later is a single, safe switch.
+--   Tenant isolation relies on the salonId filter applied in every query in
+--   application code (RLS off). Production currently connects as a
+--   superuser/BYPASSRLS role, so even if these policies are applied they do not
+--   bite — but that makes applying them a latent tripwire (see IMPORTANT). This
+--   file is therefore NO LONGER re-applied on deploy; run it by hand only when
+--   the full switch above is ready. Kept complete so that switch stays a single,
+--   deliberate step.
 
 DO $$
 DECLARE
