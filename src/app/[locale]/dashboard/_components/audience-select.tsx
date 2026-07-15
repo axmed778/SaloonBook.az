@@ -17,10 +17,10 @@ export function AudienceSelect({
   const tAudience = useTranslations("Audience");
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-zinc-400">
+      <label className="mb-1 block text-xs font-medium text-muted-foreground">
         {label ?? t("audienceFor")}
       </label>
-      <div className="inline-flex rounded-lg border border-zinc-800 p-0.5">
+      <div className="inline-flex rounded-lg border border-border p-0.5">
         {AUDIENCE_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -30,7 +30,7 @@ export function AudienceSelect({
               "rounded-md px-3 py-1.5 text-sm font-medium transition " +
               (value === o.value
                 ? "bg-rose-500 text-white"
-                : "text-zinc-400 hover:text-zinc-100")
+                : "text-muted-foreground hover:text-foreground")
             }
           >
             {tAudience(o.value)}

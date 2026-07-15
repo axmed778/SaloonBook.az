@@ -108,16 +108,16 @@ export function BookingModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-zinc-800 bg-[#0d0d0f] shadow-2xl"
+        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <h2 className="text-base font-semibold text-zinc-100">{t("newBooking")}</h2>
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">{t("newBooking")}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={tc("close")} title={tc("close")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
@@ -128,7 +128,7 @@ export function BookingModal({
           <div>
             <label className={labelCls}>{t("modal.employee")}</label>
             <select
-              className={inputCls + " w-full [color-scheme:dark]"}
+              className={inputCls + " w-full"}
               value={employeeId}
               onChange={(e) => {
                 setEmployeeId(e.target.value);
@@ -150,7 +150,7 @@ export function BookingModal({
           <div>
             <label className={labelCls}>{t("modal.service")}</label>
             <select
-              className={inputCls + " w-full [color-scheme:dark] disabled:opacity-50"}
+              className={inputCls + " w-full disabled:opacity-50"}
               value={serviceId}
               disabled={!employeeId}
               onChange={(e) => {
@@ -169,7 +169,7 @@ export function BookingModal({
               ))}
             </select>
             {employeeId && services.length === 0 && (
-              <p className="mt-1 text-xs text-amber-400">
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
                 {t("modal.noServicesForStaff")}
               </p>
             )}
@@ -180,7 +180,7 @@ export function BookingModal({
             <label className={labelCls}>{t("modal.date")}</label>
             <input
               type="date"
-              className={inputCls + " w-full [color-scheme:dark]"}
+              className={inputCls + " w-full"}
               value={day}
               min={today}
               onChange={(e) => {
@@ -198,7 +198,7 @@ export function BookingModal({
               {slotsLoading ? (
                 <div className="grid grid-cols-4 gap-2" aria-busy="true">
                   {Array.from({ length: 8 }, (_, i) => (
-                    <div key={i} className="h-[34px] animate-pulse rounded-lg bg-zinc-800/60" />
+                    <div key={i} className="h-[34px] animate-pulse rounded-lg bg-hover" />
                   ))}
                 </div>
               ) : slots && slots.length > 0 ? (
@@ -211,8 +211,8 @@ export function BookingModal({
                       className={
                         "rounded-lg border px-2 py-1.5 text-sm transition " +
                         (slot?.startUtc === s.startUtc
-                          ? "border-rose-500 bg-rose-500/15 text-rose-100"
-                          : "border-zinc-800 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/60")
+                          ? "border-rose-500 bg-rose-500/15 text-rose-800 dark:text-rose-100"
+                          : "border-border text-secondary-foreground hover:border-border-strong hover:bg-hover")
                       }
                     >
                       {s.time}
@@ -220,7 +220,7 @@ export function BookingModal({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-faint-foreground">
                   {t("modal.noSlots")}
                 </p>
               )}
@@ -240,7 +240,7 @@ export function BookingModal({
           <div>
             <label className={labelCls}>{t("modal.phone")}</label>
             <div className="flex items-center gap-2">
-              <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-400">
+              <span className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
                 +994
               </span>
               <input
@@ -254,10 +254,10 @@ export function BookingModal({
             </div>
           </div>
 
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
         </div>
 
-        <div className="border-t border-zinc-800 px-5 py-4">
+        <div className="border-t border-border px-5 py-4">
           <button
             type="button"
             disabled={submitting}

@@ -10,8 +10,8 @@ export const DAY_END_MIN = 22 * 60; // 22:00
 
 // Shared input/label styling, matching the other dashboard managers.
 export const inputCls =
-  "rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
-export const labelCls = "mb-1 block text-xs font-medium text-zinc-400";
+  "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+export const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
 
 export type CalendarColumn = {
   id: string;
@@ -55,18 +55,18 @@ export type CatalogEmployee = {
 
 // Per-status presentation, shared by the grids and the detail popup.
 export const STATUS_STYLES: Record<CalendarBlock["status"], string> = {
-  CONFIRMED: "border-rose-500/50 bg-rose-500/15 text-rose-50 hover:bg-rose-500/25",
-  COMPLETED: "border-emerald-500/50 bg-emerald-500/10 text-emerald-50 hover:bg-emerald-500/20",
-  NO_SHOW: "border-amber-500/50 bg-amber-500/10 text-amber-100/80 hover:bg-amber-500/20",
+  CONFIRMED: "border-rose-500/50 bg-rose-500/15 text-rose-800 dark:text-rose-50 hover:bg-rose-500/25",
+  COMPLETED: "border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-50 hover:bg-emerald-500/20",
+  NO_SHOW: "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-100/80 hover:bg-amber-500/20",
 };
 
 // Status/source display text lives in the "Calendar" message namespace
 // (status.*, source.*); components translate it at render.
 
 export const STATUS_BADGE: Record<CalendarBlock["status"], string> = {
-  CONFIRMED: "bg-rose-500/15 text-rose-300",
-  COMPLETED: "bg-emerald-500/15 text-emerald-300",
-  NO_SHOW: "bg-amber-500/15 text-amber-300",
+  CONFIRMED: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  COMPLETED: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  NO_SHOW: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
 };
 
 /** Minor units (qəpik) -> AZN string, dropping a trailing ".00". */

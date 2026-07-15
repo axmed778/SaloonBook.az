@@ -55,10 +55,10 @@ export type ProfileData = {
 };
 
 const STATUS_CHIP: Record<AppointmentItem["status"], string> = {
-  CONFIRMED: "bg-rose-500/10 text-rose-300",
-  COMPLETED: "bg-emerald-500/10 text-emerald-400",
-  CANCELLED: "bg-zinc-800 text-zinc-500",
-  NO_SHOW: "bg-amber-500/10 text-amber-400",
+  CONFIRMED: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  COMPLETED: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  CANCELLED: "bg-secondary text-faint-foreground",
+  NO_SHOW: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
 };
 
 function StatusPill({ status }: { status: AppointmentItem["status"] }) {
@@ -117,41 +117,41 @@ export function ClientProfile({
   }
 
   const actionBtn =
-    "inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100";
+    "inline-flex items-center gap-1.5 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-secondary-foreground transition hover:border-border-strong hover:text-foreground";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 px-4 py-6">
       <Link
         href="/dashboard/clients"
-        className="inline-flex items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-200"
+        className="inline-flex items-center gap-1 text-sm text-faint-foreground transition hover:text-foreground"
       >
         ← {t("back")}
       </Link>
 
       {/* Header + quick actions */}
-      <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
+      <section className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-sm font-semibold text-rose-300">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-sm font-semibold text-rose-700 dark:text-rose-300">
               {initials(data.name)}
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-semibold text-zinc-100">{data.name}</h1>
+                <h1 className="truncate text-lg font-semibold text-foreground">{data.name}</h1>
                 {data.active ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                     {t("statusActive")}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-faint-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-border-strong" />
                     {t("statusInactive")}
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-sm text-zinc-400">{data.phone}</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
+              <p className="mt-0.5 text-sm text-muted-foreground">{data.phone}</p>
+              <p className="mt-0.5 text-xs text-faint-foreground">
                 {t("registered")}: {data.createdLabel}
                 {s.lastActivityLabel ? t("lastActivityInline", { date: s.lastActivityLabel }) : ""}
               </p>
@@ -176,7 +176,7 @@ export function ClientProfile({
             </button>
             <button
               onClick={() => setDeleting(true)}
-              className="inline-flex items-center rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
+              className="inline-flex items-center rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-700 dark:text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
             >
               {t("delete")}
             </button>
@@ -200,8 +200,8 @@ export function ClientProfile({
       </section>
 
       {/* Derived analytics */}
-      <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-        <h2 className="text-sm font-medium text-zinc-300">{t("about")}</h2>
+      <section className="rounded-xl border border-border bg-card p-5">
+        <h2 className="text-sm font-medium text-secondary-foreground">{t("about")}</h2>
         <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <InfoRow label={t("favEmployee")} value={s.favEmployee ?? "—"} />
           <InfoRow label={t("favService")} value={s.favService ?? "—"} />
@@ -215,27 +215,27 @@ export function ClientProfile({
 
       {/* Upcoming */}
       {upcoming.length > 0 && (
-        <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-          <h2 className="text-sm font-medium text-zinc-300">{t("upcomingTitle")}</h2>
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="text-sm font-medium text-secondary-foreground">{t("upcomingTitle")}</h2>
           <AppointmentList items={upcoming} onSelect={setDetail} />
         </section>
       )}
 
       {/* History */}
-      <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-        <h2 className="text-sm font-medium text-zinc-300">
+      <section className="rounded-xl border border-border bg-card p-5">
+        <h2 className="text-sm font-medium text-secondary-foreground">
           {t("historyTitle")}
-          <span className="ml-2 text-xs font-normal text-zinc-500">
+          <span className="ml-2 text-xs font-normal text-faint-foreground">
             {t("appointmentsCount", { count: data.totalAppointments })}
           </span>
         </h2>
         {past.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">{t("noPast")}</p>
+          <p className="mt-3 text-sm text-faint-foreground">{t("noPast")}</p>
         ) : (
           <>
             <AppointmentList items={past} onSelect={setDetail} />
             {data.historyTruncated && (
-              <p className="mt-3 text-xs text-zinc-600">
+              <p className="mt-3 text-xs text-faint-foreground">
                 {t("showingLast", { count: past.length + upcoming.length })}
               </p>
             )}
@@ -297,15 +297,15 @@ function Stat({
   tone?: "warn" | "muted";
 }) {
   const valueCls = highlight
-    ? "text-rose-400"
+    ? "text-rose-700 dark:text-rose-400"
     : tone === "warn"
-      ? "text-amber-300"
+      ? "text-amber-700 dark:text-amber-300"
       : tone === "muted"
-        ? "text-zinc-400"
-        : "text-zinc-100";
+        ? "text-muted-foreground"
+        : "text-foreground";
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-4">
-      <p className="text-xs text-zinc-500">{label}</p>
+    <div className="rounded-xl border border-border bg-card p-4">
+      <p className="text-xs text-faint-foreground">{label}</p>
       <p className={`mt-1 truncate text-lg font-semibold ${valueCls}`}>{value}</p>
     </div>
   );
@@ -313,9 +313,9 @@ function Stat({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-zinc-800/50 pb-2 sm:border-0 sm:pb-0">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="truncate text-right text-zinc-200">{value}</dd>
+    <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2 sm:border-0 sm:pb-0">
+      <dt className="text-faint-foreground">{label}</dt>
+      <dd className="truncate text-right text-secondary-foreground">{value}</dd>
     </div>
   );
 }
@@ -328,22 +328,22 @@ function AppointmentList({
   onSelect: (a: AppointmentItem) => void;
 }) {
   return (
-    <ul className="mt-3 divide-y divide-zinc-800/60">
+    <ul className="mt-3 divide-y divide-border">
       {items.map((a) => (
         <li key={a.id}>
           <button
             onClick={() => onSelect(a)}
-            className="flex w-full items-center justify-between gap-3 py-2.5 text-left transition hover:bg-zinc-900/50"
+            className="flex w-full items-center justify-between gap-3 py-2.5 text-left transition hover:bg-hover"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm text-zinc-200">
+              <p className="truncate text-sm text-secondary-foreground">
                 {a.service}
-                <span className="text-zinc-500"> · {a.employee}</span>
+                <span className="text-faint-foreground"> · {a.employee}</span>
               </p>
-              <p className="mt-0.5 text-xs text-zinc-500">{a.whenLabel}</p>
+              <p className="mt-0.5 text-xs text-faint-foreground">{a.whenLabel}</p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="text-sm font-medium text-zinc-200">{azn(a.priceMinor)} ₼</span>
+              <span className="text-sm font-medium text-secondary-foreground">{azn(a.priceMinor)} ₼</span>
               <StatusPill status={a.status} />
             </div>
           </button>
@@ -387,10 +387,10 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
   }
 
   return (
-    <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-      <h2 className="text-sm font-medium text-zinc-300">
+    <section className="rounded-xl border border-border bg-card p-5">
+      <h2 className="text-sm font-medium text-secondary-foreground">
         {t("title")}
-        <span className="ml-2 text-xs font-normal text-zinc-600">{t("privateHint")}</span>
+        <span className="ml-2 text-xs font-normal text-faint-foreground">{t("privateHint")}</span>
       </h2>
 
       <form onSubmit={submit} className="mt-3 flex gap-2">
@@ -404,29 +404,29 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
         <button
           type="submit"
           disabled={pending || !body.trim()}
-          className="shrink-0 rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-700 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-50"
         >
           {t("add")}
         </button>
       </form>
-      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
       {notes.length > 0 && (
         <ul className="mt-4 space-y-2">
           {notes.map((n) => (
             <li
               key={n.id}
-              className="group flex items-start justify-between gap-3 rounded-lg bg-zinc-900/50 px-3 py-2"
+              className="group flex items-start justify-between gap-3 rounded-lg bg-muted px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="whitespace-pre-wrap break-words text-sm text-zinc-200">{n.body}</p>
-                <p className="mt-0.5 text-xs text-zinc-600">{n.createdLabel}</p>
+                <p className="whitespace-pre-wrap break-words text-sm text-secondary-foreground">{n.body}</p>
+                <p className="mt-0.5 text-xs text-faint-foreground">{n.createdLabel}</p>
               </div>
               <button
                 onClick={() => remove(n.id)}
                 disabled={pending}
                 aria-label={t("deleteAria")}
-                className="shrink-0 text-xs text-zinc-600 transition hover:text-rose-400"
+                className="shrink-0 text-xs text-faint-foreground transition hover:text-rose-400"
               >
                 {t("delete")}
               </button>
@@ -453,10 +453,10 @@ function ModalShell({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d0f] p-5 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
         <div className="mt-4">{children}</div>
       </div>
     </div>
@@ -509,7 +509,7 @@ function EditCustomerModal({
         <div>
           <label className={labelCls}>{t("phone")}</label>
           <div className="flex items-center gap-2">
-            <span className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-400">
+            <span className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
               +994
             </span>
             <input
@@ -521,12 +521,12 @@ function EditCustomerModal({
             />
           </div>
         </div>
-        {error && <p className="text-sm text-rose-400">{error}</p>}
+        {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
           >
             {tc("cancel")}
           </button>
@@ -574,23 +574,23 @@ function DeleteCustomerModal({
 
   return (
     <ModalShell title={t("title")} onClose={onClose}>
-      <p className="text-sm text-zinc-300">
+      <p className="text-sm text-secondary-foreground">
         {t.rich("confirmWith", {
           name,
-          b: (chunks) => <span className="font-medium text-zinc-100">{chunks}</span>,
+          b: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
         })}
       </p>
-      <p className="mt-2 text-sm text-rose-300">
+      <p className="mt-2 text-sm text-rose-700 dark:text-rose-300">
         {totalAppointments > 0
           ? t("bodyWithHistory", { count: totalAppointments })
           : t("bodyNoHistory")}
       </p>
-      <p className="mt-1 text-xs text-zinc-500">{t("irreversible")}</p>
-      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
+      <p className="mt-1 text-xs text-faint-foreground">{t("irreversible")}</p>
+      {error && <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
-          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
+          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
         >
           {tc("cancel")}
         </button>
@@ -653,34 +653,34 @@ function AppointmentDetailModal({
       </dl>
 
       {item.status === "CONFIRMED" && (
-        <div className="mt-4 border-t border-zinc-800 pt-4">
-          <p className="mb-2 text-xs text-zinc-500">{t("changeStatus")}</p>
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="mb-2 text-xs text-faint-foreground">{t("changeStatus")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => changeStatus("COMPLETED")}
               disabled={pending}
-              className="rounded-lg bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-600/30 disabled:opacity-50"
+              className="rounded-lg bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-600/30 disabled:opacity-50"
             >
               {t("complete")}
             </button>
             <button
               onClick={() => changeStatus("NO_SHOW")}
               disabled={pending}
-              className="rounded-lg bg-amber-600/20 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-600/30 disabled:opacity-50"
+              className="rounded-lg bg-amber-600/20 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 transition hover:bg-amber-600/30 disabled:opacity-50"
             >
               {t("noShow")}
             </button>
             <button
               onClick={() => changeStatus("CANCELLED")}
               disabled={pending}
-              className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-zinc-700 disabled:opacity-50"
+              className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-50"
             >
               {tc("cancel")}
             </button>
           </div>
         </div>
       )}
-      {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
     </ModalShell>
   );
 }
@@ -688,8 +688,8 @@ function AppointmentDetailModal({
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="text-right text-zinc-200">{value}</dd>
+      <dt className="text-faint-foreground">{label}</dt>
+      <dd className="text-right text-secondary-foreground">{value}</dd>
     </div>
   );
 }

@@ -25,8 +25,8 @@ export type ServiceRow = {
 };
 
 const inputCls =
-  "w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
-const labelCls = "mb-1 block text-xs font-medium text-zinc-400";
+  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
 
 const aznLabel = (minor: number) => {
   const v = minor / 100;
@@ -129,8 +129,8 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">
+          <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-faint-foreground">
             {t("subtitle")}
           </p>
         </div>
@@ -147,8 +147,8 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
 
       {/* Add / edit form */}
       {open && (
-        <div className="mb-6 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-          <h2 className="text-sm font-semibold text-zinc-100">
+        <div className="mb-6 rounded-xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">
             {editingId ? t("edit") : t("new")}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -203,7 +203,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             />
           </div>
 
-          {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
             <button
@@ -216,7 +216,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             <button
               onClick={close}
               disabled={pending}
-              className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60 disabled:opacity-60"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-60"
             >
               {tc("cancel")}
             </button>
@@ -226,9 +226,9 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
 
       {/* List */}
       {services.length === 0 ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 text-center">
-          <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
-          <p className="mt-1 max-w-xs text-sm text-zinc-500">
+        <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+          <p className="text-sm font-medium text-secondary-foreground">{t("emptyTitle")}</p>
+          <p className="mt-1 max-w-xs text-sm text-faint-foreground">
             {t("emptyBody")}
           </p>
         </div>
@@ -237,48 +237,48 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
           {services.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-[#0d0d0f] px-4 py-3.5"
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="truncate font-medium text-zinc-100">{s.name}</p>
-                  <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                  <p className="truncate font-medium text-foreground">{s.name}</p>
+                  <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {tAudience(s.audience)}
                   </span>
                   {!s.isActive && (
-                    <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {t("inactive")}
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-sm text-zinc-500">
+                <p className="mt-0.5 text-sm text-faint-foreground">
                   {t("minutesShort", { min: s.durationMin })}
-                  {s.bufferMin > 0 && <span className="text-zinc-600"> {t("bufferSuffix", { min: s.bufferMin })}</span>}
+                  {s.bufferMin > 0 && <span className="text-faint-foreground"> {t("bufferSuffix", { min: s.bufferMin })}</span>}
                 </p>
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
-                <span className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-100">
+                <span className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground">
                   {aznLabel(s.priceMinor)} ₼
                 </span>
                 <button
                   onClick={() => startEdit(s)}
                   disabled={pending}
-                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
                   {t("editAction")}
                 </button>
                 <button
                   onClick={() => toggleActive(s)}
                   disabled={pending}
-                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
                   {s.isActive ? t("deactivate") : t("activate")}
                 </button>
                 <button
                   onClick={() => setConfirmRemove(s)}
                   disabled={pending}
-                  className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
+                  className="text-sm text-rose-700 dark:text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
                   {t("delete")}
                 </button>
@@ -293,7 +293,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
           title={t("deleteTitle")}
           body={t.rich("deleteConfirm", {
             name: confirmRemove.name,
-            b: (chunks) => <span className="font-medium text-zinc-200">{chunks}</span>,
+            b: (chunks) => <span className="font-medium text-secondary-foreground">{chunks}</span>,
           })}
           pending={pending}
           onConfirm={() => remove(confirmRemove)}

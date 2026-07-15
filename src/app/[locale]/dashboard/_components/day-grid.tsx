@@ -35,9 +35,9 @@ export function DayGrid({
 
   if (columns.length === 0) {
     return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-zinc-800 bg-[#0d0d0f] text-center">
-        <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
-        <p className="mt-1 max-w-xs text-sm text-zinc-500">
+      <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-border bg-card text-center">
+        <p className="text-sm font-medium text-secondary-foreground">{t("emptyTitle")}</p>
+        <p className="mt-1 max-w-xs text-sm text-faint-foreground">
           {t("emptyBody")}
         </p>
       </div>
@@ -45,16 +45,16 @@ export function DayGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-[#0d0d0f]">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <div className="flex min-w-full">
         {/* Time gutter */}
-        <div className="w-14 shrink-0 border-r border-zinc-800">
-          <div className="h-12 border-b border-zinc-800" />
+        <div className="w-14 shrink-0 border-r border-border">
+          <div className="h-12 border-b border-border" />
           <div className="relative" style={{ height: bodyHeight }}>
             {hours.map((m, i) => (
               <div
                 key={m}
-                className="absolute right-2 -translate-y-1/2 text-xs text-zinc-500"
+                className="absolute right-2 -translate-y-1/2 text-xs text-faint-foreground"
                 style={{ top: i * ROW_H }}
               >
                 {i === 0 ? "" : minutesToHHMM(m)}
@@ -69,28 +69,28 @@ export function DayGrid({
           return (
             <div
               key={col.id}
-              className="min-w-[180px] flex-1 border-r border-zinc-800 last:border-r-0"
+              className="min-w-[180px] flex-1 border-r border-border last:border-r-0"
             >
-              <div className="flex h-12 flex-col items-center justify-center border-b border-zinc-800 px-2">
+              <div className="flex h-12 flex-col items-center justify-center border-b border-border px-2">
                 <span
                   className={
                     "text-sm font-medium " +
-                    (col.inactive ? "text-zinc-500" : "text-zinc-100")
+                    (col.inactive ? "text-faint-foreground" : "text-foreground")
                   }
                 >
                   {col.name}
                 </span>
                 {col.inactive ? (
-                  <span className="text-[11px] text-amber-500/80">{t("inactiveTag")}</span>
+                  <span className="text-[11px] text-amber-800 dark:text-amber-500/80">{t("inactiveTag")}</span>
                 ) : col.position ? (
-                  <span className="text-[11px] text-zinc-500">{col.position}</span>
+                  <span className="text-[11px] text-faint-foreground">{col.position}</span>
                 ) : null}
               </div>
               <div className="relative" style={{ height: bodyHeight }}>
                 {hours.map((m, i) => (
                   <div
                     key={m}
-                    className="absolute inset-x-0 border-b border-zinc-800/50"
+                    className="absolute inset-x-0 border-b border-border"
                     style={{ top: i * ROW_H, height: 0 }}
                   />
                 ))}

@@ -36,8 +36,8 @@ export type EmployeeRow = {
 const WEEKDAYS: number[] = [1, 2, 3, 4, 5, 6, 0];
 
 const inputCls =
-  "rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
-const labelCls = "mb-1 block text-xs font-medium text-zinc-400";
+  "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
 
 const toHHMM = (min: number) =>
   `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
@@ -205,8 +205,8 @@ export function WorkersManager({
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">
+          <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-faint-foreground">
             {t("subtitle")}
           </p>
         </div>
@@ -223,8 +223,8 @@ export function WorkersManager({
 
       {/* Add / edit form */}
       {open && (
-        <div className="mb-6 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-          <h2 className="text-sm font-semibold text-zinc-100">
+        <div className="mb-6 rounded-xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">
             {form.id ? t("edit") : t("new")}
           </h2>
 
@@ -272,7 +272,7 @@ export function WorkersManager({
           <div className="mt-5">
             <label className={labelCls}>{t("services")}</label>
             {activeServices.length === 0 ? (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-faint-foreground">
                 {t("noServices")}
               </p>
             ) : (
@@ -287,8 +287,8 @@ export function WorkersManager({
                       className={
                         "rounded-full border px-3 py-1.5 text-sm transition " +
                         (on
-                          ? "border-rose-500/50 bg-rose-500/15 text-rose-200"
-                          : "border-zinc-800 text-zinc-400 hover:bg-zinc-800/60")
+                          ? "border-rose-500/50 bg-rose-500/15 text-rose-800 dark:text-rose-200"
+                          : "border-border text-muted-foreground hover:bg-hover")
                       }
                     >
                       {s.name}
@@ -307,7 +307,7 @@ export function WorkersManager({
                 const d = hours[weekday];
                 return (
                   <div key={weekday} className="flex flex-wrap items-center gap-3">
-                    <label className="flex w-40 items-center gap-2 text-sm text-zinc-300">
+                    <label className="flex w-40 items-center gap-2 text-sm text-secondary-foreground">
                       <input
                         type="checkbox"
                         checked={d.on}
@@ -323,19 +323,19 @@ export function WorkersManager({
                           step={900}
                           value={d.start}
                           onChange={(e) => setDay(weekday, { start: e.target.value })}
-                          className={inputCls + " [color-scheme:dark]"}
+                          className={inputCls + ""}
                         />
-                        <span className="text-zinc-600">—</span>
+                        <span className="text-faint-foreground">—</span>
                         <input
                           type="time"
                           step={900}
                           value={d.end}
                           onChange={(e) => setDay(weekday, { end: e.target.value })}
-                          className={inputCls + " [color-scheme:dark]"}
+                          className={inputCls + ""}
                         />
                       </div>
                     ) : (
-                      <span className="text-sm text-zinc-600">{t("dayOff")}</span>
+                      <span className="text-sm text-faint-foreground">{t("dayOff")}</span>
                     )}
                   </div>
                 );
@@ -344,7 +344,7 @@ export function WorkersManager({
           </div>
 
           {/* Active toggle */}
-          <label className="mt-5 flex items-center gap-2 text-sm text-zinc-300">
+          <label className="mt-5 flex items-center gap-2 text-sm text-secondary-foreground">
             <input
               type="checkbox"
               checked={form.isActive}
@@ -354,7 +354,7 @@ export function WorkersManager({
             {t("activeLabel")}
           </label>
 
-          {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
             <button
@@ -367,7 +367,7 @@ export function WorkersManager({
             <button
               onClick={close}
               disabled={pending}
-              className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60 disabled:opacity-60"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-60"
             >
               {tc("cancel")}
             </button>
@@ -377,9 +377,9 @@ export function WorkersManager({
 
       {/* List */}
       {employees.length === 0 ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 text-center">
-          <p className="text-sm font-medium text-zinc-300">{t("emptyTitle")}</p>
-          <p className="mt-1 max-w-xs text-sm text-zinc-500">
+        <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+          <p className="text-sm font-medium text-secondary-foreground">{t("emptyTitle")}</p>
+          <p className="mt-1 max-w-xs text-sm text-faint-foreground">
             {t("emptyBody")}
           </p>
         </div>
@@ -388,29 +388,29 @@ export function WorkersManager({
           {employees.map((e) => (
             <li
               key={e.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-[#0d0d0f] px-4 py-3.5"
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-200">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
                   {e.name.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-zinc-100">{e.name}</p>
-                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                    <p className="truncate font-medium text-foreground">{e.name}</p>
+                    <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {tAudience(e.audience)}
                     </span>
                     {!e.isActive && (
-                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         {t("inactive")}
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-zinc-500">
+                  <p className="mt-0.5 truncate text-sm text-faint-foreground">
                     {e.position || "—"}
-                    <span className="text-zinc-700"> · </span>
+                    <span className="text-faint-foreground"> · </span>
                     {t("servicesCount", { count: e.serviceIds.length })}
-                    <span className="text-zinc-700"> · </span>
+                    <span className="text-faint-foreground"> · </span>
                     {t("workDaysCount", { count: e.hours.length })}
                   </p>
                 </div>
@@ -420,11 +420,11 @@ export function WorkersManager({
                 <button
                   onClick={() => setTimeOffFor(e)}
                   disabled={pending}
-                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
                   {t("timeOff")}
                   {e.timeOff.length > 0 && (
-                    <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium text-amber-300">
+                    <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                       {e.timeOff.length}
                     </span>
                   )}
@@ -432,21 +432,21 @@ export function WorkersManager({
                 <button
                   onClick={() => startEdit(e)}
                   disabled={pending}
-                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
                   {t("editAction")}
                 </button>
                 <button
                   onClick={() => toggleActive(e)}
                   disabled={pending}
-                  className="text-sm text-zinc-400 transition hover:text-zinc-100 disabled:opacity-60"
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
                   {e.isActive ? t("deactivate") : t("activate")}
                 </button>
                 <button
                   onClick={() => setConfirmRemove(e)}
                   disabled={pending}
-                  className="text-sm text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
+                  className="text-sm text-rose-700 dark:text-rose-400/80 transition hover:text-rose-400 disabled:opacity-60"
                 >
                   {t("delete")}
                 </button>
@@ -469,7 +469,7 @@ export function WorkersManager({
           title={t("deleteTitle")}
           body={t.rich("deleteConfirm", {
             name: confirmRemove.name,
-            b: (chunks) => <span className="font-medium text-zinc-200">{chunks}</span>,
+            b: (chunks) => <span className="font-medium text-secondary-foreground">{chunks}</span>,
           })}
           pending={pending}
           onConfirm={() => remove(confirmRemove)}
@@ -536,18 +536,18 @@ function TimeOffModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d0f] p-5 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-zinc-100">
+          <h2 className="text-base font-semibold text-foreground">
             {t("timeOffModal.titleFor", { name: employee.name })}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={tc("close")} title={tc("close")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
@@ -559,7 +559,7 @@ function TimeOffModal({
               <label className={labelCls}>{t("timeOffModal.start")}</label>
               <input
                 type="date"
-                className={inputCls + " w-full [color-scheme:dark]"}
+                className={inputCls + " w-full"}
                 value={from}
                 min={today}
                 onChange={(e) => {
@@ -572,7 +572,7 @@ function TimeOffModal({
               <label className={labelCls}>{t("timeOffModal.endInclusive")}</label>
               <input
                 type="date"
-                className={inputCls + " w-full [color-scheme:dark]"}
+                className={inputCls + " w-full"}
                 value={to}
                 min={from}
                 onChange={(e) => setTo(e.target.value)}
@@ -589,7 +589,7 @@ function TimeOffModal({
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
           <button
             type="submit"
             disabled={pending}
@@ -599,25 +599,25 @@ function TimeOffModal({
           </button>
         </form>
 
-        <div className="mt-5 border-t border-zinc-800 pt-4">
-          <p className="text-xs font-medium text-zinc-500">{t("timeOffModal.current")}</p>
+        <div className="mt-5 border-t border-border pt-4">
+          <p className="text-xs font-medium text-faint-foreground">{t("timeOffModal.current")}</p>
           {employee.timeOff.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">{t("timeOffModal.none")}</p>
+            <p className="mt-2 text-sm text-faint-foreground">{t("timeOffModal.none")}</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {employee.timeOff.map((row) => (
                 <li
                   key={row.id}
-                  className="flex items-center justify-between gap-3 rounded-lg bg-zinc-900/50 px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2 text-sm"
                 >
-                  <span className="min-w-0 truncate text-zinc-200">
+                  <span className="min-w-0 truncate text-secondary-foreground">
                     {row.label}
-                    {row.reason && <span className="text-zinc-500"> · {row.reason}</span>}
+                    {row.reason && <span className="text-faint-foreground"> · {row.reason}</span>}
                   </span>
                   <button
                     onClick={() => remove(row.id)}
                     disabled={pending}
-                    className="shrink-0 text-xs text-zinc-500 transition hover:text-rose-400"
+                    className="shrink-0 text-xs text-faint-foreground transition hover:text-rose-400"
                   >
                     {t("delete")}
                   </button>
@@ -625,7 +625,7 @@ function TimeOffModal({
               ))}
             </ul>
           )}
-          <p className="mt-3 text-xs text-zinc-600">
+          <p className="mt-3 text-xs text-faint-foreground">
             {t("timeOffModal.note")}
           </p>
         </div>

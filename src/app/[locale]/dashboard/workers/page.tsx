@@ -11,7 +11,7 @@ export default async function WorkersPage() {
   const session = (await getSession())!;
   if (!session.salonId) {
     const t = await getTranslations("Dashboard");
-    return <p className="text-sm text-zinc-400">{t("noSalonLinked")}</p>;
+    return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;
   }
   const salonId = session.salonId;
   const df = intlLocale(await getLocale());

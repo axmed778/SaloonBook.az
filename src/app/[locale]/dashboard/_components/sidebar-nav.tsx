@@ -132,8 +132,8 @@ export function SidebarNav({
               (collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2") +
               " " +
               (active
-                ? "bg-rose-500/10 text-rose-400"
-                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100")
+                ? "bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                : "text-muted-foreground hover:bg-hover hover:text-foreground")
             }
           >
             {item.icon}

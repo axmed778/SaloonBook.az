@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: the app toggles `.light`/`.dark` on <html> (see the
+   theme script in the root layout), so `dark:` utilities must key off that class,
+   not the OS `prefers-color-scheme`. Dark is the default when neither class is
+   present. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   SalonBook.az theme tokens.
 

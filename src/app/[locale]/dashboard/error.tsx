@@ -20,10 +20,10 @@ export default function DashboardError({
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <h1 className="text-xl font-semibold text-zinc-100">{t("title")}</h1>
-      <p className="mt-2 max-w-sm text-sm text-zinc-500">{t("dashboardBody")}</p>
+      <h1 className="text-xl font-semibold text-foreground">{t("title")}</h1>
+      <p className="mt-2 max-w-sm text-sm text-faint-foreground">{t("dashboardBody")}</p>
       {error.digest && (
-        <p className="mt-2 text-xs text-zinc-600">
+        <p className="mt-2 text-xs text-faint-foreground">
           {t("errorCode")}: {error.digest}
         </p>
       )}

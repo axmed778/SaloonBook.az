@@ -9,21 +9,21 @@ type DeltaTone = "emerald" | "rose" | "neutral";
 export type Delta = { text: string; tone: DeltaTone };
 
 const VALUE_TONE: Record<ValueTone, string> = {
-  zinc: "text-zinc-100",
-  rose: "text-rose-400",
-  emerald: "text-emerald-400",
-  muted: "text-zinc-500",
+  zinc: "text-foreground",
+  rose: "text-rose-700 dark:text-rose-400",
+  emerald: "text-emerald-700 dark:text-emerald-400",
+  muted: "text-faint-foreground",
 };
 
 const SUBLINE_TONE: Record<SublineTone, string> = {
-  zinc: "text-zinc-400",
-  amber: "text-amber-300",
+  zinc: "text-muted-foreground",
+  amber: "text-amber-700 dark:text-amber-300",
 };
 
 const DELTA_TONE: Record<DeltaTone, string> = {
-  emerald: "bg-emerald-500/10 text-emerald-400",
-  rose: "bg-rose-500/10 text-rose-400",
-  neutral: "bg-zinc-800 text-zinc-300",
+  emerald: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  rose: "bg-rose-500/10 text-rose-700 dark:text-rose-400",
+  neutral: "bg-secondary text-secondary-foreground",
 };
 
 export function StatCard({
@@ -45,9 +45,9 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5${className ? ` ${className}` : ""}`}
+      className={`rounded-xl border border-border bg-card p-5${className ? ` ${className}` : ""}`}
     >
-      <p className="text-xs font-medium text-zinc-500">{label}</p>
+      <p className="text-xs font-medium text-faint-foreground">{label}</p>
       <div className="mt-2 flex items-baseline gap-2">
         <span className={`text-2xl font-semibold sm:text-3xl ${VALUE_TONE[valueTone]}`}>
           {value}

@@ -13,9 +13,9 @@ import {
 import { updateProfile, updateSlug, updateBusinessHours } from "./actions";
 
 const inputCls =
-  "w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
-const labelCls = "mb-1 block text-xs font-medium text-zinc-400";
-const cardCls = "rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5";
+  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
+const cardCls = "rounded-xl border border-border bg-card p-5";
 const saveBtn =
   "rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60";
 
@@ -57,8 +57,8 @@ export function SettingsManager({
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">{t("subtitle")}</p>
+        <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+        <p className="mt-0.5 text-sm text-faint-foreground">{t("subtitle")}</p>
       </div>
 
       <ProfileCard salon={salon} onSaved={() => router.refresh()} />
@@ -101,7 +101,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">{t("profile.title")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("profile.title")}</h2>
       <div className="mt-4 space-y-4">
         <div>
           <label className={labelCls}>{t("profile.name")}</label>
@@ -131,7 +131,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
         <button onClick={save} disabled={pending} className={saveBtn}>
           {pending ? t("saving") : t("save")}
         </button>
-        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-400" : "text-rose-400")}>{msg.text}</span>}
+        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>{msg.text}</span>}
       </div>
     </section>
   );
@@ -172,16 +172,16 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">{t("link.title")}</h2>
-      <p className="mt-1 text-sm text-zinc-500">{t("link.subtitle")}</p>
+      <h2 className="text-sm font-semibold text-foreground">{t("link.title")}</h2>
+      <p className="mt-1 text-sm text-faint-foreground">{t("link.subtitle")}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
+        <code className="min-w-0 flex-1 truncate rounded-lg border border-border bg-background px-3 py-2 text-sm text-secondary-foreground">
           {fullUrl}
         </code>
         <button
           onClick={copy}
-          className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+          className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
         >
           {copied ? t("link.copied") : t("link.copy")}
         </button>
@@ -189,7 +189,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           href={`/${slug}`}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+          className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
         >
           {t("link.open")}
         </a>
@@ -199,7 +199,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
         <div className="mt-4">
           <label className={labelCls}>{t("link.newLinkLabel")}</label>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-zinc-500">{appUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}/</span>
+            <span className="text-sm text-faint-foreground">{appUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}/</span>
             <input
               className={inputCls + " max-w-xs"}
               value={value}
@@ -207,7 +207,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
               placeholder="mysalon"
             />
           </div>
-          {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
+          {error && <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
             <button onClick={save} disabled={pending} className={saveBtn}>
               {pending ? t("saving") : t("save")}
@@ -219,7 +219,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
                 setError(null);
               }}
               disabled={pending}
-              className="rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
             >
               {tc("cancel")}
             </button>
@@ -228,7 +228,7 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="mt-3 text-sm text-zinc-400 transition hover:text-zinc-100"
+          className="mt-3 text-sm text-muted-foreground transition hover:text-foreground"
         >
           {t("link.change")}
         </button>
@@ -256,7 +256,7 @@ function BookingQr({ url, slug }: { url: string; slug: string }) {
   }
 
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-zinc-800 pt-4">
+    <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
       <div className="rounded-xl bg-white p-3">
         <QRCodeCanvas value={url} size={140} marginSize={2} level="M" />
       </div>
@@ -265,11 +265,11 @@ function BookingQr({ url, slug }: { url: string; slug: string }) {
         <QRCodeCanvas value={url} size={1024} marginSize={4} level="M" />
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-medium text-zinc-200">{t("link.qrTitle")}</p>
-        <p className="mt-1 max-w-xs text-sm text-zinc-500">{t("link.qrHint")}</p>
+        <p className="text-sm font-medium text-secondary-foreground">{t("link.qrTitle")}</p>
+        <p className="mt-1 max-w-xs text-sm text-faint-foreground">{t("link.qrHint")}</p>
         <button
           onClick={download}
-          className="mt-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+          className="mt-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
         >
           {t("link.qrDownload")}
         </button>
@@ -320,15 +320,15 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
 
   return (
     <section className={cardCls}>
-      <h2 className="text-sm font-semibold text-zinc-100">{t("hours.title")}</h2>
-      <p className="mt-1 text-sm text-zinc-500">{t("hours.subtitle")}</p>
+      <h2 className="text-sm font-semibold text-foreground">{t("hours.title")}</h2>
+      <p className="mt-1 text-sm text-faint-foreground">{t("hours.subtitle")}</p>
 
       <div className="mt-4 space-y-2">
         {WEEKDAYS_ORDER.map((weekday) => {
           const d = hours[weekday];
           return (
             <div key={weekday} className="flex flex-wrap items-center gap-3">
-              <label className="flex w-40 items-center gap-2 text-sm text-zinc-300">
+              <label className="flex w-40 items-center gap-2 text-sm text-secondary-foreground">
                 <input
                   type="checkbox"
                   checked={d.on}
@@ -339,12 +339,12 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
               </label>
               {d.on ? (
                 <div className="flex items-center gap-2">
-                  <input type="time" step={900} value={d.open} onChange={(e) => setDay(weekday, { open: e.target.value })} className={inputCls + " w-auto [color-scheme:dark]"} />
-                  <span className="text-zinc-600">—</span>
-                  <input type="time" step={900} value={d.close} onChange={(e) => setDay(weekday, { close: e.target.value })} className={inputCls + " w-auto [color-scheme:dark]"} />
+                  <input type="time" step={900} value={d.open} onChange={(e) => setDay(weekday, { open: e.target.value })} className={inputCls + " w-auto"} />
+                  <span className="text-faint-foreground">—</span>
+                  <input type="time" step={900} value={d.close} onChange={(e) => setDay(weekday, { close: e.target.value })} className={inputCls + " w-auto"} />
                 </div>
               ) : (
-                <span className="text-sm text-zinc-600">{t("hours.closed")}</span>
+                <span className="text-sm text-faint-foreground">{t("hours.closed")}</span>
               )}
             </div>
           );
@@ -355,7 +355,7 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
         <button onClick={save} disabled={pending} className={saveBtn}>
           {pending ? t("saving") : t("save")}
         </button>
-        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-400" : "text-rose-400")}>{msg.text}</span>}
+        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>{msg.text}</span>}
       </div>
     </section>
   );

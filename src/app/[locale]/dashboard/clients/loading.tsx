@@ -13,10 +13,10 @@ export default function ClientsLoading() {
       </div>
 
       <SkeletonCard className="p-0">
-        <div className="border-b border-zinc-800 px-4 py-3">
+        <div className="border-b border-border px-4 py-3">
           <Skeleton className="h-4 w-2/3" />
         </div>
-        <div className="divide-y divide-zinc-800/60">
+        <div className="divide-y divide-border">
           {Array.from({ length: 8 }, (_, i) => (
             <div key={i} className="flex items-center justify-between gap-4 px-4 py-3.5">
               <div className="min-w-0 flex-1 space-y-2">

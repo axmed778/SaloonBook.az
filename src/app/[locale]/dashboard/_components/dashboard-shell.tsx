@@ -47,11 +47,11 @@ export function DashboardShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop sidebar */}
       <aside
         className={
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 transition-[width] duration-200 lg:flex " +
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background transition-[width] duration-200 lg:flex " +
           (collapsed ? "w-[76px]" : "w-64")
         }
       >
@@ -74,7 +74,7 @@ export function DashboardShell({
         />
         <aside
           className={
-            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-950 transition-transform duration-200 " +
+            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background transition-transform duration-200 " +
             (mobileOpen ? "translate-x-0" : "-translate-x-full")
           }
         >
@@ -90,16 +90,16 @@ export function DashboardShell({
 
       {/* Right side: mobile top bar + page content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
             aria-label={t("menu")} title={t("menu")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-300 transition hover:bg-zinc-800/60"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary-foreground transition hover:bg-hover"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
           </button>
           <span className="font-semibold tracking-tight">
-            SalonBook<span className="text-rose-400">.az</span>
+            SalonBook<span className="text-rose-700 dark:text-rose-400">.az</span>
           </span>
           <div className="ml-auto">
             <LanguageSwitcher />
@@ -143,7 +143,7 @@ function SidebarContent({
           </span>
           {!collapsed && (
             <span className="font-semibold tracking-tight">
-              SalonBook<span className="text-rose-400">.az</span>
+              SalonBook<span className="text-rose-700 dark:text-rose-400">.az</span>
             </span>
           )}
         </div>
@@ -152,7 +152,7 @@ function SidebarContent({
           <button
             onClick={onToggleCollapse}
             aria-label={t("toggleMenu")} title={t("toggleMenu")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {collapsed ? <path d="M9 18l6-6-6-6" /> : <path d="M15 18l-6-6 6-6" />}
@@ -164,7 +164,7 @@ function SidebarContent({
           <button
             onClick={onClose}
             aria-label={t("close")} title={t("close")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
@@ -175,20 +175,20 @@ function SidebarContent({
         <SidebarNav collapsed={collapsed} onNavigate={onNavigate} isAdmin={isAdmin} />
       </div>
 
-      <div className="border-t border-zinc-800 p-3">
+      <div className="border-t border-border p-3">
         <div
           className={
             "flex items-center rounded-lg " +
             (collapsed ? "justify-center px-0 py-2" : "gap-3 px-2 py-2")
           }
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-zinc-200">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
             {user.initial}
           </span>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-zinc-100">{user.name}</p>
-              <p className="truncate text-xs text-zinc-500">{user.role}</p>
+              <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
+              <p className="truncate text-xs text-faint-foreground">{user.role}</p>
             </div>
           )}
         </div>

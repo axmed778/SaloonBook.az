@@ -38,8 +38,8 @@ export async function TrialNudge({
   // Active plan — quiet strip, no CTA.
   if (status === "ACTIVE") {
     return (
-      <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-zinc-300">
-        {t("active")} <span className="font-medium text-zinc-100">{planLabel}</span>
+      <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-secondary-foreground">
+        {t("active")} <span className="font-medium text-foreground">{planLabel}</span>
         {periodEndLabel ? t("nextPayment", { date: periodEndLabel }) : ""}
       </section>
     );
@@ -53,7 +53,7 @@ export async function TrialNudge({
   ) {
     return (
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3">
-        <p className="text-sm text-rose-200">{t("trialEnded")}</p>
+        <p className="text-sm text-rose-800 dark:text-rose-200">{t("trialEnded")}</p>
         <Cta>{t("activate")}</Cta>
       </section>
     );
@@ -63,16 +63,16 @@ export async function TrialNudge({
   if (status === "TRIALING" && daysLeft !== null && daysLeft > 0) {
     const tone =
       daysLeft > 14
-        ? { border: "border-zinc-800", count: "text-zinc-200" }
+        ? { border: "border-border", count: "text-secondary-foreground" }
         : daysLeft >= 4
-          ? { border: "border-amber-500/40", count: "text-amber-300" }
-          : { border: "border-rose-500/50 bg-rose-500/10", count: "text-rose-400" };
+          ? { border: "border-amber-500/40", count: "text-amber-700 dark:text-amber-300" }
+          : { border: "border-rose-500/50 bg-rose-500/10", count: "text-rose-700 dark:text-rose-400" };
 
     return (
       <section
         className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border ${tone.border} px-4 py-3`}
       >
-        <p className="text-sm text-zinc-300">
+        <p className="text-sm text-secondary-foreground">
           {t.rich("endsIn", {
             days: daysLeft,
             price,
@@ -86,8 +86,8 @@ export async function TrialNudge({
 
   // No subscription / no trial end — generic strip.
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-800 px-4 py-3">
-      <p className="text-sm text-zinc-400">
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+      <p className="text-sm text-muted-foreground">
         {t("generic")}
       </p>
       <Cta>{t("viewPlans")}</Cta>

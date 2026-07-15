@@ -137,8 +137,8 @@ export default async function DashboardPage({
   if (!session.salonId) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-zinc-100">{t("noSalonTitle")}</h1>
-        <p className="mt-2 max-w-sm text-sm text-zinc-500">
+        <h1 className="text-xl font-semibold text-foreground">{t("noSalonTitle")}</h1>
+        <p className="mt-2 max-w-sm text-sm text-faint-foreground">
           {t("noSalonBody")}
         </p>
       </div>

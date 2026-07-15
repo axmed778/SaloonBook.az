@@ -22,11 +22,11 @@ export type AccountRow = {
 };
 
 const STATUS_CHIP: Record<string, string> = {
-  ACTIVE: "bg-emerald-500/10 text-emerald-400",
-  TRIALING: "bg-sky-500/10 text-sky-300",
-  PAST_DUE: "bg-rose-500/10 text-rose-300",
-  CANCELLED: "bg-zinc-800 text-zinc-500",
-  FREE_DOWNGRADED: "bg-amber-500/10 text-amber-300",
+  ACTIVE: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  TRIALING: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  PAST_DUE: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  CANCELLED: "bg-secondary text-faint-foreground",
+  FREE_DOWNGRADED: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 };
 
 export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
@@ -37,21 +37,21 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
+        <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+        <p className="mt-0.5 text-sm text-faint-foreground">
           {t("subtitle", { count: rows.length })}
         </p>
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-10 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-faint-foreground">
           {t("noAccounts")}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-[#0d0d0f]">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-b border-border text-xs text-faint-foreground">
                 <th className="px-4 py-3 font-medium">{t("colSalon")}</th>
                 <th className="px-4 py-3 font-medium">{t("colOwner")}</th>
                 <th className="px-4 py-3 font-medium">{t("colPlan")}</th>
@@ -99,12 +99,12 @@ function RowGroup({
   const t = useTranslations("Admin");
   return (
     <>
-      <tr className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-900/40">
+      <tr className="border-b border-border last:border-0 hover:bg-hover">
         <td className="px-4 py-3">
-          <p className="font-medium text-zinc-100">{r.salonName}</p>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="font-medium text-foreground">{r.salonName}</p>
+          <p className="mt-0.5 text-xs text-faint-foreground">
             {r.slug ? (
-              <a href={`/${r.slug}`} target="_blank" className="hover:text-zinc-300">
+              <a href={`/${r.slug}`} target="_blank" className="hover:text-secondary-foreground">
                 /{r.slug}
               </a>
             ) : (
@@ -114,11 +114,11 @@ function RowGroup({
             {r.createdLabel}
           </p>
         </td>
-        <td className="px-4 py-3 text-zinc-300">{r.ownerEmail}</td>
+        <td className="px-4 py-3 text-secondary-foreground">{r.ownerEmail}</td>
         <td className="px-4 py-3">
-          <span className="text-zinc-200">{r.plan}</span>
+          <span className="text-secondary-foreground">{r.plan}</span>
           {r.effective !== r.plan && (
-            <span className="ml-1.5 text-xs text-amber-400" title={t("effectiveTooltip")}>
+            <span className="ml-1.5 text-xs text-amber-700 dark:text-amber-400" title={t("effectiveTooltip")}>
               → {r.effective}
             </span>
           )}
@@ -126,23 +126,23 @@ function RowGroup({
         <td className="px-4 py-3">
           {r.status ? (
             <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[r.status] ?? "bg-zinc-800 text-zinc-400"}`}
+              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[r.status] ?? "bg-secondary text-muted-foreground"}`}
             >
               {t.has(`subStatus.${r.status}`) ? t(`subStatus.${r.status}`) : r.status}
             </span>
           ) : (
-            <span className="text-zinc-600">—</span>
+            <span className="text-faint-foreground">—</span>
           )}
         </td>
-        <td className="px-4 py-3 text-zinc-400">
+        <td className="px-4 py-3 text-muted-foreground">
           {r.status === "TRIALING" ? (r.trialEndsLabel ?? "—") : (r.periodEndLabel ?? "—")}
         </td>
-        <td className="px-4 py-3 text-right text-zinc-200">{r.bookingsThisMonth}</td>
+        <td className="px-4 py-3 text-right text-secondary-foreground">{r.bookingsThisMonth}</td>
         <td className="px-4 py-3">
           <div className="flex justify-end gap-2">
             <button
               onClick={onToggle}
-              className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 transition hover:border-zinc-500"
+              className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
             >
               {expanded ? t("close") : t("payments")}
             </button>
@@ -156,13 +156,13 @@ function RowGroup({
         </td>
       </tr>
       {expanded && (
-        <tr className="border-b border-zinc-800/60 bg-zinc-900/30">
+        <tr className="border-b border-border bg-muted">
           <td colSpan={7} className="px-4 py-3">
-            <p className="text-xs font-medium text-zinc-500">{t("recentPayments")}</p>
+            <p className="text-xs font-medium text-faint-foreground">{t("recentPayments")}</p>
             {r.payments.length === 0 ? (
-              <p className="mt-1 text-sm text-zinc-500">{t("noPayments")}</p>
+              <p className="mt-1 text-sm text-faint-foreground">{t("noPayments")}</p>
             ) : (
-              <ul className="mt-1 space-y-1 text-sm text-zinc-300">
+              <ul className="mt-1 space-y-1 text-sm text-secondary-foreground">
                 {r.payments.map((p) => (
                   <li key={p.id}>{p.label}</li>
                 ))}
@@ -213,19 +213,19 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
   }
 
   const inputCls =
-    "rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-rose-500 focus:outline-none";
+    "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-[#0d0d0f] p-5 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-zinc-100">
+        <h2 className="text-base font-semibold text-foreground">
           {t("activateTitle", { name: r_name(row) })}
         </h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-faint-foreground">
           {t("activateNote", {
             from: row.status === "ACTIVE" ? t("fromExisting") : t("fromToday"),
           })}
@@ -234,9 +234,9 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
         <form onSubmit={submit} className="mt-4 space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">{t("planLabel")}</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("planLabel")}</label>
               <select
-                className={inputCls + " w-full [color-scheme:dark]"}
+                className={inputCls + " w-full"}
                 value={plan}
                 onChange={(e) => setPlan(e.target.value as "BASIC" | "PRO")}
               >
@@ -245,7 +245,7 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">{t("monthsLabel")}</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("monthsLabel")}</label>
               <input
                 className={inputCls + " w-full"}
                 inputMode="numeric"
@@ -254,7 +254,7 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 {t("amountLabel")}
               </label>
               <input
@@ -266,12 +266,12 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               />
             </div>
           </div>
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition hover:border-zinc-500"
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
             >
               {tc("cancel")}
             </button>

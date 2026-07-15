@@ -64,18 +64,18 @@ export function Calendar({
       {/* Toolbar */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-          <p className="mt-0.5 text-sm capitalize text-zinc-500">{periodLabel}</p>
+          <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-0.5 text-sm capitalize text-faint-foreground">{periodLabel}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* View toggle */}
-          <div className="flex rounded-lg border border-zinc-800 p-0.5">
+          <div className="flex rounded-lg border border-border p-0.5">
             <Link
               href={href(day, "day")}
               className={
                 "rounded-md px-3 py-1 text-sm font-medium transition " +
-                (!isWeek ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200")
+                (!isWeek ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground")
               }
             >
               {t("viewDay")}
@@ -84,7 +84,7 @@ export function Calendar({
               href={href(day, "week")}
               className={
                 "rounded-md px-3 py-1 text-sm font-medium transition " +
-                (isWeek ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200")
+                (isWeek ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground")
               }
             >
               {t("viewWeek")}
@@ -97,7 +97,7 @@ export function Calendar({
               href={href(prev)}
               aria-label={isWeek ? t("prevWeek") : t("prevDay")}
               title={isWeek ? t("prevWeek") : t("prevDay")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-hover hover:text-foreground"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
             </Link>
@@ -106,8 +106,8 @@ export function Calendar({
               className={
                 "rounded-lg border px-3 py-1.5 text-sm font-medium transition " +
                 (atNow
-                  ? "border-zinc-800 text-zinc-500"
-                  : "border-zinc-800 text-zinc-200 hover:bg-zinc-800/60")
+                  ? "border-border text-faint-foreground"
+                  : "border-border text-secondary-foreground hover:bg-hover")
               }
             >
               {isWeek ? t("thisWeek") : t("thisDay")}
@@ -116,7 +116,7 @@ export function Calendar({
               href={href(next)}
               aria-label={isWeek ? t("nextWeek") : t("nextDay")}
               title={isWeek ? t("nextWeek") : t("nextDay")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400 transition hover:bg-zinc-800/60 hover:text-zinc-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-hover hover:text-foreground"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
             </Link>

@@ -34,16 +34,16 @@ export function WeekGrid({
   const bodyHeight = ((windowEndMin - windowStartMin) / 60) * ROW_H;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-[#0d0d0f]">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <div className="flex min-w-full">
         {/* Time gutter */}
-        <div className="w-14 shrink-0 border-r border-zinc-800">
-          <div className="h-12 border-b border-zinc-800" />
+        <div className="w-14 shrink-0 border-r border-border">
+          <div className="h-12 border-b border-border" />
           <div className="relative" style={{ height: bodyHeight }}>
             {hours.map((m, i) => (
               <div
                 key={m}
-                className="absolute right-2 -translate-y-1/2 text-xs text-zinc-500"
+                className="absolute right-2 -translate-y-1/2 text-xs text-faint-foreground"
                 style={{ top: i * ROW_H }}
               >
                 {i === 0 ? "" : minutesToHHMM(m)}
@@ -58,19 +58,19 @@ export function WeekGrid({
           return (
             <div
               key={wd.ymd}
-              className="min-w-[120px] flex-1 border-r border-zinc-800 last:border-r-0"
+              className="min-w-[120px] flex-1 border-r border-border last:border-r-0"
             >
               <Link
                 href={`/dashboard?view=day&day=${wd.ymd}`}
                 className={
-                  "flex h-12 flex-col items-center justify-center border-b border-zinc-800 px-2 transition hover:bg-zinc-800/40 " +
+                  "flex h-12 flex-col items-center justify-center border-b border-border px-2 transition hover:bg-hover " +
                   (wd.isToday ? "bg-rose-500/10" : "")
                 }
               >
                 <span
                   className={
                     "text-[11px] uppercase " +
-                    (wd.isToday ? "text-rose-300" : "text-zinc-500")
+                    (wd.isToday ? "text-rose-700 dark:text-rose-300" : "text-faint-foreground")
                   }
                 >
                   {wd.weekdayLabel}
@@ -78,7 +78,7 @@ export function WeekGrid({
                 <span
                   className={
                     "text-sm font-medium " +
-                    (wd.isToday ? "text-rose-200" : "text-zinc-100")
+                    (wd.isToday ? "text-rose-800 dark:text-rose-200" : "text-foreground")
                   }
                 >
                   {wd.dayLabel}
@@ -88,7 +88,7 @@ export function WeekGrid({
                 {hours.map((m, i) => (
                   <div
                     key={m}
-                    className="absolute inset-x-0 border-b border-zinc-800/50"
+                    className="absolute inset-x-0 border-b border-border"
                     style={{ top: i * ROW_H, height: 0 }}
                   />
                 ))}

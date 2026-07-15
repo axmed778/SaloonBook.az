@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   const session = (await getSession())!;
   const t = await getTranslations("Dashboard");
   if (!session.salonId) {
-    return <p className="text-sm text-zinc-400">{t("noSalonLinked")}</p>;
+    return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;
   }
 
   const salon = await prisma.salon.findUnique({
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
       businessHours: true,
     },
   });
-  if (!salon) return <p className="text-sm text-zinc-400">{t("noSalonTitle")}</p>;
+  if (!salon) return <p className="text-sm text-muted-foreground">{t("noSalonTitle")}</p>;
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
 

@@ -18,31 +18,31 @@ export async function HeroValue({
 }) {
   const t = await getTranslations("Analytics");
   return (
-    <section className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+    <section className="rounded-xl border border-border bg-card p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-faint-foreground">
         {monthLabel} · {t("monthBrought")}
       </p>
 
       {count === 0 ? (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-secondary-foreground">
             {t("heroEmpty")}
           </p>
           <Link
             href={bookingHref}
-            className="shrink-0 text-sm font-medium text-rose-400 hover:underline"
+            className="shrink-0 text-sm font-medium text-rose-700 dark:text-rose-400 hover:underline"
           >
             {t("shareLink")}
           </Link>
         </div>
       ) : (
-        <p className="mt-1.5 text-xl font-semibold text-zinc-100">
+        <p className="mt-1.5 text-xl font-semibold text-foreground">
           {t.rich("heroLine", {
             count,
-            n: (chunks) => <span className="text-rose-400">{chunks}</span>,
+            n: (chunks) => <span className="text-rose-700 dark:text-rose-400">{chunks}</span>,
           })}
-          <span className="text-zinc-600"> · </span>
-          <span className="text-rose-400">{azn(valueMinor)} ₼</span>
+          <span className="text-faint-foreground"> · </span>
+          <span className="text-rose-700 dark:text-rose-400">{azn(valueMinor)} ₼</span>
         </p>
       )}
     </section>

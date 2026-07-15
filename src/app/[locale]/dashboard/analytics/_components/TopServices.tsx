@@ -14,20 +14,20 @@ export type TopServiceRow = {
 export async function TopServices({ rows }: { rows: TopServiceRow[] }) {
   const t = await getTranslations("Analytics.topServices");
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5 lg:col-span-2">
-      <h2 className="text-lg font-semibold text-zinc-100">
+    <div className="rounded-xl border border-border bg-card p-5 lg:col-span-2">
+      <h2 className="text-lg font-semibold text-foreground">
         {t("title")}
       </h2>
 
       {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-zinc-500">{t("empty")}</p>
+        <p className="mt-4 text-sm text-faint-foreground">{t("empty")}</p>
       ) : (
         <ul className="mt-4 space-y-3">
           {rows.map((r, i) => (
             <li key={i}>
               <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-sm text-zinc-200">{r.name}</span>
-                <span className="whitespace-nowrap text-sm font-medium text-zinc-100">
+                <span className="truncate text-sm text-secondary-foreground">{r.name}</span>
+                <span className="whitespace-nowrap text-sm font-medium text-foreground">
                   {azn(r.revenueMinor)} ₼
                 </span>
               </div>
@@ -38,7 +38,7 @@ export async function TopServices({ rows }: { rows: TopServiceRow[] }) {
                     style={{ width: `${r.pct}%` }}
                   />
                 </div>
-                <span className="whitespace-nowrap text-xs text-zinc-500">
+                <span className="whitespace-nowrap text-xs text-faint-foreground">
                   {t("appointments", { count: r.count })}
                 </span>
               </div>

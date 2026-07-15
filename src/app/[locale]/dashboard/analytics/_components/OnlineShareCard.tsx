@@ -15,9 +15,9 @@ export async function OnlineShareCard({
 }) {
   const t = await getTranslations("Analytics.onlineShare");
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
-      <p className="text-xs font-medium text-zinc-500">{t("title")}</p>
-      <p className="mt-2 text-2xl font-semibold text-rose-400 sm:text-3xl">
+    <div className="rounded-xl border border-border bg-card p-5">
+      <p className="text-xs font-medium text-faint-foreground">{t("title")}</p>
+      <p className="mt-2 text-2xl font-semibold text-rose-700 dark:text-rose-400 sm:text-3xl">
         {share === null ? "—" : `${share}%`}
       </p>
       {share !== null && (
@@ -25,7 +25,7 @@ export async function OnlineShareCard({
           <div className="h-full rounded-full bg-rose-500" style={{ width: `${share}%` }} />
         </div>
       )}
-      <p className="mt-2 text-sm text-zinc-400">
+      <p className="mt-2 text-sm text-muted-foreground">
         {t("detail", { publicCount, totalCount })}
       </p>
     </div>

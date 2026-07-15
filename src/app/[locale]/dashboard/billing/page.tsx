@@ -43,10 +43,10 @@ export default async function BillingPage() {
     const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-zinc-100">
+        <h1 className="text-xl font-semibold text-foreground">
           {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
-        <p className="mt-2 max-w-sm text-sm text-zinc-500">
+        <p className="mt-2 max-w-sm text-sm text-faint-foreground">
           {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>
@@ -116,16 +116,16 @@ export default async function BillingPage() {
   }
 
   const statusToneCls: Record<"emerald" | "amber" | "rose", string> = {
-    emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-200",
-    amber: "border-amber-500/40 bg-amber-500/5 text-amber-200",
-    rose: "border-rose-500/50 bg-rose-500/10 text-rose-200",
+    emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200",
+    amber: "border-amber-500/40 bg-amber-500/5 text-amber-800 dark:text-amber-200",
+    rose: "border-rose-500/50 bg-rose-500/10 text-rose-800 dark:text-rose-200",
   };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
       <div>
-        <h1 className="text-lg font-semibold text-zinc-100">{t("title")}</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
+        <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+        <p className="mt-0.5 text-sm text-faint-foreground">
           {t("subtitle")}
         </p>
       </div>
@@ -141,29 +141,29 @@ export default async function BillingPage() {
           <div
             key={p.key}
             className={
-              "flex flex-col justify-between rounded-xl border bg-[#0d0d0f] p-5 " +
-              (p.highlighted ? "border-rose-500/40" : "border-zinc-800")
+              "flex flex-col justify-between rounded-xl border bg-card p-5 " +
+              (p.highlighted ? "border-rose-500/40" : "border-border")
             }
           >
             <div>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-semibold text-zinc-100">{p.name}</h2>
+                <h2 className="text-base font-semibold text-foreground">{p.name}</h2>
                 {p.highlighted && (
-                  <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-300">
+                  <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300">
                     {t("recommended")}
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-zinc-500">{p.tagline}</p>
+              <p className="mt-0.5 text-xs text-faint-foreground">{p.tagline}</p>
               <p className="mt-3">
-                <span className="text-3xl font-semibold text-zinc-100">{azn(p.priceMinor)} ₼</span>
-                <span className="text-sm text-zinc-500"> {t("perMonth")}</span>
+                <span className="text-3xl font-semibold text-foreground">{azn(p.priceMinor)} ₼</span>
+                <span className="text-sm text-faint-foreground"> {t("perMonth")}</span>
               </p>
               <ul className="mt-4 space-y-2">
                 {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
+                  <li key={f} className="flex items-start gap-2 text-sm text-secondary-foreground">
                     <svg
-                      className="mt-0.5 h-4 w-4 shrink-0 text-rose-400"
+                      className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-400"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -191,10 +191,10 @@ export default async function BillingPage() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-[#0d0d0f] p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5">
         <div>
-          <p className="font-medium text-zinc-100">{t("questionsTitle")}</p>
-          <p className="mt-0.5 text-sm text-zinc-500">
+          <p className="font-medium text-foreground">{t("questionsTitle")}</p>
+          <p className="mt-0.5 text-sm text-faint-foreground">
             {t("questionsBody")}
           </p>
         </div>

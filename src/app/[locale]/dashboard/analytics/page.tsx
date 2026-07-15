@@ -33,10 +33,10 @@ export default async function AnalyticsPage() {
     const td = await getTranslations("Dashboard");
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-zinc-100">
+        <h1 className="text-xl font-semibold text-foreground">
           {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
         </h1>
-        <p className="mt-2 max-w-sm text-sm text-zinc-500">
+        <p className="mt-2 max-w-sm text-sm text-faint-foreground">
           {session.isAdmin ? t("adminBody") : td("noSalonBody")}
         </p>
       </div>

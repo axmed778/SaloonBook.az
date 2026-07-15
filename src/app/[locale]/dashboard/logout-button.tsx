@@ -26,7 +26,7 @@ export function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
       disabled={busy}
       title={collapsed ? t("logout") : undefined}
       className={
-        "flex w-full items-center rounded-lg border border-zinc-800 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60 hover:text-zinc-100 disabled:opacity-60 " +
+        "flex w-full items-center rounded-lg border border-border text-sm font-medium text-secondary-foreground transition hover:bg-hover hover:text-foreground disabled:opacity-60 " +
         (collapsed ? "justify-center px-0 py-2" : "justify-center gap-2 px-3 py-2")
       }
     >
