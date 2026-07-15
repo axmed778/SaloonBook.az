@@ -20,6 +20,19 @@ const CREATED_GRACE_MS = 5 * 60_000;
 const DUE_GRACE_MS = 2 * 60_000;
 // Bound the work per pass; the next tick picks up the rest.
 const BATCH = 500;
+// Cap each enqueue: with Redis down, ioredis buffers the command in its offline
+// queue and never resolves, so a bare await would hang the whole sweep. Match
+// the booking/manage enqueue policy (time-bounded, best-effort).
+const ENQUEUE_TIMEOUT_MS = 2_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("enqueue timed out")), ms),
+    ),
+  ]);
+}
 
 export async function sweepNotifications(): Promise<void> {
   const now = Date.now();
@@ -34,15 +47,23 @@ export async function sweepNotifications(): Promise<void> {
     take: BATCH,
   });
   if (stuck.length === 0) return;
+  if (stuck.length === BATCH) {
+    console.log(`[sweep] batch cap (${BATCH}) reached — more stuck rows remain, next tick continues`);
+  }
 
   let ok = 0;
   for (const n of stuck) {
     try {
-      // Due now (sendAfter already passed) — enqueue with no delay.
-      await enqueueNotification(n.id);
+      // Due now (sendAfter already passed) — enqueue with no delay. Bounded so a
+      // down Redis can't hang the sweep; jobId dedup (see enqueueNotification)
+      // makes a later retry of a timed-out-but-eventually-buffered add safe.
+      await withTimeout(enqueueNotification(n.id), ENQUEUE_TIMEOUT_MS);
       ok++;
     } catch (e) {
-      console.error(`[sweep] failed to enqueue notification ${n.id}`, e);
+      // A timeout almost always means Redis is unreachable — the remaining rows
+      // would fail the same way, so stop and let the next tick retry.
+      console.error(`[sweep] enqueue failed for ${n.id}; aborting this pass`, e);
+      break;
     }
   }
   console.log(`[sweep] re-enqueued ${ok}/${stuck.length} stuck QUEUED notifications`);

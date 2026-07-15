@@ -40,6 +40,12 @@ export async function enqueueNotification(notificationId: string, delayMs?: numb
   await notificationsQueue().add(
     "send",
     { notificationId },
-    delayMs ? { delay: delayMs } : undefined,
+    // jobId = notificationId dedupes the queue: if a job for this notification
+    // already exists (e.g. a still-pending delayed reminder), a second enqueue
+    // — such as the stuck-row sweep re-adding it — is ignored instead of
+    // creating a duplicate that would send the same WhatsApp message twice.
+    // Safe because a notification is only ever sent once: after it completes,
+    // its row is SENT and no path re-enqueues it.
+    { jobId: notificationId, ...(delayMs ? { delay: delayMs } : {}) },
   );
 }

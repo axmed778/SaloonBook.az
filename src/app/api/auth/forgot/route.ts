@@ -18,6 +18,11 @@ const TOKEN_TTL_MIN = 60;
 const LIMITS = {
   ip: { limit: 5, windowSec: 900 },
   email: { limit: 3, windowSec: 900 },
+  // "No account" emails go to addresses that may never have interacted with us,
+  // so this endpoint could be abused to mail arbitrary recipients (harming
+  // sender reputation). Cap them tightly per IP per day. Legit resets go to
+  // REGISTERED addresses and never hit this branch, so they're unaffected.
+  noAccountIp: { limit: 3, windowSec: 86_400 },
 };
 
 const bodySchema = z.object({ email: z.string().email().max(254) });
@@ -25,7 +30,8 @@ const bodySchema = z.object({ email: z.string().email().max(254) });
 export async function POST(req: NextRequest) {
   const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
 
-  const ipRl = await rateLimit(`forgot:ip:${clientIp(req)}`, LIMITS.ip.limit, LIMITS.ip.windowSec);
+  const ip = clientIp(req);
+  const ipRl = await rateLimit(`forgot:ip:${ip}`, LIMITS.ip.limit, LIMITS.ip.windowSec);
   if (!ipRl.allowed) {
     return NextResponse.json(
       { error: t("tooManyAttempts") },
@@ -65,6 +71,15 @@ export async function POST(req: NextRequest) {
   // who needs it (e.g. they registered with a different address and are confused
   // about why no reset link arrived).
   if (!user) {
+    // Strict, separate cap for the arbitrary-recipient no-account path. Over the
+    // cap we stay silent (same generic response) rather than mail the address.
+    const naRl = await rateLimit(
+      `forgot:noacct:ip:${ip}`,
+      LIMITS.noAccountIp.limit,
+      LIMITS.noAccountIp.windowSec,
+    );
+    if (!naRl.allowed) return generic;
+
     await sendEmail({
       to: email,
       subject: t("email.noAccountSubject"),
