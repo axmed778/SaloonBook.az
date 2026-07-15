@@ -177,7 +177,10 @@
       "copied": "Kopyalandı",
       "open": "Aç",
       "newLinkLabel": "Yeni link (yalnız hərf, rəqəm, defis)",
-      "change": "Linki dəyiş"
+      "change": "Linki dəyiş",
+      "qrTitle": "QR kod",
+      "qrHint": "Piştaxta və ya vitrin üçün çap edin — müştərilər skan edib qeydiyyatdan keçir.",
+      "qrDownload": "PNG yüklə"
     },
     "hours": {
       "title": "İş saatları",

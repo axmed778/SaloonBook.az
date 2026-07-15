@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import {
@@ -232,7 +233,48 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
           {t("link.change")}
         </button>
       )}
+
+      <BookingQr url={fullUrl} slug={slug} />
     </section>
+  );
+}
+
+// QR code for the public booking link. Salons print it (counter, window, flyer)
+// so walk-in customers book by scanning. Must be dark-on-light to scan, so it
+// sits on a white card. A hidden high-res canvas backs the PNG download for print.
+function BookingQr({ url, slug }: { url: string; slug: string }) {
+  const t = useTranslations("Settings");
+  const hiResRef = useRef<HTMLDivElement>(null);
+
+  function download() {
+    const canvas = hiResRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.download = `salonbook-qr-${slug}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  }
+
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-zinc-800 pt-4">
+      <div className="rounded-xl bg-white p-3">
+        <QRCodeCanvas value={url} size={140} marginSize={2} level="M" />
+      </div>
+      {/* High-res copy (offscreen) used only for the PNG download. */}
+      <div ref={hiResRef} className="hidden" aria-hidden>
+        <QRCodeCanvas value={url} size={1024} marginSize={4} level="M" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-zinc-200">{t("link.qrTitle")}</p>
+        <p className="mt-1 max-w-xs text-sm text-zinc-500">{t("link.qrHint")}</p>
+        <button
+          onClick={download}
+          className="mt-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800/60"
+        >
+          {t("link.qrDownload")}
+        </button>
+      </div>
+    </div>
   );
 }
 

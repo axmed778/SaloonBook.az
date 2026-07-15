@@ -177,7 +177,10 @@
       "copied": "Copied",
       "open": "Open",
       "newLinkLabel": "New link (letters, digits and hyphens only)",
-      "change": "Change link"
+      "change": "Change link",
+      "qrTitle": "QR code",
+      "qrHint": "Print it for your counter or window — clients scan it to book.",
+      "qrDownload": "Download PNG"
     },
     "hours": {
       "title": "Business hours",

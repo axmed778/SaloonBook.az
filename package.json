@@ -42,6 +42,7 @@
     "lucide-react": "^1.22.0",
     "next": "^15.1.4",
     "next-intl": "^4.13.2",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsx": "^4.19.2",
