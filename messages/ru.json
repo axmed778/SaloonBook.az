@@ -837,6 +837,7 @@
     "minutesShort": "{min} мин",
     "nameLabel": "Ваше имя",
     "namePlaceholder": "Имя и фамилия",
+    "nameHint": "Записываете другого человека? Укажите его имя.",
     "phoneLabel": "Телефон",
     "submit": "Подтвердить запись",
     "submitting": "Подтверждение…",

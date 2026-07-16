@@ -164,6 +164,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           employeeId: input.employeeId,
           serviceId: service.id,
           customerId: customer.id,
+          // The name entered for THIS booking — may differ from the contact's
+          // (Customer) name when one phone books for several people.
+          attendeeName: safeName,
           startsAt: input.startUtc,
           endsAt: endUtc,
           status: "CONFIRMED",

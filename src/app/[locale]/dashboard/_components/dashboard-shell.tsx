@@ -194,7 +194,7 @@ function SidebarContent({
         </div>
         {!collapsed && (
           <div className="mt-2">
-            <LanguageSwitcher />
+            <LanguageSwitcher direction="up" />
           </div>
         )}
         <div className="mt-2">

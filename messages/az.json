@@ -837,6 +837,7 @@
     "minutesShort": "{min} dəq",
     "nameLabel": "Adınız",
     "namePlaceholder": "Ad Soyad",
+    "nameHint": "Başqası üçün rezervasiya edirsinizsə, həmin şəxsin adını yazın.",
     "phoneLabel": "Telefon",
     "submit": "Qeydiyyatı təsdiqlə",
     "submitting": "Təsdiqlənir…",

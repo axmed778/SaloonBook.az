@@ -530,6 +530,7 @@ export function BookingWidget({
                       placeholder={t("namePlaceholder")}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
+                    <p className="mt-1 text-xs text-faint-foreground">{t("nameHint")}</p>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("phoneLabel")}</label>

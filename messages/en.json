@@ -837,6 +837,7 @@
     "minutesShort": "{min} min",
     "nameLabel": "Your name",
     "namePlaceholder": "Full name",
+    "nameHint": "Booking for someone else? Enter their name.",
     "phoneLabel": "Phone",
     "submit": "Confirm booking",
     "submitting": "Confirming…",

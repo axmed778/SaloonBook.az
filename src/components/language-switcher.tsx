@@ -16,7 +16,15 @@ const LOCALES: { value: Locale; label: string; code: string }[] = [
 // Compact language picker. Switching keeps the current path and swaps the locale
 // prefix via a soft navigation (no full reload); next-intl persists the choice
 // in the NEXT_LOCALE cookie.
-export function LanguageSwitcher() {
+//
+// `direction` controls which way the menu opens: "down" (default) for top-of-page
+// placements (headers), "up" for the dashboard sidebar footer — where a downward
+// menu would spill past the bottom of the viewport and get clipped.
+export function LanguageSwitcher({
+  direction = "down",
+}: {
+  direction?: "up" | "down";
+} = {}) {
   const t = useTranslations("LanguageSwitcher");
   const locale = useLocale() as Locale;
   const router = useRouter();
@@ -58,7 +66,10 @@ export function LanguageSwitcher() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             role="menu"
-            className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg"
+            className={
+              "absolute z-50 max-h-[60vh] w-44 overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg " +
+              (direction === "up" ? "bottom-full left-0 mb-2" : "top-full right-0 mt-2")
+            }
           >
             {routing.locales.map((value) => {
               const item = LOCALES.find((l) => l.value === value)!;

@@ -40,6 +40,7 @@ const APPT_SELECT = {
   service: { select: { name: true } },
   employee: { select: { name: true, position: true } },
   customer: { select: { name: true, phone: true } },
+  attendeeName: true,
 } as const;
 
 type ApptRow = {
@@ -54,6 +55,7 @@ type ApptRow = {
   service: { name: string };
   employee: { name: string; position: string | null };
   customer: { name: string; phone: string };
+  attendeeName: string | null;
 };
 
 const MINUTES_IN_DAY = 24 * 60;
@@ -72,7 +74,8 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
     startMin,
     endMin,
     title: a.service.name,
-    subtitle: a.customer.name,
+    // Show who the booking is for; the phone stays the contact's.
+    subtitle: a.attendeeName ?? a.customer.name,
     status: a.status as CalendarBlock["status"],
     priceMinor: a.priceMinor,
     customerPhone: a.customer.phone,

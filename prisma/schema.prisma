@@ -290,6 +290,10 @@ model Appointment {
   priceMinor    Int // snapshot at booking time
   source        BookingSource     @default(PUBLIC)
   notes         String?
+  // Who this booking is actually for. The Customer is keyed by phone (the
+  // contact), so when someone books from one number for a family member
+  // (self, grandma, …) this holds the attendee's name. Null → use Customer.name.
+  attendeeName  String?
   // Unguessable capability token for the public self-service page (/a/{token}):
   // whoever holds the link can view, cancel or reschedule this appointment.
   manageToken   String            @unique @default(uuid())
