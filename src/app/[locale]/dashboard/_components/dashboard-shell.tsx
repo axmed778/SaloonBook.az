@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarNav } from "./sidebar-nav";
 import { LogoutButton } from "../logout-button";
 
@@ -101,7 +102,8 @@ export function DashboardShell({
           <span className="font-semibold tracking-tight">
             SalonBook<span className="text-rose-700 dark:text-rose-400">.az</span>
           </span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </header>
@@ -192,11 +194,10 @@ function SidebarContent({
             </div>
           )}
         </div>
-        {!collapsed && (
-          <div className="mt-2">
-            <LanguageSwitcher direction="up" />
-          </div>
-        )}
+        <div className={"mt-2 flex items-center gap-2 " + (collapsed ? "justify-center" : "")}>
+          {!collapsed && <LanguageSwitcher direction="up" />}
+          <ThemeToggle />
+        </div>
         <div className="mt-2">
           <LogoutButton collapsed={collapsed} />
         </div>
