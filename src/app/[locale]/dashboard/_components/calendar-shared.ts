@@ -40,6 +40,7 @@ export type CalendarBlock = {
   manageToken: string; // customer self-service link: /a/{manageToken}
   employeeName: string; // shown in the detail popup (and week-view blocks)
   dateLabel: string; // this appointment's Baku date label (for the popup)
+  notes: string | null; // customer's booking note (e.g. preferred colour)
 };
 
 // Catalog backing the manual-booking form: active employees and, per employee,

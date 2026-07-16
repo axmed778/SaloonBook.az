@@ -110,6 +110,15 @@ export function AppointmentPopup({
           <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>
 
+        {block.notes && (
+          <div className="mt-3 rounded-lg border border-border bg-muted/50 p-3">
+            <p className="text-xs font-medium text-faint-foreground">{t("popup.notes")}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
+              {block.notes}
+            </p>
+          </div>
+        )}
+
         {error && <p className="mt-4 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
         {block.status === "CONFIRMED" && (

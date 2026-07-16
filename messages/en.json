@@ -85,6 +85,7 @@
     "popup": {
       "customer": "Customer",
       "phone": "Phone",
+      "notes": "Note",
       "employee": "Specialist",
       "date": "Date",
       "time": "Time",
@@ -110,6 +111,8 @@
       "customerName": "Customer name",
       "namePlaceholder": "Full name",
       "phone": "Phone",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Customer's special request — e.g. hair colour",
       "create": "Create booking",
       "creating": "Creating…",
       "minutesShort": "{min} min",
@@ -841,6 +844,8 @@
     "namePlaceholder": "Full name",
     "nameHint": "Booking for someone else? Enter their name.",
     "phoneLabel": "Phone",
+    "notesLabel": "Notes (optional)",
+    "notesPlaceholder": "Any special requests — e.g. hair colour, allergies…",
     "submit": "Confirm booking",
     "submitting": "Confirming…",
     "errors": {

@@ -99,6 +99,7 @@ export function BookingWidget({
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState("");
   const [phoneDigits, setPhoneDigits] = useState("");
+  const [notes, setNotes] = useState("");
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -264,6 +265,7 @@ export function BookingWidget({
           startUtc: slot.startUtc,
           name: name.trim(),
           phone: "+994" + digits,
+          notes: notes.trim() || undefined,
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
@@ -544,6 +546,16 @@ export function BookingWidget({
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("notesLabel")}</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                      rows={2}
+                      placeholder={t("notesPlaceholder")}
+                      className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                    />
                   </div>
 
                   {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="min-h-[65px]" />}

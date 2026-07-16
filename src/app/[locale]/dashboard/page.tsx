@@ -41,6 +41,7 @@ const APPT_SELECT = {
   employee: { select: { name: true, position: true } },
   customer: { select: { name: true, phone: true } },
   attendeeName: true,
+  notes: true,
 } as const;
 
 type ApptRow = {
@@ -56,6 +57,7 @@ type ApptRow = {
   employee: { name: string; position: string | null };
   customer: { name: string; phone: string };
   attendeeName: string | null;
+  notes: string | null;
 };
 
 const MINUTES_IN_DAY = 24 * 60;
@@ -85,6 +87,7 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
     manageToken: a.manageToken,
     employeeName: a.employee.name,
     dateLabel,
+    notes: a.notes,
   };
 }
 

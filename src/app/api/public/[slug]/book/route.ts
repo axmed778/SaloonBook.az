@@ -40,6 +40,8 @@ const bodySchema = z.object({
     .string()
     .regex(/^\+994\d{9}$/, "Phone must be in +994XXXXXXXXX format"),
   waOptIn: z.boolean().optional(),
+  // Optional free-text booking note (e.g. preferred hair colour).
+  notes: z.string().max(500).optional(),
   // CAPTCHA: Cloudflare Turnstile token from the public form. Required only when
   // TURNSTILE_SECRET_KEY is configured (see src/lib/turnstile.ts).
   turnstileToken: z.string().max(2048).optional(),
@@ -146,6 +148,7 @@ export async function POST(
       employeeId: parsed.data.employeeId,
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: parsed.data.waOptIn },
+      notes: parsed.data.notes,
       source: "PUBLIC",
     });
     const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");

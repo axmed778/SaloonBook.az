@@ -90,6 +90,7 @@ const bookingSchema = z.object({
   phone: z
     .string()
     .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+  notes: z.string().max(500).optional(),
 });
 
 export async function createManualBooking(input: unknown): Promise<ActionResult> {
@@ -116,6 +117,7 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
       employeeId: d.employeeId,
       startUtc: new Date(d.startUtc),
       customer: { name: d.name, phone: d.phone },
+      notes: d.notes,
       source: "DASHBOARD",
     });
   } catch (e) {

@@ -41,6 +41,7 @@ export function BookingModal({
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(initialName);
   const [phoneDigits, setPhoneDigits] = useState(initialPhoneDigits);
+  const [notes, setNotes] = useState("");
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -91,6 +92,7 @@ export function BookingModal({
         startUtc: slot.startUtc,
         name: name.trim(),
         phone: "+994" + digits,
+        notes: notes.trim() || undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -252,6 +254,16 @@ export function BookingModal({
                 placeholder="501234567"
               />
             </div>
+          </div>
+          <div>
+            <label className={labelCls}>{t("modal.notes")}</label>
+            <textarea
+              className={inputCls + " w-full resize-y"}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+              rows={2}
+              placeholder={t("modal.notesPlaceholder")}
+            />
           </div>
 
           {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
