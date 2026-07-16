@@ -202,25 +202,29 @@ export function BookingWidget({
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY || activeKey !== "contact") return;
     let cancelled = false;
+    let renderedTheme: string | null = null;
     const container = turnstileRef.current;
 
-    ensureTurnstileScript(() => {
+    // Match OUR theme (class on <html>), not the phone's system setting —
+    // Turnstile's "auto" default follows prefers-color-scheme, so it rendered a
+    // dark widget on a light page.
+    const currentTheme = () =>
+      document.documentElement.classList.contains("light") ? "light" : "dark";
+
+    const renderWidget = () => {
       const ts = getTurnstile();
       if (cancelled || !ts || !container || turnstileWidgetId.current) return;
+      renderedTheme = currentTheme();
       turnstileWidgetId.current = ts.render(container, {
         sitekey: TURNSTILE_SITE_KEY,
-        // Match OUR theme (class on <html>), not the phone's system setting —
-        // Turnstile's "auto" default followed prefers-color-scheme and rendered
-        // a dark widget on a light page.
-        theme: document.documentElement.classList.contains("light") ? "light" : "dark",
+        theme: renderedTheme,
         callback: (token: string) => setTurnstileToken(token),
         "expired-callback": () => setTurnstileToken(null),
         "error-callback": () => setTurnstileToken(null),
       });
-    });
+    };
 
-    return () => {
-      cancelled = true;
+    const removeWidget = () => {
       const ts = getTurnstile();
       if (ts && turnstileWidgetId.current) {
         try {
@@ -231,6 +235,30 @@ export function BookingWidget({
       }
       turnstileWidgetId.current = null;
       setTurnstileToken(null);
+    };
+
+    ensureTurnstileScript(() => {
+      if (cancelled) return;
+      renderWidget();
+    });
+
+    // Turnstile can't restyle a mounted widget and has no setTheme, so on a
+    // theme toggle we tear it down and re-render with the new theme (resets the
+    // token — a fine cost for a rare mid-booking toggle).
+    const observer = new MutationObserver(() => {
+      if (cancelled || !turnstileWidgetId.current || currentTheme() === renderedTheme) return;
+      removeWidget();
+      renderWidget();
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      removeWidget();
     };
   }, [activeKey]);
 
