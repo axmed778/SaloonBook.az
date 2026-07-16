@@ -44,6 +44,30 @@ function buildHours(existing: BusinessHour[]): HoursState {
 
 const TIME_RE = /^\d{2}:\d{2}$/;
 
+// 24-hour "HH:MM" options in 15-minute steps (Azerbaijan uses 24h; the native
+// <input type="time"> picker forced 12h AM/PM and looked dated).
+const TIME_OPTIONS: string[] = Array.from({ length: (24 * 60) / 15 }, (_, i) =>
+  minToHHMM(i * 15),
+);
+
+const timeSelectCls =
+  "rounded-lg border border-border bg-background px-2.5 py-2 text-sm tabular-nums text-foreground focus:border-rose-500 focus:outline-none";
+
+// Styled 24h time dropdown. Keeps an off-grid saved value selectable by folding
+// it into the option list rather than showing a blank.
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const options = TIME_OPTIONS.includes(value) ? TIME_OPTIONS : [value, ...TIME_OPTIONS];
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={timeSelectCls}>
+      {options.map((tm) => (
+        <option key={tm} value={tm}>
+          {tm}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SettingsManager({
   salon,
   appUrl,
@@ -55,15 +79,24 @@ export function SettingsManager({
   const router = useRouter();
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-faint-foreground">{t("subtitle")}</p>
       </div>
 
-      <ProfileCard salon={salon} onSaved={() => router.refresh()} />
-      <LinkCard slug={salon.slug} appUrl={appUrl} onSaved={() => router.refresh()} />
-      <HoursCard businessHours={salon.businessHours} onSaved={() => router.refresh()} />
+      {/* Two columns on wide screens so the page fills the width instead of
+          leaving a tall empty gutter: salon config on the left, the shareable
+          booking link + QR on the right. Collapses to one column below lg. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-6">
+          <ProfileCard salon={salon} onSaved={() => router.refresh()} />
+          <HoursCard businessHours={salon.businessHours} onSaved={() => router.refresh()} />
+        </div>
+        <div className="space-y-6">
+          <LinkCard slug={salon.slug} appUrl={appUrl} onSaved={() => router.refresh()} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -323,25 +356,25 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
       <h2 className="text-sm font-semibold text-foreground">{t("hours.title")}</h2>
       <p className="mt-1 text-sm text-faint-foreground">{t("hours.subtitle")}</p>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 divide-y divide-border/60">
         {WEEKDAYS_ORDER.map((weekday) => {
           const d = hours[weekday];
           return (
-            <div key={weekday} className="flex flex-wrap items-center gap-3">
-              <label className="flex w-40 items-center gap-2 text-sm text-secondary-foreground">
+            <div key={weekday} className="flex flex-wrap items-center gap-3 py-2.5">
+              <label className="flex w-40 cursor-pointer items-center gap-2.5 text-sm font-medium text-secondary-foreground">
                 <input
                   type="checkbox"
                   checked={d.on}
                   onChange={(e) => setDay(weekday, { on: e.target.checked })}
-                  className="h-4 w-4 accent-rose-500"
+                  className="h-4 w-4 rounded accent-rose-500"
                 />
                 {tWeekday(String(weekday))}
               </label>
               {d.on ? (
                 <div className="flex items-center gap-2">
-                  <input type="time" step={900} value={d.open} onChange={(e) => setDay(weekday, { open: e.target.value })} className={inputCls + " w-auto"} />
+                  <TimeSelect value={d.open} onChange={(v) => setDay(weekday, { open: v })} />
                   <span className="text-faint-foreground">—</span>
-                  <input type="time" step={900} value={d.close} onChange={(e) => setDay(weekday, { close: e.target.value })} className={inputCls + " w-auto"} />
+                  <TimeSelect value={d.close} onChange={(v) => setDay(weekday, { close: v })} />
                 </div>
               ) : (
                 <span className="text-sm text-faint-foreground">{t("hours.closed")}</span>
