@@ -425,7 +425,7 @@
           "Limitsiz işçi",
           "Əməkhaqqı modulu (maaş + komissiya)",
           "Çoxfilial dəstəyi (tezliklə)",
-          "Excel ixracı (tezliklə)",
+          "Məlumat eksportu (CSV / Excel)",
           "İşçi rolları və icazələr (tezliklə)"
         ]
       }
@@ -598,6 +598,46 @@
       "appointments": "{count} görüş",
       "customerFallback": "Müştəri",
       "masterFallback": "Usta"
+    }
+  },
+  "Export": {
+    "title": "Məlumat eksportu",
+    "subtitle": "Rezervasiyalarınızı CSV (Excel) faylı kimi yükləyin.",
+    "rangeLabel": "Dövr",
+    "ranges": {
+      "thisMonth": "Bu ay",
+      "lastMonth": "Keçən ay",
+      "thisYear": "Bu il",
+      "all": "Bütün vaxt"
+    },
+    "download": "CSV yüklə",
+    "proBody": "Məlumat eksportu yalnız Pro planında mövcuddur.",
+    "upgrade": "Pro-ya keçin",
+    "csv": {
+      "headers": {
+        "date": "Tarix",
+        "start": "Başlanğıc",
+        "end": "Bitmə",
+        "status": "Status",
+        "source": "Mənbə",
+        "customer": "Müştəri",
+        "phone": "Telefon",
+        "service": "Xidmət",
+        "employee": "Usta",
+        "price": "Qiymət (AZN)",
+        "notes": "Qeyd",
+        "created": "Yaradılıb"
+      },
+      "status": {
+        "CONFIRMED": "Təsdiqlənib",
+        "COMPLETED": "Tamamlanıb",
+        "CANCELLED": "Ləğv edilib",
+        "NO_SHOW": "Gəlmədi"
+      },
+      "source": {
+        "PUBLIC": "Onlayn",
+        "DASHBOARD": "Əl ilə"
+      }
     }
   },
   "Legal": {
@@ -929,7 +969,7 @@
         "roiPanel": "ROI analitika paneli",
         "payroll": "Əməkhaqqı modulu (maaş + komissiya)",
         "roles": "Rol idarəetməsi (tezliklə)",
-        "exports": "Məlumat eksportu (tezliklə)",
+        "exports": "Məlumat eksportu",
         "deposits": "Depozit / no-show qoruması (tezliklə)"
       },
       "plans": {

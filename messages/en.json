@@ -425,7 +425,7 @@
           "Unlimited staff",
           "Payroll module (salary + commission)",
           "Multi-branch support (coming soon)",
-          "Excel export (coming soon)",
+          "Data export (CSV / Excel)",
           "Staff roles and permissions (coming soon)"
         ]
       }
@@ -598,6 +598,46 @@
       "appointments": "{count} appointments",
       "customerFallback": "Customer",
       "masterFallback": "Staff"
+    }
+  },
+  "Export": {
+    "title": "Data export",
+    "subtitle": "Download your bookings as a CSV (Excel) file.",
+    "rangeLabel": "Period",
+    "ranges": {
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "thisYear": "This year",
+      "all": "All time"
+    },
+    "download": "Download CSV",
+    "proBody": "Data export is available on the Pro plan only.",
+    "upgrade": "Upgrade to Pro",
+    "csv": {
+      "headers": {
+        "date": "Date",
+        "start": "Start",
+        "end": "End",
+        "status": "Status",
+        "source": "Source",
+        "customer": "Customer",
+        "phone": "Phone",
+        "service": "Service",
+        "employee": "Staff",
+        "price": "Price (AZN)",
+        "notes": "Notes",
+        "created": "Created"
+      },
+      "status": {
+        "CONFIRMED": "Confirmed",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled",
+        "NO_SHOW": "No-show"
+      },
+      "source": {
+        "PUBLIC": "Online",
+        "DASHBOARD": "Manual"
+      }
     }
   },
   "Legal": {
@@ -929,7 +969,7 @@
         "roiPanel": "ROI analytics dashboard",
         "payroll": "Payroll module (salary + commission)",
         "roles": "Role management (coming soon)",
-        "exports": "Data export (coming soon)",
+        "exports": "Data export",
         "deposits": "Deposit / no-show protection (coming soon)"
       },
       "plans": {

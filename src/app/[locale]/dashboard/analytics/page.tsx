@@ -9,9 +9,11 @@ import {
   formatBakuDate,
 } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { PLAN_LIMITS, featuresFor } from "@/lib/plans";
+import { effectivePlan } from "@/lib/subscription";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { HeroValue } from "./_components/HeroValue";
+import { ExportCard } from "./_components/ExportCard";
 import { TrialNudge } from "./_components/TrialNudge";
 import { StatCard, type Delta } from "./_components/StatCard";
 import { OnlineShareCard } from "./_components/OnlineShareCard";
@@ -272,6 +274,7 @@ export default async function AnalyticsPage() {
       Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000),
     );
   }
+  const canExport = featuresFor(effectivePlan(sub)).exports;
   const planPriceMinor = PLAN_LIMITS[sub?.plan ?? "BASIC"].priceMinor;
   const planLabel = sub?.plan === "PRO" ? "Pro" : "Basic";
   const periodEndLabel = sub?.currentPeriodEnd
@@ -424,6 +427,8 @@ export default async function AnalyticsPage() {
           empty={t("leaderboards.empty")}
         />
       </div>
+
+      <ExportCard canExport={canExport} />
     </div>
   );
 }
