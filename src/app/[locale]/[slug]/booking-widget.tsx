@@ -209,6 +209,10 @@ export function BookingWidget({
       if (cancelled || !ts || !container || turnstileWidgetId.current) return;
       turnstileWidgetId.current = ts.render(container, {
         sitekey: TURNSTILE_SITE_KEY,
+        // Match OUR theme (class on <html>), not the phone's system setting —
+        // Turnstile's "auto" default followed prefers-color-scheme and rendered
+        // a dark widget on a light page.
+        theme: document.documentElement.classList.contains("light") ? "light" : "dark",
         callback: (token: string) => setTurnstileToken(token),
         "expired-callback": () => setTurnstileToken(null),
         "error-callback": () => setTurnstileToken(null),
