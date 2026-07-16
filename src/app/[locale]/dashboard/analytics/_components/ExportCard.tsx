@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
+type Dataset = "appointments" | "clients";
 type Range = "this-month" | "last-month" | "this-year" | "all";
 
+const DATASETS: Dataset[] = ["appointments", "clients"];
 const RANGES: Range[] = ["this-month", "last-month", "this-year", "all"];
 const RANGE_KEY: Record<Range, string> = {
   "this-month": "thisMonth",
@@ -14,17 +16,24 @@ const RANGE_KEY: Record<Range, string> = {
   all: "all",
 };
 
+const SELECT_CLASS =
+  "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-border-strong sm:w-48";
+
 // PRO data export. Downloading the attachment is a plain navigation to the API
 // route — Content-Disposition makes the browser save it without leaving the
 // page, so there's no load event to clear `busy`; a short timer does it instead.
+// The period picker only applies to bookings; the clients export is a full
+// snapshot.
 export function ExportCard({ canExport }: { canExport: boolean }) {
   const t = useTranslations("Export");
+  const [dataset, setDataset] = useState<Dataset>("appointments");
   const [range, setRange] = useState<Range>("this-month");
   const [busy, setBusy] = useState(false);
 
   function download() {
     setBusy(true);
-    window.location.assign(`/api/dashboard/export/appointments?range=${range}`);
+    const query = dataset === "appointments" ? `?range=${range}` : "";
+    window.location.assign(`/api/dashboard/export/${dataset}${query}`);
     setTimeout(() => setBusy(false), 1500);
   }
 
@@ -51,21 +60,39 @@ export function ExportCard({ canExport }: { canExport: boolean }) {
       </div>
 
       {canExport ? (
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-            {t("rangeLabel")}
+            {t("datasetLabel")}
             <select
-              value={range}
-              onChange={(e) => setRange(e.target.value as Range)}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-border-strong sm:w-48"
+              value={dataset}
+              onChange={(e) => setDataset(e.target.value as Dataset)}
+              className={SELECT_CLASS}
             >
-              {RANGES.map((r) => (
-                <option key={r} value={r}>
-                  {t(`ranges.${RANGE_KEY[r]}`)}
+              {DATASETS.map((d) => (
+                <option key={d} value={d}>
+                  {t(`datasets.${d}`)}
                 </option>
               ))}
             </select>
           </label>
+
+          {dataset === "appointments" && (
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+              {t("rangeLabel")}
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value as Range)}
+                className={SELECT_CLASS}
+              >
+                {RANGES.map((r) => (
+                  <option key={r} value={r}>
+                    {t(`ranges.${RANGE_KEY[r]}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <button
             type="button"
             onClick={download}

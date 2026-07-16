@@ -602,7 +602,12 @@
   },
   "Export": {
     "title": "Экспорт данных",
-    "subtitle": "Выгрузите записи в файл CSV (Excel).",
+    "subtitle": "Выгрузите данные в файл CSV (Excel).",
+    "datasetLabel": "Данные",
+    "datasets": {
+      "appointments": "Записи",
+      "clients": "Клиенты"
+    },
     "rangeLabel": "Период",
     "ranges": {
       "thisMonth": "Этот месяц",
@@ -637,6 +642,23 @@
       "source": {
         "PUBLIC": "Онлайн",
         "DASHBOARD": "Вручную"
+      }
+    },
+    "clientsCsv": {
+      "headers": {
+        "name": "Имя",
+        "phone": "Телефон",
+        "visits": "Визиты",
+        "spent": "Потрачено (AZN)",
+        "lastVisit": "Последний визит",
+        "upcoming": "Предстоящие",
+        "favorite": "Любимый мастер",
+        "status": "Статус",
+        "registered": "Регистрация"
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный"
       }
     }
   },

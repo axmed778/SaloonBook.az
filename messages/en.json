@@ -602,7 +602,12 @@
   },
   "Export": {
     "title": "Data export",
-    "subtitle": "Download your bookings as a CSV (Excel) file.",
+    "subtitle": "Download your data as a CSV (Excel) file.",
+    "datasetLabel": "Data",
+    "datasets": {
+      "appointments": "Bookings",
+      "clients": "Clients"
+    },
     "rangeLabel": "Period",
     "ranges": {
       "thisMonth": "This month",
@@ -637,6 +642,23 @@
       "source": {
         "PUBLIC": "Online",
         "DASHBOARD": "Manual"
+      }
+    },
+    "clientsCsv": {
+      "headers": {
+        "name": "Name",
+        "phone": "Phone",
+        "visits": "Visits",
+        "spent": "Spent (AZN)",
+        "lastVisit": "Last visit",
+        "upcoming": "Upcoming",
+        "favorite": "Favorite staff",
+        "status": "Status",
+        "registered": "Registered"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
       }
     }
   },

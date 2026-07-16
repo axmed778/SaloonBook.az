@@ -602,7 +602,12 @@
   },
   "Export": {
     "title": "Məlumat eksportu",
-    "subtitle": "Rezervasiyalarınızı CSV (Excel) faylı kimi yükləyin.",
+    "subtitle": "Məlumatlarınızı CSV (Excel) faylı kimi yükləyin.",
+    "datasetLabel": "Məlumat",
+    "datasets": {
+      "appointments": "Rezervasiyalar",
+      "clients": "Müştərilər"
+    },
     "rangeLabel": "Dövr",
     "ranges": {
       "thisMonth": "Bu ay",
@@ -637,6 +642,23 @@
       "source": {
         "PUBLIC": "Onlayn",
         "DASHBOARD": "Əl ilə"
+      }
+    },
+    "clientsCsv": {
+      "headers": {
+        "name": "Ad",
+        "phone": "Telefon",
+        "visits": "Ziyarətlər",
+        "spent": "Xərclənib (AZN)",
+        "lastVisit": "Son ziyarət",
+        "upcoming": "Qarşıda",
+        "favorite": "Sevimli usta",
+        "status": "Status",
+        "registered": "Qeydiyyat"
+      },
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Passiv"
       }
     }
   },
