@@ -11,6 +11,7 @@ import {
   type BusinessHour,
 } from "@/lib/business-hours";
 import { updateProfile, updateSlug, updateBusinessHours } from "./actions";
+import { TimeSelect } from "../_components/time-select";
 
 const inputCls =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
@@ -43,30 +44,6 @@ function buildHours(existing: BusinessHour[]): HoursState {
 }
 
 const TIME_RE = /^\d{2}:\d{2}$/;
-
-// 24-hour "HH:MM" options in 15-minute steps (Azerbaijan uses 24h; the native
-// <input type="time"> picker forced 12h AM/PM and looked dated).
-const TIME_OPTIONS: string[] = Array.from({ length: (24 * 60) / 15 }, (_, i) =>
-  minToHHMM(i * 15),
-);
-
-const timeSelectCls =
-  "rounded-lg border border-border bg-background px-2.5 py-2 text-sm tabular-nums text-foreground focus:border-rose-500 focus:outline-none";
-
-// Styled 24h time dropdown. Keeps an off-grid saved value selectable by folding
-// it into the option list rather than showing a blank.
-function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const options = TIME_OPTIONS.includes(value) ? TIME_OPTIONS : [value, ...TIME_OPTIONS];
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={timeSelectCls}>
-      {options.map((tm) => (
-        <option key={tm} value={tm}>
-          {tm}
-        </option>
-      ))}
-    </select>
-  );
-}
 
 export function SettingsManager({
   salon,

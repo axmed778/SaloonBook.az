@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import { type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
+import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { ErrorToast } from "../_components/toast";
 
@@ -46,16 +47,63 @@ const toMin = (hhmm: string) => {
   return h * 60 + m;
 };
 
-type DayState = { on: boolean; start: string; end: string };
+// A lunch break is stored as a GAP between two working windows for the day (the
+// availability engine already supports multiple non-overlapping windows), so no
+// schema/booking change is needed — the UI just splits/rejoins around the break.
+type DayState = {
+  on: boolean;
+  start: string;
+  end: string;
+  breakOn: boolean;
+  breakStart: string;
+  breakEnd: string;
+};
 type HoursState = Record<number, DayState>;
 
+const DEFAULT_DAY: Omit<DayState, "on"> = {
+  start: "10:00",
+  end: "19:00",
+  breakOn: false,
+  breakStart: "13:00",
+  breakEnd: "14:00",
+};
+
 function buildHours(existing: HourRow[]): HoursState {
+  const byDay = new Map<number, HourRow[]>();
+  for (const h of existing) {
+    const arr = byDay.get(h.weekday) ?? [];
+    arr.push(h);
+    byDay.set(h.weekday, arr);
+  }
+
   const state: HoursState = {};
   for (const weekday of WEEKDAYS) {
-    const found = existing.find((h) => h.weekday === weekday);
-    state[weekday] = found
-      ? { on: true, start: toHHMM(found.startMin), end: toHHMM(found.endMin) }
-      : { on: false, start: "10:00", end: "19:00" };
+    const windows = (byDay.get(weekday) ?? []).sort((a, b) => a.startMin - b.startMin);
+    if (windows.length === 0) {
+      state[weekday] = { on: false, ...DEFAULT_DAY };
+    } else if (windows.length === 1) {
+      state[weekday] = {
+        on: true,
+        ...DEFAULT_DAY,
+        start: toHHMM(windows[0].startMin),
+        end: toHHMM(windows[0].endMin),
+      };
+    } else {
+      // Two (or more) windows = a lunch break. Span the whole day; treat the
+      // first gap as the break. (The UI only creates one break; extra windows
+      // from crafted data collapse to a single break on re-save.)
+      const first = windows[0];
+      const last = windows[windows.length - 1];
+      state[weekday] = {
+        on: true,
+        ...DEFAULT_DAY,
+        start: toHHMM(first.startMin),
+        end: toHHMM(last.endMin),
+        breakOn: true,
+        breakStart: toHHMM(first.endMin),
+        breakEnd: toHHMM(windows[1].startMin),
+      };
+    }
   }
   return state;
 }
@@ -64,7 +112,7 @@ function buildHours(existing: HourRow[]): HoursState {
 function defaultHours(): HoursState {
   const state: HoursState = {};
   for (const weekday of WEEKDAYS) {
-    state[weekday] = { on: weekday !== 0, start: "10:00", end: "19:00" };
+    state[weekday] = { on: weekday !== 0, ...DEFAULT_DAY };
   }
   return state;
 }
@@ -160,7 +208,24 @@ export function WorkersManager({
       if (!Number.isFinite(startMin) || !Number.isFinite(endMin) || endMin <= startMin) {
         return setError(t("errors.endAfterStart", { day: tWeekday(String(weekday)) }));
       }
-      hoursPayload.push({ weekday, startMin, endMin });
+
+      if (d.breakOn) {
+        if (!TIME_RE.test(d.breakStart) || !TIME_RE.test(d.breakEnd)) {
+          return setError(t("errors.fillHours", { day: tWeekday(String(weekday)) }));
+        }
+        const bStart = toMin(d.breakStart);
+        const bEnd = toMin(d.breakEnd);
+        // The break must sit strictly inside the working window, leaving a real
+        // working span on each side.
+        if (!(startMin < bStart && bStart < bEnd && bEnd < endMin)) {
+          return setError(t("errors.breakRange", { day: tWeekday(String(weekday)) }));
+        }
+        // Two windows with the break as the gap between them.
+        hoursPayload.push({ weekday, startMin, endMin: bStart });
+        hoursPayload.push({ weekday, startMin: bEnd, endMin });
+      } else {
+        hoursPayload.push({ weekday, startMin, endMin });
+      }
     }
 
     startTransition(async () => {
@@ -302,38 +367,44 @@ export function WorkersManager({
           {/* Working hours */}
           <div className="mt-5">
             <label className={labelCls}>{t("schedule")}</label>
-            <div className="space-y-2">
+            <div className="divide-y divide-border/60">
               {WEEKDAYS.map((weekday) => {
                 const d = hours[weekday];
                 return (
-                  <div key={weekday} className="flex flex-wrap items-center gap-3">
-                    <label className="flex w-40 items-center gap-2 text-sm text-secondary-foreground">
+                  <div key={weekday} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+                    <label className="flex w-40 cursor-pointer items-center gap-2.5 text-sm font-medium text-secondary-foreground">
                       <input
                         type="checkbox"
                         checked={d.on}
                         onChange={(e) => setDay(weekday, { on: e.target.checked })}
-                        className="h-4 w-4 accent-rose-500"
+                        className="h-4 w-4 rounded accent-rose-500"
                       />
                       {tWeekday(String(weekday))}
                     </label>
                     {d.on ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          step={900}
-                          value={d.start}
-                          onChange={(e) => setDay(weekday, { start: e.target.value })}
-                          className={inputCls + ""}
-                        />
-                        <span className="text-faint-foreground">—</span>
-                        <input
-                          type="time"
-                          step={900}
-                          value={d.end}
-                          onChange={(e) => setDay(weekday, { end: e.target.value })}
-                          className={inputCls + ""}
-                        />
-                      </div>
+                      <>
+                        <div className="flex items-center gap-2">
+                          <TimeSelect value={d.start} onChange={(v) => setDay(weekday, { start: v })} />
+                          <span className="text-faint-foreground">—</span>
+                          <TimeSelect value={d.end} onChange={(v) => setDay(weekday, { end: v })} />
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={d.breakOn}
+                            onChange={(e) => setDay(weekday, { breakOn: e.target.checked })}
+                            className="h-3.5 w-3.5 rounded accent-rose-500"
+                          />
+                          {t("breakLabel")}
+                        </label>
+                        {d.breakOn && (
+                          <div className="flex items-center gap-2">
+                            <TimeSelect value={d.breakStart} onChange={(v) => setDay(weekday, { breakStart: v })} />
+                            <span className="text-faint-foreground">—</span>
+                            <TimeSelect value={d.breakEnd} onChange={(v) => setDay(weekday, { breakEnd: v })} />
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <span className="text-sm text-faint-foreground">{t("dayOff")}</span>
                     )}
@@ -411,7 +482,7 @@ export function WorkersManager({
                     <span className="text-faint-foreground"> · </span>
                     {t("servicesCount", { count: e.serviceIds.length })}
                     <span className="text-faint-foreground"> · </span>
-                    {t("workDaysCount", { count: e.hours.length })}
+                    {t("workDaysCount", { count: new Set(e.hours.map((h) => h.weekday)).size })}
                   </p>
                 </div>
               </div>
