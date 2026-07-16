@@ -80,6 +80,8 @@
       "PUBLIC": "Online booking",
       "DASHBOARD": "Manual (panel)"
     },
+    "overdue": "Overdue",
+    "overdueHint": "Close this booking — mark completed or no-show.",
     "popup": {
       "customer": "Customer",
       "phone": "Phone",

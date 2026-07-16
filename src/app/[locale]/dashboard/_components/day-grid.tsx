@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { minutesToHHMM } from "@/lib/time";
 import {
-  STATUS_STYLES,
+  blockStyle,
   type CalendarColumn,
   type CalendarBlock,
 } from "./calendar-shared";
@@ -104,7 +104,7 @@ export function DayGrid({
                       onClick={() => onSelect(b)}
                       className={
                         "absolute left-1 right-1 overflow-hidden rounded-md border px-2 py-1 text-left transition-colors " +
-                        STATUS_STYLES[b.status]
+                        blockStyle(b)
                       }
                       style={{ top, height }}
                     >

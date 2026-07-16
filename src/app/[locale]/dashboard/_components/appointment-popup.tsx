@@ -6,7 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
 import { setAppointmentStatus } from "../actions";
 import {
-  STATUS_BADGE,
+  blockBadge,
   azn,
   type CalendarBlock,
 } from "./calendar-shared";
@@ -76,11 +76,16 @@ export function AppointmentPopup({
             <span
               className={
                 "mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium " +
-                STATUS_BADGE[block.status]
+                blockBadge(block)
               }
             >
-              {t(`status.${block.status}`)}
+              {block.overdue ? t("overdue") : t(`status.${block.status}`)}
             </span>
+            {block.overdue && (
+              <p className="mt-1.5 text-[11px] font-medium text-violet-700 dark:text-violet-300">
+                {t("overdueHint")}
+              </p>
+            )}
           </div>
           <button
             type="button"

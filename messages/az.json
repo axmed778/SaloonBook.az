@@ -80,6 +80,8 @@
       "PUBLIC": "Onlayn qeydiyyat",
       "DASHBOARD": "Əl ilə (panel)"
     },
+    "overdue": "Vaxtı keçib",
+    "overdueHint": "Bu görüşü bağlayın — tamamlandı və ya gəlmədi.",
     "popup": {
       "customer": "Müştəri",
       "phone": "Telefon",

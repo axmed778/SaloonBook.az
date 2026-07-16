@@ -3,7 +3,7 @@
 import { Link } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
 import {
-  STATUS_STYLES,
+  blockStyle,
   packLanes,
   type CalendarBlock,
   type WeekDay,
@@ -102,7 +102,7 @@ export function WeekGrid({
                       onClick={() => onSelect(b)}
                       className={
                         "absolute overflow-hidden rounded-md border px-1.5 py-1 text-left transition-colors " +
-                        STATUS_STYLES[b.status]
+                        blockStyle(b)
                       }
                       style={{
                         top,

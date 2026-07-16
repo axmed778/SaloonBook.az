@@ -31,6 +31,9 @@ export type CalendarBlock = {
   title: string; // service name
   subtitle: string; // customer name
   status: "CONFIRMED" | "COMPLETED" | "NO_SHOW";
+  // A CONFIRMED booking whose time has already passed but hasn't been closed
+  // (completed / no-show). Rendered distinctly so staff clear it at day's end.
+  overdue: boolean;
   priceMinor: number;
   customerPhone: string;
   source: string; // "PUBLIC" | "DASHBOARD"
@@ -68,6 +71,25 @@ export const STATUS_BADGE: Record<CalendarBlock["status"], string> = {
   COMPLETED: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   NO_SHOW: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
 };
+
+// Overdue = past-due CONFIRMED, awaiting close. A distinct violet (not reused by
+// any status) plus an inset pulsing ring so it stands out even in a busy day —
+// the cue for staff to mark it completed or no-show. `ring-inset` survives the
+// block's overflow-hidden clip.
+export const OVERDUE_STYLE =
+  "border-violet-500/60 bg-violet-500/20 text-violet-900 dark:text-violet-50 ring-2 ring-inset ring-violet-500/70 animate-pulse hover:bg-violet-500/30";
+
+export const OVERDUE_BADGE = "bg-violet-500/15 text-violet-700 dark:text-violet-300";
+
+/** Block background style, accounting for the derived overdue state. */
+export function blockStyle(b: CalendarBlock): string {
+  return b.overdue ? OVERDUE_STYLE : STATUS_STYLES[b.status];
+}
+
+/** Status-badge style, accounting for the derived overdue state. */
+export function blockBadge(b: CalendarBlock): string {
+  return b.overdue ? OVERDUE_BADGE : STATUS_BADGE[b.status];
+}
 
 /** Minor units (qəpik) -> AZN string, dropping a trailing ".00". */
 export const azn = (minor: number) => {

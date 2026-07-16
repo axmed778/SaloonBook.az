@@ -77,6 +77,8 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
     // Show who the booking is for; the phone stays the contact's.
     subtitle: a.attendeeName ?? a.customer.name,
     status: a.status as CalendarBlock["status"],
+    // Past-due but still CONFIRMED → needs closing (completed / no-show).
+    overdue: a.status === "CONFIRMED" && a.endsAt.getTime() < Date.now(),
     priceMinor: a.priceMinor,
     customerPhone: a.customer.phone,
     source: a.source,
