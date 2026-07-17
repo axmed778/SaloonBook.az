@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { matchesClientGender, type Audience } from "@/lib/audience";
+import { LEGAL_DOCS } from "@/lib/legal";
 
 // Cloudflare Turnstile: only wired when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set
 // (paired with the server's TURNSTILE_SECRET_KEY). Loaded lazily so the script
@@ -100,6 +101,8 @@ export function BookingWidget({
   const [name, setName] = useState("");
   const [phoneDigits, setPhoneDigits] = useState("");
   const [notes, setNotes] = useState("");
+  const [dataConsent, setDataConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -282,6 +285,7 @@ export function BookingWidget({
     if (!name.trim()) return setError(t("errors.nameRequired"));
     if (digits.length !== 9) return setError(t("errors.phoneInvalid"));
     if (!slot || !serviceId || !employeeId) return setError(t("errors.incomplete"));
+    if (!dataConsent) return setError(t("errors.consentRequired"));
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
       return setError(t("errors.confirmHuman"));
     }
@@ -298,6 +302,8 @@ export function BookingWidget({
           name: name.trim(),
           phone: "+994" + digits,
           notes: notes.trim() || undefined,
+          dataConsent: true,
+          waOptIn: marketingConsent,
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
@@ -588,6 +594,40 @@ export function BookingWidget({
                       placeholder={t("notesPlaceholder")}
                       className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={dataConsent}
+                        onChange={(e) => setDataConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                      />
+                      <span>
+                        {t.rich("consentData", {
+                          doc: (chunks) => (
+                            <a
+                              href={LEGAL_DOCS.clientConsents}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-accent underline underline-offset-2"
+                            >
+                              {chunks}
+                            </a>
+                          ),
+                        })}
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={marketingConsent}
+                        onChange={(e) => setMarketingConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                      />
+                      <span>{t("consentMarketing")}</span>
+                    </label>
                   </div>
 
                   {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="min-h-[65px]" />}

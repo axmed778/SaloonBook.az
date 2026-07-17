@@ -9,6 +9,7 @@ import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
 import { TRIAL_MONTHS } from "@/lib/plans";
 import { addMonths } from "@/lib/time";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,10 @@ const bodySchema = z
     salonName: z.string().min(2).max(120),
     audience: z.enum(["MALE", "FEMALE", "ALL"]).default("ALL"),
     fullName: z.string().max(120).optional(),
+    // Required acceptance of the user agreement + data-processing consent.
+    legalConsent: z.literal(true),
+    // Optional marketing opt-in.
+    marketing: z.boolean().optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Şifrələr uyğun gəlmir.",
@@ -85,7 +90,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { email, password, salonName, audience, fullName } = parsed.data;
+  const { email, password, salonName, audience, fullName, marketing } = parsed.data;
 
   // Enforce password policy server-side (the client also shows the rules).
   const issueCodes = passwordIssues(password);
@@ -116,6 +121,10 @@ export async function POST(req: NextRequest) {
       const account = await tx.account.create({
         data: {
           name: salonName,
+          legalAcceptedAt: new Date(),
+          offerVersion: LEGAL_VERSIONS.salonOffer,
+          privacyVersion: LEGAL_VERSIONS.salonConsent,
+          marketingOptIn: marketing ?? false,
           subscription: { create: { plan: "BASIC", status: "TRIALING", trialEndsAt } },
           salons: { create: { slug, name: salonName, audience } },
         },

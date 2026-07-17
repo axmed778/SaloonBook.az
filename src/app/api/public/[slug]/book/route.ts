@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking";
 import { rateLimit, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,9 @@ const bodySchema = z.object({
     .string()
     .regex(/^\+994\d{9}$/, "Phone must be in +994XXXXXXXXX format"),
   waOptIn: z.boolean().optional(),
+  // Required data-processing consent (the booking form's mandatory checkbox).
+  // Enforced server-side: a booking cannot be created without it.
+  dataConsent: z.literal(true),
   // Optional free-text booking note (e.g. preferred hair colour).
   notes: z.string().max(500).optional(),
   // CAPTCHA: Cloudflare Turnstile token from the public form. Required only when
@@ -149,6 +153,7 @@ export async function POST(
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: parsed.data.waOptIn },
       notes: parsed.data.notes,
+      consent: { version: LEGAL_VERSIONS.clientConsent },
       source: "PUBLIC",
     });
     const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");

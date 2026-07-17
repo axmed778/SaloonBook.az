@@ -47,6 +47,9 @@ export interface CreateBookingInput {
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
   notes?: string;
+  /** Customer's data-processing consent (public self-booking). Records the
+   *  document version accepted; absent for staff-entered bookings. */
+  consent?: { version: string };
   source?: "PUBLIC" | "DASHBOARD";
 }
 
@@ -174,6 +177,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           // (Customer) name when one phone books for several people.
           attendeeName: safeName,
           notes: safeNotes,
+          consentAt: input.consent ? new Date() : null,
+          consentVersion: input.consent?.version ?? null,
           startsAt: input.startUtc,
           endsAt: endUtc,
           status: "CONFIRMED",

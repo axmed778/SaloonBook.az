@@ -778,7 +778,10 @@
       "submitting": "Yaradılır…",
       "haveAccount": "Artıq hesabınız var?",
       "loginLink": "Daxil olun",
-      "failed": "Qeydiyyat alınmadı."
+      "failed": "Qeydiyyat alınmadı.",
+      "legalConsent": "<offer>İstifadəçi razılaşması (oferta)</offer> və <privacy>fərdi məlumatların emalına dair Razılıq</privacy> ilə tanış oldum və razıyam.",
+      "marketingConsent": "Yeniliklər və xüsusi təkliflər barədə bildirişlər almağa razıyam (könüllü).",
+      "consentRequired": "Davam etmək üçün şərtlərlə razılaşmalısınız."
     },
     "forgot": {
       "title": "Şifrənin bərpası",
@@ -846,12 +849,15 @@
     "phoneLabel": "Telefon",
     "notesLabel": "Qeydlər (istəyə bağlı)",
     "notesPlaceholder": "Xüsusi istəkləriniz — məs. saç rəngi, alerginiz və s.",
+    "consentData": "<doc>Fərdi məlumatların emalına dair Razılıq</doc> ilə tanış oldum və şəxsi məlumatlarımın emalına razıyam.",
+    "consentMarketing": "Aksiya, endirim və yeniliklər barədə bildirişlər almağa razıyam (könüllü).",
     "submit": "Qeydiyyatı təsdiqlə",
     "submitting": "Təsdiqlənir…",
     "errors": {
       "nameRequired": "Adınızı daxil edin.",
       "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır.",
       "incomplete": "Məlumat natamamdır.",
+      "consentRequired": "Davam etmək üçün fərdi məlumatların emalına razılıq verməlisiniz.",
       "confirmHuman": "Robot olmadığınızı təsdiqləyin.",
       "bookingFailed": "Qeydiyyat alınmadı. Yenidən cəhd edin.",
       "network": "Şəbəkə xətası. Yenidən cəhd edin."

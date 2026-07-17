@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { AUDIENCE_OPTIONS, type Audience } from "@/lib/audience";
+import { LEGAL_DOCS } from "@/lib/legal";
 
 export default function RegisterPage() {
   const t = useTranslations("Auth");
@@ -17,6 +18,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [legalConsent, setLegalConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -25,12 +28,25 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     setIssues([]);
+    if (!legalConsent) {
+      setError(t("register.consentRequired"));
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ salonName, audience, fullName, email, password, confirmPassword }),
+        body: JSON.stringify({
+          salonName,
+          audience,
+          fullName,
+          email,
+          password,
+          confirmPassword,
+          legalConsent: true,
+          marketing: marketingConsent,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -157,6 +173,50 @@ export default function RegisterPage() {
             <li key={rule}>{rule}</li>
           ))}
         </ul>
+
+        <div className="flex flex-col gap-2">
+          <label className="flex items-start gap-2 text-xs leading-relaxed text-neutral-500">
+            <input
+              type="checkbox"
+              checked={legalConsent}
+              onChange={(e) => setLegalConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+            />
+            <span>
+              {t.rich("register.legalConsent", {
+                offer: (chunks) => (
+                  <a
+                    href={LEGAL_DOCS.salonOffer}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-emerald-600 underline"
+                  >
+                    {chunks}
+                  </a>
+                ),
+                privacy: (chunks) => (
+                  <a
+                    href={LEGAL_DOCS.salonConsents}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-emerald-600 underline"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })}
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-xs leading-relaxed text-neutral-500">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+            />
+            <span>{t("register.marketingConsent")}</span>
+          </label>
+        </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {issues.length > 0 && (

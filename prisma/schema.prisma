@@ -56,6 +56,14 @@ model Account {
   subscription Subscription?
   salons       Salon[]
   memberships  Membership[]
+  // Legal consent captured at salon registration: the user agreement (offer)
+  // and the data-processing consent are accepted together; marketing is opt-in.
+  // Versions (see src/lib/legal.ts) are stored so a consent stays auditable
+  // after the document text changes.
+  legalAcceptedAt DateTime?
+  offerVersion    String?
+  privacyVersion  String?
+  marketingOptIn  Boolean   @default(false)
   createdAt    DateTime      @default(now())
 }
 
@@ -294,6 +302,11 @@ model Appointment {
   // contact), so when someone books from one number for a family member
   // (self, grandma, …) this holds the attendee's name. Null → use Customer.name.
   attendeeName  String?
+  // Customer's data-processing consent captured on a public self-booking (the
+  // required checkbox). Null for staff-entered (DASHBOARD) bookings, where the
+  // salon carries the consent obligation. Marketing consent = Customer.waOptIn.
+  consentAt     DateTime?         @db.Timestamptz(6)
+  consentVersion String?
   // Unguessable capability token for the public self-service page (/a/{token}):
   // whoever holds the link can view, cancel or reschedule this appointment.
   manageToken   String            @unique @default(uuid())

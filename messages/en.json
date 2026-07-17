@@ -778,7 +778,10 @@
       "submitting": "Creating…",
       "haveAccount": "Already have an account?",
       "loginLink": "Log in",
-      "failed": "Sign-up failed."
+      "failed": "Sign-up failed.",
+      "legalConsent": "I have read and agree to the <offer>User Agreement (offer)</offer> and the <privacy>Personal Data Processing Consent</privacy>.",
+      "marketingConsent": "I agree to receive news and special offers (optional).",
+      "consentRequired": "You must accept the terms to continue."
     },
     "forgot": {
       "title": "Reset password",
@@ -846,12 +849,15 @@
     "phoneLabel": "Phone",
     "notesLabel": "Notes (optional)",
     "notesPlaceholder": "Any special requests — e.g. hair colour, allergies…",
+    "consentData": "I have read and agree to the <doc>Personal Data Processing Consent</doc>.",
+    "consentMarketing": "I agree to receive news, offers and promotions (optional).",
     "submit": "Confirm booking",
     "submitting": "Confirming…",
     "errors": {
       "nameRequired": "Please enter your name.",
       "phoneInvalid": "Phone must be +994 followed by 9 digits.",
       "incomplete": "The information is incomplete.",
+      "consentRequired": "You must agree to the processing of personal data to continue.",
       "confirmHuman": "Please confirm you're not a robot.",
       "bookingFailed": "Booking failed. Please try again.",
       "network": "Network error. Please try again."
