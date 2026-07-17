@@ -2,8 +2,9 @@
 // version strings we persist alongside each recorded consent. Bump the version
 // here whenever a document's text changes so stored consents stay auditable.
 //
-// Versions follow the source filenames (…_v1.1 etc.). The consent UI links to
-// these URLs; the register/book handlers stamp the matching version on the row.
+// Versions match the "Sənədin versiyası" printed inside each PDF (all 1.0). The
+// consent UI links to these URLs; the register/book handlers stamp the matching
+// version on the stored consent.
 
 export const LEGAL_DOCS = {
   /** Customer consent forms (data processing + marketing). */
@@ -15,7 +16,7 @@ export const LEGAL_DOCS = {
 } as const;
 
 export const LEGAL_VERSIONS = {
-  clientConsent: "1.1",
+  clientConsent: "1.0",
   salonOffer: "1.0",
-  salonConsent: "1.1",
+  salonConsent: "1.0",
 } as const;
