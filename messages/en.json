@@ -47,7 +47,10 @@
     "logout": "Log out",
     "loggingOut": "Logging out…",
     "roleAdmin": "Platform Admin",
-    "roleOwner": "Salon owner"
+    "roleOwner": "Salon owner",
+    "branch": "Branch",
+    "branchSwitcherLabel": "Active branch",
+    "manageBranches": "Manage branches"
   },
   "Common": {
     "cancel": "Cancel",
@@ -185,7 +188,42 @@
       "change": "Change link",
       "qrTitle": "QR code",
       "qrHint": "Print it for your counter or window — clients scan it to book.",
-      "qrDownload": "Download PNG"
+      "qrDownload": "Download PNG",
+      "sharedNote": "This link is shared by all branches — clients pick the branch while booking."
+    },
+    "branches": {
+      "title": "Branches",
+      "subtitle": "Create several branches — they all share one booking link.",
+      "add": "New branch",
+      "name": "Branch name",
+      "namePlaceholder": "Downtown branch",
+      "address": "Address",
+      "addressPlaceholder": "5 Nizami St, Baku",
+      "primaryBadge": "Primary",
+      "currentBadge": "Current panel",
+      "suspendedBadge": "Inactive",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "deleteTitle": "Delete branch",
+      "deleteConfirm": "Delete the branch <b>{name}</b>? Its staff, services and schedules will be deleted too. This cannot be undone.",
+      "noAddress": "No address set",
+      "usage": "{count} / {max}",
+      "limitHint": "Branch limit reached. Contact us on WhatsApp (number in the Billing section) to buy extra branch slots — 15 ₼ each.",
+      "linkNote": "Clients choose the branch from a dropdown on the booking page — its name and address show there.",
+      "proTeaserTitle": "Multi-branch support — Pro",
+      "proTeaserBody": "Upgrade to the Pro plan to create branches and switch between them.",
+      "proTeaserCta": "See the Pro plan",
+      "errors": {
+        "proRequired": "Adding branches requires the Pro plan.",
+        "invalidData": "Invalid data.",
+        "notFound": "Branch not found.",
+        "limitReached": "Branch limit reached. Contact us to buy an extra branch slot (15 ₼).",
+        "primaryLocked": "The primary branch cannot be deactivated.",
+        "primaryDelete": "The primary branch cannot be deleted.",
+        "hasData": "This branch has appointments or client records. Deactivate it instead of deleting."
+      }
     },
     "hours": {
       "title": "Business hours",
@@ -431,7 +469,7 @@
           "Everything in Basic",
           "Unlimited staff",
           "Payroll module (salary + commission)",
-          "Multi-branch support (coming soon)",
+          "Up to 3 branches (extra branch — 15 ₼)",
           "Data export (CSV / Excel)",
           "Staff roles and permissions (coming soon)"
         ]
@@ -463,6 +501,12 @@
     "amountLabel": "Amount (₼)",
     "amountPlaceholder": "list price",
     "confirm": "Confirm",
+    "branchesBtn": "Branches {count}/{limit}",
+    "branchesTitle": "Branch slots — {name}",
+    "branchesUsage": "Branch usage: {count} / {limit}",
+    "branchesNote": "Each extra branch — {price} ₼. Lowering records no payment.",
+    "extrasLabel": "Extra slots (total)",
+    "errExtrasRange": "Extra slots must be 0–50.",
     "paymentLabel": "{amount} ₼ · {months} mo · {date}",
     "errMonthsRange": "Months must be between 1 and 24.",
     "errAmountInvalid": "The amount is invalid.",
@@ -821,6 +865,8 @@
   "SalonPage": {
     "createOwn": "Create your own salon",
     "open": "Open",
+    "branchTitle": "Choose a branch",
+    "branchQuestion": "Which branch would you like to visit?",
     "poweredBy": "Powered by SalonBook.az",
     "metaTitleSuffix": "Online booking",
     "metaNotFound": "Salon not found — SalonBook.az",

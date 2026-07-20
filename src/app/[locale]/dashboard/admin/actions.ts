@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { PLAN_LIMITS, EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
 import { addMonths } from "@/lib/time";
 
 // Platform-admin actions: manual billing (mark a salon as paid). Guarded by
@@ -84,6 +84,81 @@ export async function activateSubscription(input: unknown): Promise<ActionResult
           previousStatus: sub.status,
           previousPlan: sub.plan,
           currentPeriodEnd: periodEnd.toISOString(),
+        },
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+// --- Paid extra branch slots -------------------------------------------------
+
+const extraBranchesSchema = z.object({
+  accountId: z.string().uuid(),
+  /** New TOTAL of extra slots on top of the plan's maxBranches. */
+  extraBranches: z.number().int().min(0).max(50),
+  /** Payment received, in qəpik. Defaults to added slots × list price. */
+  amountMinor: z.number().int().min(0).max(10_000_000).nullish(),
+});
+
+/**
+ * Sets an account's paid extra branch slots (each EXTRA_BRANCH_PRICE_MINOR,
+ * collected manually like every payment here). When the total goes UP, a
+ * Payment row is recorded for the added slots (amount overridable, e.g. for a
+ * discount); lowering the total just revokes slots — already-created branches
+ * are never touched, the owner simply can't add new ones past the new limit.
+ */
+export async function setExtraBranches(input: unknown): Promise<ActionResult> {
+  const t = await getTranslations("Admin.errors");
+  let adminId: string;
+  try {
+    adminId = await requireAdmin();
+  } catch {
+    return { ok: false, error: t("unauthorized") };
+  }
+  const parsed = extraBranchesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  const sub = await prisma.subscription.findUnique({
+    where: { accountId: d.accountId },
+    select: { id: true, extraBranches: true },
+  });
+  if (!sub) return { ok: false, error: t("subNotFound") };
+
+  const added = d.extraBranches - sub.extraBranches;
+  const amountMinor = d.amountMinor ?? Math.max(0, added) * EXTRA_BRANCH_PRICE_MINOR;
+
+  await prisma.$transaction([
+    prisma.subscription.update({
+      where: { id: sub.id },
+      data: { extraBranches: d.extraBranches },
+    }),
+    ...(added > 0
+      ? [
+          prisma.payment.create({
+            data: {
+              subscriptionId: sub.id,
+              amountMinor,
+              method: "manual",
+              periodMonths: 1,
+              recordedBy: adminId,
+            },
+          }),
+        ]
+      : []),
+    prisma.auditLog.create({
+      data: {
+        accountId: d.accountId,
+        actorUserId: adminId,
+        action: "subscription.extra_branches",
+        target: sub.id,
+        meta: {
+          previous: sub.extraBranches,
+          next: d.extraBranches,
+          amountMinor: added > 0 ? amountMinor : 0,
         },
       },
     }),

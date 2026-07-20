@@ -25,10 +25,22 @@ export default async function DashboardLayout({
   const roleLabel = session.isAdmin ? t("roleAdmin") : t("roleOwner");
   const initial = displayName.charAt(0).toUpperCase();
 
+  // Branch switcher: only meaningful for a Pro owner with 2+ ACTIVE branches.
+  // Everyone else (staff, single-branch, admins) never sees it.
+  const branch =
+    !session.isAdmin &&
+    session.role === "OWNER" &&
+    session.multiBranch &&
+    session.branches.length > 1 &&
+    session.salonId
+      ? { branches: session.branches, activeId: session.salonId }
+      : null;
+
   return (
     <DashboardShell
       user={{ name: displayName, role: roleLabel, initial }}
       isAdmin={session.isAdmin}
+      branch={branch}
     >
       {children}
     </DashboardShell>

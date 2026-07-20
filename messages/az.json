@@ -47,7 +47,10 @@
     "logout": "Çıxış",
     "loggingOut": "Çıxılır…",
     "roleAdmin": "Platform Admin",
-    "roleOwner": "Salon sahibi"
+    "roleOwner": "Salon sahibi",
+    "branch": "Filial",
+    "branchSwitcherLabel": "Aktiv filial",
+    "manageBranches": "Filialları idarə et"
   },
   "Common": {
     "cancel": "Ləğv et",
@@ -185,7 +188,42 @@
       "change": "Linki dəyiş",
       "qrTitle": "QR kod",
       "qrHint": "Piştaxta və ya vitrin üçün çap edin — müştərilər skan edib qeydiyyatdan keçir.",
-      "qrDownload": "PNG yüklə"
+      "qrDownload": "PNG yüklə",
+      "sharedNote": "Bu link bütün filiallar üçün ümumidir — müştəri qeydiyyat zamanı filialı özü seçir."
+    },
+    "branches": {
+      "title": "Filiallar",
+      "subtitle": "Bir neçə filial yaradın — hamısı eyni qeydiyyat linkini paylaşır.",
+      "add": "Yeni filial",
+      "name": "Filial adı",
+      "namePlaceholder": "Mərkəz filialı",
+      "address": "Ünvan",
+      "addressPlaceholder": "Nizami küç. 5, Bakı",
+      "primaryBadge": "Əsas",
+      "currentBadge": "Aktiv panel",
+      "suspendedBadge": "Deaktiv",
+      "edit": "Redaktə",
+      "deactivate": "Deaktiv et",
+      "activate": "Aktiv et",
+      "delete": "Sil",
+      "deleteTitle": "Filialı sil",
+      "deleteConfirm": "<b>{name}</b> filialı silinsin? İşçilər, xidmətlər və iş qrafikləri də silinəcək. Bu əməliyyat geri qaytarıla bilməz.",
+      "noAddress": "Ünvan qeyd edilməyib",
+      "usage": "{count} / {max}",
+      "limitHint": "Filial limiti dolub. Əlavə filial slotu (hər biri 15 ₼) üçün bizimlə WhatsApp-la əlaqə saxlayın — Qiymətlər bölməsindəki nömrə ilə.",
+      "linkNote": "Müştərilər qeydiyyat səhifəsində filialı açılan menyudan seçir — filial adı və ünvanı orada görünür.",
+      "proTeaserTitle": "Çoxfilial dəstəyi — Pro",
+      "proTeaserBody": "Bir neçə filial yaratmaq və aralarında keçid etmək üçün Pro planına keçin.",
+      "proTeaserCta": "Pro planına bax",
+      "errors": {
+        "proRequired": "Filial əlavə etmək Pro planında mümkündür.",
+        "invalidData": "Yanlış məlumat.",
+        "notFound": "Filial tapılmadı.",
+        "limitReached": "Filial limiti dolub. Əlavə filial slotu (15 ₼) üçün bizimlə əlaqə saxlayın.",
+        "primaryLocked": "Əsas filial deaktiv edilə bilməz.",
+        "primaryDelete": "Əsas filial silinə bilməz.",
+        "hasData": "Bu filialda görüş və ya müştəri qeydləri var. Silmək əvəzinə onu deaktiv edin."
+      }
     },
     "hours": {
       "title": "İş saatları",
@@ -431,7 +469,7 @@
           "Basic-dəki hər şey",
           "Limitsiz işçi",
           "Əməkhaqqı modulu (maaş + komissiya)",
-          "Çoxfilial dəstəyi (tezliklə)",
+          "3 filiala qədər (əlavə filial — 15 ₼)",
           "Məlumat eksportu (CSV / Excel)",
           "İşçi rolları və icazələr (tezliklə)"
         ]
@@ -466,6 +504,12 @@
     "paymentLabel": "{amount} ₼ · {months} ay · {date}",
     "errMonthsRange": "Ay 1–24 arası olmalıdır.",
     "errAmountInvalid": "Məbləğ düzgün deyil.",
+    "branchesBtn": "Filial {count}/{limit}",
+    "branchesTitle": "Filial slotları — {name}",
+    "branchesUsage": "Filial istifadəsi: {count} / {limit}",
+    "branchesNote": "Hər əlavə filial — {price} ₼. Azaltmaq ödəniş yaratmır.",
+    "extrasLabel": "Əlavə slot (cəmi)",
+    "errExtrasRange": "Əlavə slot 0–50 arası olmalıdır.",
     "subStatus": {
       "ACTIVE": "Aktiv",
       "TRIALING": "Sınaq",
@@ -821,6 +865,8 @@
   "SalonPage": {
     "createOwn": "Öz salonunu yarat",
     "open": "Açıqdır",
+    "branchTitle": "Filial seçin",
+    "branchQuestion": "Hansı filiala gəlmək istəyirsiniz?",
     "poweredBy": "SalonBook.az ilə gücləndirilib",
     "metaTitleSuffix": "Onlayn qeydiyyat",
     "metaNotFound": "Salon tapılmadı — SalonBook.az",

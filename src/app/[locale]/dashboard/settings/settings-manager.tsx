@@ -10,8 +10,19 @@ import {
   hhmmToMin,
   type BusinessHour,
 } from "@/lib/business-hours";
-import { updateProfile, updateSlug, updateBusinessHours } from "./actions";
+import {
+  updateProfile,
+  updateSlug,
+  updateBusinessHours,
+  createBranch,
+  updateBranch,
+  setBranchStatus,
+  deleteBranch,
+} from "./actions";
 import { TimeSelect } from "../_components/time-select";
+import { ConfirmDialog } from "../_components/confirm-dialog";
+import { Link } from "@/i18n/navigation";
+import { MapPin, Store } from "lucide-react";
 
 const inputCls =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
@@ -27,6 +38,25 @@ type SalonData = {
   phone: string | null;
   slug: string;
   businessHours: BusinessHour[];
+};
+
+export type BranchRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  active: boolean;
+  /** Oldest branch — carries the public booking link, can't be deactivated. */
+  isPrimary: boolean;
+  /** The branch the dashboard is currently switched to. */
+  isCurrent: boolean;
+};
+
+type BranchSection = {
+  branches: BranchRow[];
+  /** Whether the effective plan allows creating more branches (Pro). */
+  multiBranch: boolean;
+  /** Total branch allowance: plan base (Pro = 3) + paid extra slots. */
+  maxBranches: number;
 };
 
 type DayState = { on: boolean; open: string; close: string };
@@ -48,12 +78,16 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 export function SettingsManager({
   salon,
   appUrl,
+  branchSection = null,
 }: {
   salon: SalonData;
   appUrl: string;
+  branchSection?: BranchSection | null;
 }) {
   const t = useTranslations("Settings");
   const router = useRouter();
+
+  const multiActive = (branchSection?.branches.filter((b) => b.active).length ?? 0) > 1;
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -71,7 +105,15 @@ export function SettingsManager({
           <HoursCard businessHours={salon.businessHours} onSaved={() => router.refresh()} />
         </div>
         <div className="space-y-6">
-          <LinkCard slug={salon.slug} appUrl={appUrl} onSaved={() => router.refresh()} />
+          <LinkCard
+            slug={salon.slug}
+            appUrl={appUrl}
+            shared={multiActive}
+            onSaved={() => router.refresh()}
+          />
+          {branchSection && (
+            <BranchesCard section={branchSection} onSaved={() => router.refresh()} />
+          )}
         </div>
       </div>
     </div>
@@ -149,7 +191,18 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
 
 // --- Booking link ----------------------------------------------------------
 
-function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onSaved: () => void }) {
+function LinkCard({
+  slug,
+  appUrl,
+  shared = false,
+  onSaved,
+}: {
+  slug: string;
+  appUrl: string;
+  /** True when 2+ active branches share this one link (Pro multi-branch). */
+  shared?: boolean;
+  onSaved: () => void;
+}) {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
   const [pending, start] = useTransition();
@@ -184,6 +237,11 @@ function LinkCard({ slug, appUrl, onSaved }: { slug: string; appUrl: string; onS
     <section className={cardCls}>
       <h2 className="text-sm font-semibold text-foreground">{t("link.title")}</h2>
       <p className="mt-1 text-sm text-faint-foreground">{t("link.subtitle")}</p>
+      {shared && (
+        <p className="mt-2 rounded-lg border border-rose-500/25 bg-rose-500/5 px-3 py-2 text-xs text-rose-800 dark:text-rose-200">
+          {t("link.sharedNote")}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded-lg border border-border bg-background px-3 py-2 text-sm text-secondary-foreground">
@@ -285,6 +343,277 @@ function BookingQr({ url, slug }: { url: string; slug: string }) {
         </button>
       </div>
     </div>
+  );
+}
+
+// --- Branches (filiallar) ---------------------------------------------------
+
+// Pro-only multi-branch management: create branches (any name the owner wants,
+// plus an address shown to clients in the booking-page branch dropdown), rename
+// them, and switch them on/off. All branches share ONE public booking link.
+function BranchesCard({ section, onSaved }: { section: BranchSection; onSaved: () => void }) {
+  const t = useTranslations("Settings");
+  const tc = useTranslations("Common");
+  const [pending, start] = useTransition();
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<BranchRow | null>(null);
+  const [form, setForm] = useState({ name: "", address: "" });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function reset() {
+    setAdding(false);
+    setEditingId(null);
+    setForm({ name: "", address: "" });
+  }
+
+  function submitCreate() {
+    setMsg(null);
+    start(async () => {
+      const res = await createBranch({
+        name: form.name.trim(),
+        address: form.address.trim() || null,
+      });
+      if (res.ok) {
+        reset();
+        setMsg({ ok: true, text: t("saved") });
+        onSaved();
+      } else {
+        setMsg({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  function submitEdit(id: string) {
+    setMsg(null);
+    start(async () => {
+      const res = await updateBranch({
+        id,
+        name: form.name.trim(),
+        address: form.address.trim() || null,
+      });
+      if (res.ok) {
+        reset();
+        setMsg({ ok: true, text: t("saved") });
+        onSaved();
+      } else {
+        setMsg({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  function toggleActive(id: string, active: boolean) {
+    setMsg(null);
+    start(async () => {
+      const res = await setBranchStatus({ id, active });
+      if (res.ok) {
+        setMsg({ ok: true, text: t("saved") });
+        onSaved();
+      } else {
+        setMsg({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  function remove(b: BranchRow) {
+    setMsg(null);
+    start(async () => {
+      const res = await deleteBranch({ id: b.id });
+      setConfirmDelete(null);
+      if (res.ok) {
+        setMsg({ ok: true, text: t("saved") });
+        onSaved();
+      } else {
+        setMsg({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  const branchForm = (submit: () => void) => (
+    <div className="mt-3 space-y-3 rounded-lg border border-border bg-background p-3">
+      <div>
+        <label className={labelCls}>{t("branches.name")}</label>
+        <input
+          className={inputCls}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder={t("branches.namePlaceholder")}
+        />
+      </div>
+      <div>
+        <label className={labelCls}>{t("branches.address")}</label>
+        <input
+          className={inputCls}
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+          placeholder={t("branches.addressPlaceholder")}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={submit} disabled={pending || form.name.trim().length < 2} className={saveBtn}>
+          {pending ? t("saving") : t("save")}
+        </button>
+        <button
+          onClick={reset}
+          disabled={pending}
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
+        >
+          {tc("cancel")}
+        </button>
+      </div>
+    </div>
+  );
+
+  const atLimit = section.branches.length >= section.maxBranches;
+
+  return (
+    <section className={cardCls}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Store className="h-4 w-4 text-rose-700 dark:text-rose-400" strokeWidth={2} />
+            {t("branches.title")}
+            {section.multiBranch && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                {t("branches.usage", {
+                  count: section.branches.length,
+                  max: section.maxBranches,
+                })}
+              </span>
+            )}
+          </h2>
+          <p className="mt-1 text-sm text-faint-foreground">{t("branches.subtitle")}</p>
+        </div>
+        {section.multiBranch && !atLimit && !adding && editingId === null && (
+          <button
+            onClick={() => {
+              setAdding(true);
+              setForm({ name: "", address: "" });
+              setMsg(null);
+            }}
+            className={saveBtn + " shrink-0"}
+          >
+            {t("branches.add")}
+          </button>
+        )}
+      </div>
+
+      {/* Allowance used up: extra slots are sold manually (15 ₼ each), so point
+          the owner at support instead of a button that can only error. */}
+      {section.multiBranch && atLimit && (
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          {t("branches.limitHint")}
+        </p>
+      )}
+
+      {!section.multiBranch && (
+        <div className="mt-4 rounded-lg border border-rose-500/25 bg-rose-500/5 p-4">
+          <p className="text-sm font-medium text-foreground">{t("branches.proTeaserTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("branches.proTeaserBody")}</p>
+          <Link
+            href="/dashboard/billing"
+            className="mt-3 inline-block rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+          >
+            {t("branches.proTeaserCta")}
+          </Link>
+        </div>
+      )}
+
+      <div className="mt-4 divide-y divide-border/60">
+        {section.branches.map((b) => (
+          <div key={b.id} className="py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={"h-2 w-2 shrink-0 rounded-full " + (b.isCurrent ? "bg-rose-500" : "bg-border")} />
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">{b.name}</span>
+              {b.isPrimary && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                  {t("branches.primaryBadge")}
+                </span>
+              )}
+              {b.isCurrent && (
+                <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+                  {t("branches.currentBadge")}
+                </span>
+              )}
+              {!b.active && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                  {t("branches.suspendedBadge")}
+                </span>
+              )}
+              <span className="ml-auto flex shrink-0 items-center gap-2 text-sm">
+                {section.multiBranch && (
+                  <button
+                    onClick={() => {
+                      setEditingId(b.id);
+                      setAdding(false);
+                      setForm({ name: b.name, address: b.address ?? "" });
+                      setMsg(null);
+                    }}
+                    disabled={pending}
+                    className="text-muted-foreground transition hover:text-foreground"
+                  >
+                    {t("branches.edit")}
+                  </button>
+                )}
+                {section.multiBranch && !b.isPrimary && (
+                  <button
+                    onClick={() => toggleActive(b.id, !b.active)}
+                    disabled={pending}
+                    className={
+                      b.active
+                        ? "text-muted-foreground transition hover:text-rose-700 dark:hover:text-rose-400"
+                        : "text-emerald-700 transition hover:text-emerald-600 dark:text-emerald-400"
+                    }
+                  >
+                    {b.active ? t("branches.deactivate") : t("branches.activate")}
+                  </button>
+                )}
+                {/* Hard delete: any plan (post-downgrade cleanup), never the
+                    primary. The action itself refuses when history exists. */}
+                {!b.isPrimary && (
+                  <button
+                    onClick={() => setConfirmDelete(b)}
+                    disabled={pending}
+                    className="text-rose-700 transition hover:text-rose-600 dark:text-rose-400"
+                  >
+                    {t("branches.delete")}
+                  </button>
+                )}
+              </span>
+            </div>
+            <p className="ml-4 mt-1 flex items-center gap-1 text-xs text-faint-foreground">
+              <MapPin className="h-3 w-3 shrink-0" strokeWidth={2} />
+              {b.address || t("branches.noAddress")}
+            </p>
+            {editingId === b.id && branchForm(() => submitEdit(b.id))}
+          </div>
+        ))}
+      </div>
+
+      {adding && branchForm(submitCreate)}
+
+      {section.multiBranch && section.branches.filter((b) => b.active).length > 1 && (
+        <p className="mt-3 text-xs text-faint-foreground">{t("branches.linkNote")}</p>
+      )}
+      {msg && (
+        <p className={"mt-3 text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
+          {msg.text}
+        </p>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={t("branches.deleteTitle")}
+          body={t.rich("branches.deleteConfirm", {
+            name: confirmDelete.name,
+            b: (chunks) => <span className="font-medium text-secondary-foreground">{chunks}</span>,
+          })}
+          pending={pending}
+          onConfirm={() => remove(confirmDelete)}
+          onClose={() => setConfirmDelete(null)}
+        />
+      )}
+    </section>
   );
 }
 

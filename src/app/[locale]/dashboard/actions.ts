@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, type Slot } from "@/lib/availability";
@@ -137,6 +137,36 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
     return { ok: false, error: t("bookingFailed") };
   }
 
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Switch the active branch (multi-branch / Pro owners) --------------------
+
+const switchBranchSchema = z.object({ salonId: z.string().uuid() });
+
+/**
+ * Sets the sb_branch cookie that getSession() reads, re-scoping the WHOLE
+ * dashboard (calendar, clients, services, workers, payroll, analytics) to the
+ * chosen branch. Owner-only, Pro-only, and only to a branch of the caller's own
+ * account — everything else is a silent no-op error.
+ */
+export async function switchBranch(input: unknown): Promise<ActionResult> {
+  const session = await getSession();
+  const t = await getTranslations("Actions");
+  const parsed = switchBranchSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  if (
+    !session ||
+    session.role !== "OWNER" ||
+    !session.multiBranch ||
+    !session.branches.some((b) => b.id === parsed.data.salonId)
+  ) {
+    return { ok: false, error: t("invalidData") };
+  }
+
+  await setActiveBranch(parsed.data.salonId);
   revalidatePath("/dashboard");
   return { ok: true };
 }
