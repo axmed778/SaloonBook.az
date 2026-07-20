@@ -15,10 +15,15 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   PRO: {
     maxEmployees: Infinity,
     maxBookingsPerMonth: Infinity,
-    maxBranches: Infinity,
+    // Pro includes 3 branches; more are sold as paid extra slots
+    // (Subscription.extraBranches, granted by a platform admin).
+    maxBranches: 3,
     priceMinor: 3000,
   },
 };
+
+/** Price of one extra branch slot beyond the plan's maxBranches, in qəpik. */
+export const EXTRA_BRANCH_PRICE_MINOR = 1500;
 
 export interface PlanFeatures {
   multiBranch: boolean;

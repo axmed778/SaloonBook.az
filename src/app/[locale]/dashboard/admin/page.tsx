@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
+import { featuresFor, limitsFor } from "@/lib/plans";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export default async function AdminPage() {
             status: true,
             trialEndsAt: true,
             currentPeriodEnd: true,
+            extraBranches: true,
             payments: {
               orderBy: { paidAt: "desc" },
               take: 5,
@@ -42,6 +44,9 @@ export default async function AdminPage() {
           },
         },
         salons: { select: { id: true, name: true, slug: true }, take: 1 },
+        _count: {
+          select: { salons: { where: { status: { not: "DELETED" } } } },
+        },
         memberships: {
           where: { role: "OWNER" },
           take: 1,
@@ -60,6 +65,8 @@ export default async function AdminPage() {
   const rows: AccountRow[] = accounts.map((a) => {
     const sub = a.subscription;
     const salon = a.salons[0] ?? null;
+    const effective = effectivePlan(sub ?? null);
+    const extraBranches = sub?.extraBranches ?? 0;
     return {
       accountId: a.id,
       accountName: a.name,
@@ -68,8 +75,14 @@ export default async function AdminPage() {
       ownerEmail: a.memberships[0]?.user.email ?? "—",
       createdLabel: formatBakuDate(bakuYmd(a.createdAt), df),
       plan: sub?.plan ?? "FREE",
-      effective: effectivePlan(sub ?? null),
+      effective,
       status: sub?.status ?? null,
+      extraBranches,
+      branchCount: a._count.salons,
+      // Same rule as the session: extras only count while multi-branch is on.
+      branchLimit:
+        limitsFor(effective).maxBranches +
+        (featuresFor(effective).multiBranch ? extraBranches : 0),
       trialEndsLabel: sub?.trialEndsAt ? formatBakuDate(bakuYmd(sub.trialEndsAt), df) : null,
       periodEndLabel: sub?.currentPeriodEnd
         ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)

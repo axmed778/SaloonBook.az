@@ -5,12 +5,15 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import type { Audience } from "@/lib/audience";
 import { bakuToday, shiftYmd } from "@/lib/time";
+import { effectivePlan } from "@/lib/subscription";
+import { featuresFor } from "@/lib/plans";
 import { intlLocale, ogLocale } from "@/i18n/format";
 import { ButtonLink } from "@/components/ui";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { BookingWidget } from "./booking-widget";
+import { BranchPicker } from "./branch-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -69,40 +72,74 @@ const initials = (name: string) =>
 
 export default async function BookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ branch?: string }>;
 }) {
   const { slug } = await params;
+  const { branch: branchParam } = await searchParams;
   const t = await getTranslations("SalonPage");
   const locale = await getLocale();
 
   const salon = await prisma.salon.findUnique({
     where: { slug },
     select: {
+      id: true,
       name: true,
       description: true,
       status: true,
       audience: true,
-      services: {
-        where: { isActive: true },
-        select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
-        orderBy: { name: "asc" },
-      },
-      employees: {
-        where: { isActive: true },
+      account: {
         select: {
-          id: true,
-          name: true,
-          position: true,
-          audience: true,
-          services: { select: { serviceId: true } },
+          subscription: {
+            select: { plan: true, status: true, trialEndsAt: true, currentPeriodEnd: true },
+          },
+          salons: {
+            where: { status: "ACTIVE" },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, slug: true, name: true, address: true, audience: true },
+          },
         },
-        orderBy: { name: "asc" },
       },
     },
   });
 
   if (!salon || salon.status !== "ACTIVE") notFound();
+
+  // Multi-branch (Pro): the account shares ONE public link, so this page offers
+  // a branch dropdown when the account has 2+ ACTIVE branches. ?branch=<slug>
+  // picks one (validated against the account's own list); the default is the
+  // salon the link points at. Non-Pro accounts never see the picker — their
+  // extra branches (if any, after a downgrade) stay unreachable here.
+  const plan = effectivePlan(salon.account.subscription);
+  const siblings = salon.account.salons;
+  const branches =
+    featuresFor(plan).multiBranch && siblings.length > 1 ? siblings : null;
+  const selected =
+    branches?.find((b) => b.slug === branchParam) ??
+    siblings.find((b) => b.id === salon.id) ??
+    { id: salon.id, slug, name: salon.name, address: null, audience: salon.audience };
+
+  // Catalog of the SELECTED branch (each branch has its own staff + services).
+  const [services, employees] = await Promise.all([
+    prisma.service.findMany({
+      where: { salonId: selected.id, isActive: true },
+      select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.employee.findMany({
+      where: { salonId: selected.id, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        position: true,
+        audience: true,
+        services: { select: { serviceId: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   // Next 14 Baku days for the booking date picker (availability is validated
   // server-side, so past/closed days simply return no slots).
@@ -118,14 +155,14 @@ export default async function BookingPage({
     return { ymd, label };
   });
 
-  const bookingServices = salon.services.map((s) => ({
+  const bookingServices = services.map((s) => ({
     id: s.id,
     name: s.name,
     priceMinor: s.priceMinor,
     durationMin: s.durationMin,
     audience: s.audience as Audience,
   }));
-  const bookingEmployees = salon.employees.map((e) => ({
+  const bookingEmployees = employees.map((e) => ({
     id: e.id,
     name: e.name,
     position: e.position,
@@ -174,10 +211,26 @@ export default async function BookingPage({
           </div>
         </div>
 
-        {/* Booking flow — the whole page is the booking widget */}
+        {/* Branch choice (Pro multi-branch): which location does the client
+            want to visit? One link — the dropdown swaps the catalog below. */}
+        {branches && (
+          <BranchPicker
+            branches={branches.map((b) => ({
+              slug: b.slug,
+              name: b.name,
+              address: b.address,
+            }))}
+            activeSlug={selected.slug}
+          />
+        )}
+
+        {/* Booking flow — the whole page is the booking widget. Keyed by branch
+            so switching remounts it (stale service/employee ids must not leak
+            across branches); its API calls use the branch's own internal slug. */}
         <BookingWidget
-          slug={slug}
-          salonAudience={salon.audience as Audience}
+          key={selected.id}
+          slug={selected.slug}
+          salonAudience={selected.audience as Audience}
           services={bookingServices}
           employees={bookingEmployees}
           days={days}

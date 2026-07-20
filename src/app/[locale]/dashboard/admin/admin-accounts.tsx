@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { activateSubscription } from "./actions";
+import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
+import { activateSubscription, setExtraBranches } from "./actions";
 
 export type AccountRow = {
   accountId: string;
@@ -18,6 +19,12 @@ export type AccountRow = {
   trialEndsLabel: string | null;
   periodEndLabel: string | null;
   bookingsThisMonth: number;
+  /** Paid extra branch slots on top of the plan's base limit. */
+  extraBranches: number;
+  /** Non-deleted branches the account currently has. */
+  branchCount: number;
+  /** Effective total branch limit (plan base + extras). */
+  branchLimit: number;
   payments: { id: string; label: string }[];
 };
 
@@ -32,6 +39,7 @@ const STATUS_CHIP: Record<string, string> = {
 export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const t = useTranslations("Admin");
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
+  const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -71,6 +79,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                     setExpanded(expanded === r.accountId ? null : r.accountId)
                   }
                   onActivate={() => setActivateFor(r)}
+                  onBranches={() => setBranchesFor(r)}
                 />
               ))}
             </tbody>
@@ -81,6 +90,9 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
       {activateFor && (
         <ActivateModal row={activateFor} onClose={() => setActivateFor(null)} />
       )}
+      {branchesFor && (
+        <ExtraBranchesModal row={branchesFor} onClose={() => setBranchesFor(null)} />
+      )}
     </div>
   );
 }
@@ -90,11 +102,13 @@ function RowGroup({
   expanded,
   onToggle,
   onActivate,
+  onBranches,
 }: {
   row: AccountRow;
   expanded: boolean;
   onToggle: () => void;
   onActivate: () => void;
+  onBranches: () => void;
 }) {
   const t = useTranslations("Admin");
   return (
@@ -145,6 +159,13 @@ function RowGroup({
               className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
             >
               {expanded ? t("close") : t("payments")}
+            </button>
+            <button
+              onClick={onBranches}
+              title={t("branchesUsage", { count: r.branchCount, limit: r.branchLimit })}
+              className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
+            >
+              {t("branchesBtn", { count: r.branchCount, limit: r.branchLimit })}
             </button>
             <button
               onClick={onActivate}
@@ -261,6 +282,117 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
                 className={inputCls + " w-full"}
                 inputMode="decimal"
                 placeholder={t("amountPlaceholder")}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+          </div>
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
+            >
+              {tc("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            >
+              {pending ? tc("pleaseWait") : t("confirm")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Grant/revoke paid extra branch slots (each EXTRA_BRANCH_PRICE_MINOR). The
+// input is the new TOTAL of extras; raising it records a Payment for the added
+// slots (amount overridable for discounts), lowering it records nothing.
+function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => void }) {
+  const t = useTranslations("Admin");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [extras, setExtras] = useState(String(row.extraBranches));
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const nextExtras = Number(extras);
+  const added = Number.isInteger(nextExtras) ? nextExtras - row.extraBranches : 0;
+  const defaultAmount = ((Math.max(0, added) * EXTRA_BRANCH_PRICE_MINOR) / 100).toFixed(2);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!Number.isInteger(nextExtras) || nextExtras < 0 || nextExtras > 50) {
+      return setError(t("errExtrasRange"));
+    }
+    let amountMinor: number | null = null;
+    if (amount.trim() !== "") {
+      const v = Number(amount.trim().replace(",", "."));
+      if (!Number.isFinite(v) || v < 0) return setError(t("errAmountInvalid"));
+      amountMinor = Math.round(v * 100);
+    }
+    startTransition(async () => {
+      const res = await setExtraBranches({
+        accountId: row.accountId,
+        extraBranches: nextExtras,
+        amountMinor,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  const inputCls =
+    "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-semibold text-foreground">
+          {t("branchesTitle", { name: r_name(row) })}
+        </h2>
+        <p className="mt-1 text-xs text-faint-foreground">
+          {t("branchesUsage", { count: row.branchCount, limit: row.branchLimit })}
+          {" · "}
+          {t("branchesNote", { price: (EXTRA_BRANCH_PRICE_MINOR / 100).toFixed(0) })}
+        </p>
+
+        <form onSubmit={submit} className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {t("extrasLabel")}
+              </label>
+              <input
+                className={inputCls + " w-full"}
+                inputMode="numeric"
+                value={extras}
+                onChange={(e) => setExtras(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {t("amountLabel")}
+              </label>
+              <input
+                className={inputCls + " w-full"}
+                inputMode="decimal"
+                placeholder={added > 0 ? defaultAmount : "0"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />

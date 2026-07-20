@@ -5,9 +5,11 @@ import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarNav } from "./sidebar-nav";
+import { BranchSwitcher, type BranchOption } from "./branch-switcher";
 import { LogoutButton } from "../logout-button";
 
 type User = { name: string; role: string; initial: string };
+type BranchData = { branches: BranchOption[]; activeId: string };
 
 const STORAGE_KEY = "sb_sidebar_collapsed";
 
@@ -16,10 +18,12 @@ const STORAGE_KEY = "sb_sidebar_collapsed";
 export function DashboardShell({
   user,
   isAdmin = false,
+  branch = null,
   children,
 }: {
   user: User;
   isAdmin?: boolean;
+  branch?: BranchData | null;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Nav");
@@ -59,6 +63,7 @@ export function DashboardShell({
         <SidebarContent
           user={user}
           isAdmin={isAdmin}
+          branch={branch}
           collapsed={collapsed}
           onToggleCollapse={toggleCollapse}
         />
@@ -82,6 +87,7 @@ export function DashboardShell({
           <SidebarContent
             user={user}
             isAdmin={isAdmin}
+            branch={branch}
             collapsed={false}
             onNavigate={() => setMobileOpen(false)}
             onClose={() => setMobileOpen(false)}
@@ -99,9 +105,16 @@ export function DashboardShell({
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
           </button>
-          <span className="font-semibold tracking-tight">
-            SalonBook<span className="text-rose-700 dark:text-rose-400">.az</span>
-          </span>
+          {/* With multi-branch active, the top bar shows WHICH branch you're on
+              (tappable switcher) instead of the static brand — the brand still
+              lives in the drawer. */}
+          {branch ? (
+            <BranchSwitcher branches={branch.branches} activeId={branch.activeId} compact />
+          ) : (
+            <span className="font-semibold tracking-tight">
+              SalonBook<span className="text-rose-700 dark:text-rose-400">.az</span>
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <LanguageSwitcher />
@@ -117,6 +130,7 @@ export function DashboardShell({
 function SidebarContent({
   user,
   isAdmin,
+  branch,
   collapsed,
   onToggleCollapse,
   onNavigate,
@@ -124,6 +138,7 @@ function SidebarContent({
 }: {
   user: User;
   isAdmin: boolean;
+  branch?: BranchData | null;
   collapsed: boolean;
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
@@ -172,6 +187,19 @@ function SidebarContent({
           </button>
         )}
       </div>
+
+      {/* Active-branch switcher (Pro, multi-branch): sits right above the nav —
+          the first thing seen next to Təqvim. Outside the scrollable nav box so
+          its dropdown never gets clipped. */}
+      {branch && (
+        <div className={"px-3 pb-2 " + (collapsed ? "flex justify-center" : "")}>
+          <BranchSwitcher
+            branches={branch.branches}
+            activeId={branch.activeId}
+            collapsed={collapsed}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 py-2">
         <SidebarNav collapsed={collapsed} onNavigate={onNavigate} isAdmin={isAdmin} />

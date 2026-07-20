@@ -379,6 +379,10 @@ model Subscription {
   status             SubStatus @default(TRIALING)
   trialEndsAt        DateTime? @db.Timestamptz(6)
   currentPeriodEnd   DateTime? @db.Timestamptz(6)
+  // Paid extra branch slots on top of the plan's maxBranches (Pro includes 3;
+  // each extra costs EXTRA_BRANCH_PRICE_MINOR). Granted manually by a platform
+  // admin (admin panel), like every other payment in the manual-billing MVP.
+  extraBranches      Int       @default(0)
   providerCustomerId String? // reserved for future payment provider
   providerSubId      String?
   account            Account   @relation(fields: [accountId], references: [id])
