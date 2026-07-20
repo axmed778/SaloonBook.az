@@ -102,14 +102,16 @@ Two services from this repo:
 
 Plus managed Postgres (`btree_gist` enabled) and Redis.
 
-## Plans (limits enforced in `src/lib/plans.ts`)
+## Plans (marketing tiers in `MARKETING_PLANS`, limits in `PLAN_LIMITS` — `src/lib/plans.ts`)
 
-| Plan | Employees | Bookings/mo | Branches | Price |
-|---|---|---|---|---|
-| Free | 2 | 50 | 1 | 0 |
-| Basic | 10 | unlimited | 1 | 15 AZN/mo |
-| Pro | unlimited | unlimited | many | 30–40 AZN/mo |
+| Plan | Employees | Bookings/mo | Branches | WhatsApp reminders/mo | Price | Annual |
+|---|---|---|---|---|---|---|
+| Start | 2 | unlimited | 1 | 150 | 15 AZN/mo | 150 AZN |
+| Salon (popular) | 8 | unlimited | 1 | 600 | 35 AZN/mo | 350 AZN |
+| Pro | unlimited | unlimited | 3 | 1500 | 70 AZN/mo | 700 AZN |
 
-Basic is free for 3 months (invite-gated). Billing is **manual** in MVP: owner pays
-out-of-band, a platform admin activates the plan. `Subscription`/`Payment` tables are
-ready for a future payment provider.
+Every account starts with a **14-day free trial** (no card). There is no free tier;
+`Plan.FREE` is the internal zero-entitlement floor an account falls to when the trial
+lapses or a payment is missed. Billing is **manual** in MVP: owner pays out-of-band, a
+platform admin activates the plan. `Subscription`/`Payment` tables are ready for a
+future payment provider.

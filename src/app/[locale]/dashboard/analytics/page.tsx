@@ -276,7 +276,8 @@ export default async function AnalyticsPage() {
   }
   const canExport = featuresFor(effectivePlan(sub)).exports;
   const planPriceMinor = PLAN_LIMITS[sub?.plan ?? "BASIC"].priceMinor;
-  const planLabel = sub?.plan === "PRO" ? "Pro" : "Basic";
+  // Internal BASIC tier is marketed as "Salon" (see MARKETING_PLANS).
+  const planLabel = sub?.plan === "PRO" ? "Pro" : "Salon";
   const periodEndLabel = sub?.currentPeriodEnd
     ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;

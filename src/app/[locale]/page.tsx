@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { PLAN_FEATURES, PLAN_LIMITS } from "@/lib/plans";
+import { MARKETING_PLANS, type MarketingPlan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
 import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
@@ -53,20 +53,22 @@ function PricingCard({
   plan,
   rows,
   perMonth,
+  annualLabel,
 }: {
   plan: {
-    id: "FREE" | "BASIC" | "PRO";
     name: string;
     tagline: string;
     cta: string;
     note: string;
     highlight: boolean;
     badge: string | null;
+    monthlyMinor: number;
   };
   rows: Row[];
   perMonth: string;
+  annualLabel: string;
 }) {
-  const price = (PLAN_LIMITS[plan.id].priceMinor / 100).toString();
+  const price = (plan.monthlyMinor / 100).toString();
 
   return (
     <div
@@ -93,6 +95,7 @@ function PricingCard({
         </span>
         <span className="text-sm text-muted-foreground">{perMonth}</span>
       </div>
+      <p className="mt-1.5 text-sm text-muted-foreground">{annualLabel}</p>
 
       <ButtonLink
         href="/register"
@@ -155,27 +158,24 @@ export default async function Home() {
     { icon: CalendarCheck, key: "accept" },
   ] as const;
 
-  const plans = [
-    { id: "FREE" as const, key: "free", highlight: false, hasBadge: false },
-    { id: "BASIC" as const, key: "basic", highlight: true, hasBadge: true },
-    { id: "PRO" as const, key: "pro", highlight: false, hasBadge: false },
-  ];
+  const plans = MARKETING_PLANS;
 
-  function planRows(id: "FREE" | "BASIC" | "PRO"): Row[] {
-    const lim = PLAN_LIMITS[id];
-    const feat = PLAN_FEATURES[id];
+  function planRows(plan: MarketingPlan): Row[] {
     return [
-      { label: t("pricing.rows.employees"), value: fmtLimit(lim.maxEmployees) },
-      { label: t("pricing.rows.monthlyBookings"), value: fmtLimit(lim.maxBookingsPerMonth) },
-      { label: t("pricing.rows.branches"), value: fmtLimit(lim.maxBranches) },
+      { label: t("pricing.rows.employees"), value: fmtLimit(plan.maxEmployees) },
+      { label: t("pricing.rows.monthlyBookings"), value: t("pricing.unlimited") },
+      { label: t("pricing.rows.branches"), value: fmtLimit(plan.maxBranches) },
+      {
+        label: t("pricing.rows.whatsappReminders"),
+        value: t("pricing.rows.whatsappRemindersValue", { count: plan.waRemindersPerMonth }),
+      },
       { label: t("pricing.rows.onlineBooking"), value: true },
-      { label: t("pricing.rows.whatsappReminders"), value: true },
       { label: t("pricing.rows.overlapProtection"), value: true },
       { label: t("pricing.rows.roiPanel"), value: true },
-      { label: t("pricing.rows.payroll"), value: feat.payroll },
-      { label: t("pricing.rows.roles"), value: feat.staffRoles },
-      { label: t("pricing.rows.exports"), value: feat.exports },
-      { label: t("pricing.rows.deposits"), value: feat.deposits },
+      { label: t("pricing.rows.payroll"), value: plan.advanced },
+      { label: t("pricing.rows.roles"), value: plan.advanced },
+      { label: t("pricing.rows.exports"), value: plan.advanced },
+      { label: t("pricing.rows.deposits"), value: plan.advanced },
     ];
   }
 
@@ -224,7 +224,7 @@ export default async function Home() {
               </div>
 
               <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                {[t("heroChecks.noCard"), t("heroChecks.quickSetup"), t("heroChecks.cancelAnytime")].map(
+                {[t("heroChecks.trial"), t("heroChecks.noCard"), t("heroChecks.moneyBack")].map(
                   (item) => (
                     <li key={item} className="inline-flex items-center gap-1.5">
                       <Check className="h-4 w-4 text-accent" strokeWidth={2.5} />
@@ -329,18 +329,19 @@ export default async function Home() {
             <div className="mt-16 grid gap-5 lg:grid-cols-3">
               {plans.map((plan) => (
                 <PricingCard
-                  key={plan.id}
+                  key={plan.key}
                   plan={{
-                    id: plan.id,
                     name: t(`pricing.plans.${plan.key}.name`),
                     tagline: t(`pricing.plans.${plan.key}.tagline`),
                     cta: t(`pricing.plans.${plan.key}.cta`),
                     note: t(`pricing.plans.${plan.key}.note`),
                     highlight: plan.highlight,
-                    badge: plan.hasBadge ? t(`pricing.plans.${plan.key}.badge`) : null,
+                    badge: plan.popular ? t(`pricing.plans.${plan.key}.badge`) : null,
+                    monthlyMinor: plan.monthlyMinor,
                   }}
-                  rows={planRows(plan.id)}
+                  rows={planRows(plan)}
                   perMonth={t("pricing.perMonth")}
+                  annualLabel={t("pricing.annual", { price: plan.annualMinor / 100 })}
                 />
               ))}
             </div>

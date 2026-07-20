@@ -447,18 +447,30 @@
       "trial": "Free trial: {days} days left",
       "trialEnded": "Your trial has ended — activate a plan.",
       "pastDue": "Payment pending — activate a plan.",
-      "freeDowngraded": "Your trial has ended — the account was moved to the free plan. Activate a plan."
+      "freeDowngraded": "Your trial has ended — the account was moved to limited mode. Activate a plan."
     },
     "plans": {
-      "basic": {
-        "name": "Basic",
+      "start": {
+        "name": "Start",
         "tagline": "For small salons",
         "features": [
           "Online booking link",
           "Calendar and appointment management",
-          "Up to 10 staff",
+          "Up to 2 staff · 1 branch",
           "Unlimited bookings",
-          "WhatsApp notifications",
+          "150 WhatsApp reminders/mo",
+          "ROI analytics dashboard"
+        ]
+      },
+      "salon": {
+        "name": "Salon",
+        "tagline": "For active salons",
+        "features": [
+          "Online booking link",
+          "Up to 8 staff · 1 branch",
+          "Unlimited bookings",
+          "600 WhatsApp reminders/mo",
+          "Double-booking protection",
           "ROI analytics dashboard"
         ]
       },
@@ -466,10 +478,11 @@
         "name": "Pro",
         "tagline": "For growing and multi-branch salons",
         "features": [
-          "Everything in Basic",
+          "Everything in Salon",
           "Unlimited staff",
-          "Payroll module (salary + commission)",
           "Up to 3 branches (extra branch — 15 ₼)",
+          "1500 WhatsApp reminders/mo",
+          "Payroll module (salary + commission)",
           "Data export (CSV / Excel)",
           "Staff roles and permissions (coming soon)"
         ]
@@ -515,7 +528,7 @@
       "TRIALING": "Trial",
       "PAST_DUE": "Payment pending",
       "CANCELLED": "Cancelled",
-      "FREE_DOWNGRADED": "Downgraded to free"
+      "FREE_DOWNGRADED": "Limited mode"
     },
     "errors": {
       "unauthorized": "Not allowed.",
@@ -974,16 +987,16 @@
     }
   },
   "Landing": {
-    "badgeNew": "New",
-    "badgePromo": "3 months free with EARLYBIRD",
+    "badgeNew": "14 days",
+    "badgePromo": "Free trial — no card required",
     "heroTitle": "Let clients book themselves — 24/7.",
-    "heroSubtitle": "Stop replying to booking messages on Instagram and WhatsApp. Create a personal link for your salon, share it — we handle the rest.",
-    "ctaStartFree": "Start free",
+    "heroSubtitle": "A professional booking and management platform for your salon. Clients book themselves 24/7, WhatsApp reminders go out automatically — and there are no commissions on bookings.",
+    "ctaStartFree": "Start your 14-day trial",
     "ctaViewDemo": "View demo page",
     "heroChecks": {
+      "trial": "14-day free trial",
       "noCard": "No card required",
-      "quickSetup": "Set up in minutes",
-      "cancelAnytime": "Cancel anytime"
+      "moneyBack": "Money-back guarantee"
     },
     "heroImageAlt": "SalonBook.az online booking page — choosing service, staff and a time slot",
     "features": {
@@ -1039,16 +1052,18 @@
     "pricing": {
       "eyebrow": "Pricing",
       "title": "Simple, transparent pricing",
-      "subtitle": "Start free, scale as you grow. No hidden fees.",
+      "subtitle": "Start with a 14-day free trial. A fixed monthly subscription — no hidden fees, no commissions.",
       "perMonth": "/mo",
       "unlimited": "Unlimited",
-      "footnote": "All prices are in AZN. Payments are currently activated manually.",
+      "annual": "or {price} ₼ / year",
+      "footnote": "Money-back guarantee during your first paid month. All prices are in AZN; payments are currently activated manually.",
       "rows": {
         "employees": "Staff",
         "monthlyBookings": "Monthly bookings",
         "branches": "Branches",
         "onlineBooking": "24/7 online booking",
         "whatsappReminders": "WhatsApp reminders",
+        "whatsappRemindersValue": "{count} reminders/mo",
         "overlapProtection": "Double-booking protection",
         "roiPanel": "ROI analytics dashboard",
         "payroll": "Payroll module (salary + commission)",
@@ -1057,23 +1072,23 @@
         "deposits": "Deposit / no-show protection (coming soon)"
       },
       "plans": {
-        "free": {
-          "name": "Free",
-          "tagline": "To get started",
-          "cta": "Start free",
+        "start": {
+          "name": "Start",
+          "tagline": "For small salons",
+          "cta": "Start your 14-day trial",
           "note": "No card required"
         },
-        "basic": {
-          "name": "Basic",
+        "salon": {
+          "name": "Salon",
           "tagline": "For active salons",
-          "cta": "Choose Basic",
-          "note": "First 3 months free with EARLYBIRD",
-          "badge": "Popular"
+          "cta": "Start your 14-day trial",
+          "note": "Money-back guarantee in your first paid month",
+          "badge": "Most Popular"
         },
         "pro": {
           "name": "Pro",
-          "tagline": "For growing teams",
-          "cta": "Choose Pro",
+          "tagline": "For growing, multi-branch salons",
+          "cta": "Start your 14-day trial",
           "note": "Cancel anytime"
         }
       }
@@ -1086,8 +1101,8 @@
     "finalCta": {
       "eyebrow": "Ready?",
       "title": "Create your booking link today",
-      "subtitle": "Set it up in minutes, share it with your clients and watch the bookings come in on their own.",
-      "ctaStartFree": "Start free",
+      "subtitle": "Start with a 14-day free trial — no card required. Set it up in minutes, share it with your clients and watch the bookings come in on their own.",
+      "ctaStartFree": "Start your 14-day trial",
       "ctaViewDemo": "See the demo first"
     }
   },
@@ -1110,12 +1125,12 @@
         "a": "Two confirmed appointments for the same staff member can never overlap — this is enforced at the database level. Even if two people pick the same time at once, only one goes through."
       },
       {
-        "q": "Can I use it for free?",
-        "a": "Yes. The free plan includes 2 staff and up to 50 bookings per month. With the invite code (EARLYBIRD) the Basic plan is completely free for 3 months."
+        "q": "How do I get started — is there a free trial?",
+        "a": "Yes. You start with a 14-day free trial — no card required. When it ends you pick the plan that fits you (Start, Salon or Pro) and continue. If you're not happy during your first paid month, we'll refund you."
       },
       {
         "q": "How is payment handled?",
-        "a": "Payments are currently manual — you pick your plan, we activate it. Automatic online payments and deposits (no-show protection) are in the works for Pro."
+        "a": "A fixed monthly subscription — with no commissions on bookings. Annual billing is also available. Payments are currently manual: you pick your plan, we activate it. Automatic online payments and deposits (no-show protection) are in the works for Pro."
       }
     ]
   }

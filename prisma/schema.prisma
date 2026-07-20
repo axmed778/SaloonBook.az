@@ -437,7 +437,7 @@ model UsageCounter {
 model Invite {
   id          String    @id @default(uuid())
   code        String    @unique
-  grantsTrial Boolean   @default(true) // redeem => 3-month Basic trial
+  grantsTrial Boolean   @default(true) // redeem => extended paid-tier trial
   maxUses     Int       @default(1)
   usedCount   Int       @default(0)
   redeemedBy  String[]  @default([]) // account ids

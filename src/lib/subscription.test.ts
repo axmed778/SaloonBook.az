@@ -72,8 +72,8 @@ describe("effectivePlan", () => {
 describe("effectiveLimits", () => {
   it("maps the effective plan to its limits (expired trial gets FREE caps)", () => {
     const expired = sub({ trialEndsAt: new Date(NOW.getTime() - DAY) });
-    expect(effectiveLimits(expired, NOW).maxBookingsPerMonth).toBe(50);
-    expect(effectiveLimits(expired, NOW).maxEmployees).toBe(2);
+    expect(effectiveLimits(expired, NOW).maxBookingsPerMonth).toBe(30);
+    expect(effectiveLimits(expired, NOW).maxEmployees).toBe(1);
 
     const active = sub({ status: "ACTIVE", plan: "PRO" });
     expect(effectiveLimits(active, NOW).maxEmployees).toBe(Infinity);
