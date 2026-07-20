@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import { TRIAL_MONTHS } from "../src/lib/plans";
+import { TRIAL_DAYS } from "../src/lib/plans";
 import { hashPassword, passwordIssues } from "../src/lib/auth/password";
-import { addMonths, bakuToday, bakuWallClockToUtc } from "../src/lib/time";
+import { addDays, bakuToday, bakuWallClockToUtc } from "../src/lib/time";
 
 const prisma = new PrismaClient();
 
@@ -79,7 +79,7 @@ async function seedAuthAccounts() {
     return;
   }
 
-  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
+  const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
 
   const account = await prisma.account.create({
     data: {
@@ -167,7 +167,7 @@ async function main() {
     return;
   }
 
-  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
+  const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
 
   const account = await prisma.account.create({
     data: {
@@ -219,13 +219,7 @@ async function main() {
   );
   await prisma.workingHour.createMany({ data: hours });
 
-  // An invite code granting the 3-month Basic trial (max 50 uses).
-  await prisma.invite.create({
-    data: { code: "EARLYBIRD", grantsTrial: true, maxUses: 50, createdBy: "seed" },
-  });
-
   console.log(`seed: created account ${account.id}, salon /${salon.slug}, 2 employees, 2 services.`);
-  console.log("seed: invite code EARLYBIRD (50 uses).");
 }
 
 main()

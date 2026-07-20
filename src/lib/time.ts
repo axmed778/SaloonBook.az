@@ -101,6 +101,11 @@ export function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+/** Add whole days to an instant. Simple UTC-ms arithmetic — no DST in Baku. */
+export function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 86_400_000);
+}
+
 export function minutesToHHMM(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

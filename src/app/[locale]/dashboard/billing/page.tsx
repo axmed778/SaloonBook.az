@@ -2,7 +2,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
-import { PLAN_LIMITS } from "@/lib/plans";
+import { MARKETING_PLANS, type MarketingPlanKey } from "@/lib/plans";
 import { intlLocale } from "@/i18n/format";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
@@ -26,7 +26,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 type PlanCard = {
-  key: "basic" | "pro";
+  key: MarketingPlanKey;
   name: string;
   tagline: string;
   priceMinor: number;
@@ -53,23 +53,14 @@ export default async function BillingPage() {
     );
   }
 
-  const PLANS: PlanCard[] = [
-    {
-      key: "basic",
-      name: t("plans.basic.name"),
-      tagline: t("plans.basic.tagline"),
-      priceMinor: PLAN_LIMITS.BASIC.priceMinor,
-      features: t.raw("plans.basic.features") as string[],
-    },
-    {
-      key: "pro",
-      name: t("plans.pro.name"),
-      tagline: t("plans.pro.tagline"),
-      priceMinor: PLAN_LIMITS.PRO.priceMinor,
-      highlighted: true,
-      features: t.raw("plans.pro.features") as string[],
-    },
-  ];
+  const PLANS: PlanCard[] = MARKETING_PLANS.map((p) => ({
+    key: p.key,
+    name: t(`plans.${p.key}.name`),
+    tagline: t(`plans.${p.key}.tagline`),
+    priceMinor: p.monthlyMinor,
+    highlighted: p.highlight,
+    features: t.raw(`plans.${p.key}.features`) as string[],
+  }));
 
   const salon = await prisma.salon.findUnique({
     where: { id: session.salonId },
@@ -88,7 +79,15 @@ export default async function BillingPage() {
       Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000),
     );
   }
-  const planLabel = sub?.plan === "PRO" ? t("plans.pro.name") : t("plans.basic.name");
+  // Internal enum → marketed tier name. BASIC is the standard paid/trial tier,
+  // shown to owners as "Salon"; FREE is the internal floor (only reached when a
+  // plan lapses, so it never surfaces as an ACTIVE label).
+  const planLabel =
+    sub?.plan === "PRO"
+      ? t("plans.pro.name")
+      : sub?.plan === "BASIC"
+        ? t("plans.salon.name")
+        : t("plans.start.name");
   const periodEndLabel = sub?.currentPeriodEnd
     ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;
@@ -122,7 +121,7 @@ export default async function BillingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <div>
         <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-faint-foreground">
@@ -136,7 +135,7 @@ export default async function BillingPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.map((p) => (
           <div
             key={p.key}

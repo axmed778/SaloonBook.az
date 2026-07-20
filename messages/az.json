@@ -447,18 +447,30 @@
       "trial": "Pulsuz sınaq: {days} gün qalıb",
       "trialEnded": "Sınaq müddəti bitib — planı aktivləşdirin.",
       "pastDue": "Ödəniş gözlənilir — planı aktivləşdirin.",
-      "freeDowngraded": "Sınaq müddəti bitib — hesab pulsuz plana keçirilib. Planı aktivləşdirin."
+      "freeDowngraded": "Sınaq müddəti bitib — hesab məhdud rejimə keçirilib. Planı aktivləşdirin."
     },
     "plans": {
-      "basic": {
-        "name": "Basic",
+      "start": {
+        "name": "Start",
         "tagline": "Kiçik salonlar üçün",
         "features": [
           "Onlayn qeydiyyat linki",
           "Təqvim və görüş idarəetməsi",
-          "10 işçiyə qədər",
+          "2 işçiyə qədər · 1 filial",
           "Limitsiz görüş",
-          "WhatsApp bildirişləri",
+          "150 WhatsApp xatırlatması/ay",
+          "ROI analitika paneli"
+        ]
+      },
+      "salon": {
+        "name": "Salon",
+        "tagline": "Aktiv salonlar üçün",
+        "features": [
+          "Onlayn qeydiyyat linki",
+          "8 işçiyə qədər · 1 filial",
+          "Limitsiz görüş",
+          "600 WhatsApp xatırlatması/ay",
+          "İkiqat rezervasiya qoruması",
           "ROI analitika paneli"
         ]
       },
@@ -466,10 +478,11 @@
         "name": "Pro",
         "tagline": "Böyüyən və çoxfiliallı salonlar üçün",
         "features": [
-          "Basic-dəki hər şey",
+          "Salon-dakı hər şey",
           "Limitsiz işçi",
-          "Əməkhaqqı modulu (maaş + komissiya)",
           "3 filiala qədər (əlavə filial — 15 ₼)",
+          "1500 WhatsApp xatırlatması/ay",
+          "Əməkhaqqı modulu (maaş + komissiya)",
           "Məlumat eksportu (CSV / Excel)",
           "İşçi rolları və icazələr (tezliklə)"
         ]
@@ -515,7 +528,7 @@
       "TRIALING": "Sınaq",
       "PAST_DUE": "Ödəniş gözlənilir",
       "CANCELLED": "Ləğv edilib",
-      "FREE_DOWNGRADED": "Pulsuza düşüb"
+      "FREE_DOWNGRADED": "Məhdud rejim"
     },
     "errors": {
       "unauthorized": "İcazə yoxdur.",
@@ -974,16 +987,16 @@
     }
   },
   "Landing": {
-    "badgeNew": "Yeni",
-    "badgePromo": "EARLYBIRD ilə 3 ay pulsuz",
+    "badgeNew": "14 gün",
+    "badgePromo": "Pulsuz sınaq — kart tələb olunmur",
     "heroTitle": "Müştərilər özləri qeydiyyatdan keçsin — 24/7.",
-    "heroSubtitle": "Instagram və WhatsApp-da qeydiyyat mesajlarına cavab verməyi dayandırın. Salonunuz üçün şəxsi link yaradın, paylaşın — qalanını biz edirik.",
-    "ctaStartFree": "Pulsuz başla",
+    "heroSubtitle": "Salonunuz üçün peşəkar qeydiyyat və idarəetmə platforması. Müştərilər 24/7 özləri yer ayırır, WhatsApp xatırlatmaları avtomatik gedir — rezervasiyalardan heç bir komissiya yoxdur.",
+    "ctaStartFree": "14 günlük sınağa başla",
     "ctaViewDemo": "Nümunə səhifəyə bax",
     "heroChecks": {
+      "trial": "14 günlük pulsuz sınaq",
       "noCard": "Kart tələb olunmur",
-      "quickSetup": "Dəqiqələrə quraşdır",
-      "cancelAnytime": "İstənilən vaxt ləğv et"
+      "moneyBack": "Pul geri qaytarılma zəmanəti"
     },
     "heroImageAlt": "SalonBook.az onlayn qeydiyyat səhifəsi — xidmət, usta və boş vaxt seçimi",
     "features": {
@@ -1039,16 +1052,18 @@
     "pricing": {
       "eyebrow": "Qiymətlər",
       "title": "Sadə, şəffaf qiymət",
-      "subtitle": "Pulsuz başla, böyüdükcə yüksəl. Gizli ödəniş yoxdur.",
+      "subtitle": "14 günlük pulsuz sınaqla başlayın. Sabit aylıq abunə — gizli ödəniş və komissiya yoxdur.",
       "perMonth": "/ay",
       "unlimited": "Limitsiz",
-      "footnote": "Bütün qiymətlər AZN-dədir. Ödənişlər hazırda manual aktivləşdirilir.",
+      "annual": "və ya illik {price} ₼",
+      "footnote": "İlk ödənişli ay ərzində pul geri qaytarılma zəmanəti. Bütün qiymətlər AZN-dədir; ödənişlər hazırda əl ilə aktivləşdirilir.",
       "rows": {
         "employees": "İşçi",
         "monthlyBookings": "Aylıq rezervasiya",
         "branches": "Filial",
         "onlineBooking": "24/7 onlayn qeydiyyat",
         "whatsappReminders": "WhatsApp xatırlatmaları",
+        "whatsappRemindersValue": "{count} xatırlatma/ay",
         "overlapProtection": "İkiqat rezervasiya qoruması",
         "roiPanel": "ROI analitika paneli",
         "payroll": "Əməkhaqqı modulu (maaş + komissiya)",
@@ -1057,24 +1072,24 @@
         "deposits": "Depozit / no-show qoruması (tezliklə)"
       },
       "plans": {
-        "free": {
-          "name": "Pulsuz",
-          "tagline": "Başlamaq üçün",
-          "cta": "Pulsuz başla",
+        "start": {
+          "name": "Start",
+          "tagline": "Kiçik salonlar üçün",
+          "cta": "14 günlük sınağa başla",
           "note": "Kart tələb olunmur"
         },
-        "basic": {
-          "name": "Basic",
+        "salon": {
+          "name": "Salon",
           "tagline": "Aktiv salonlar üçün",
-          "cta": "Basic seç",
-          "note": "EARLYBIRD ilə ilk 3 ay pulsuz",
-          "badge": "Populyar"
+          "cta": "14 günlük sınağa başla",
+          "note": "İlk ödənişli ayda pul geri qaytarılma zəmanəti",
+          "badge": "Ən Populyar"
         },
         "pro": {
           "name": "Pro",
-          "tagline": "Böyüyən komandalar üçün",
-          "cta": "Pro seç",
-          "note": "İstənilən vaxt ləğv et"
+          "tagline": "Böyüyən və çoxfiliallı salonlar üçün",
+          "cta": "14 günlük sınağa başla",
+          "note": "İstənilən vaxt ləğv edin"
         }
       }
     },
@@ -1086,8 +1101,8 @@
     "finalCta": {
       "eyebrow": "Hazırsınız?",
       "title": "Bu gün öz qeydiyyat linkinizi yaradın",
-      "subtitle": "Dəqiqələr ərzində qurun, müştərilərinizlə paylaşın və rezervasiyaların özü-özünə gəlməsini izləyin.",
-      "ctaStartFree": "Pulsuz başla",
+      "subtitle": "14 günlük pulsuz sınaqla başlayın — kart tələb olunmur. Dəqiqələr ərzində qurun, müştərilərinizlə paylaşın və rezervasiyaların özü-özünə gəlməsini izləyin.",
+      "ctaStartFree": "14 günlük sınağa başla",
       "ctaViewDemo": "Əvvəlcə nümunəyə bax"
     }
   },
@@ -1110,12 +1125,12 @@
         "a": "Eyni usta üçün iki təsdiqlənmiş görüş heç vaxt üst-üstə düşə bilməz — bu, verilənlər bazası səviyyəsində təmin olunur. İki nəfər eyni anda eyni vaxtı seçsə belə, yalnız biri keçir."
       },
       {
-        "q": "Pulsuz istifadə edə bilərəm?",
-        "a": "Bəli. Pulsuz planla 2 işçi və ayda 50 rezervasiyaya qədər. Dəvət kodu (EARLYBIRD) ilə Basic planı 3 ay tamamilə pulsuzdur."
+        "q": "Necə başlayıram — pulsuz sınaq var?",
+        "a": "Bəli. 14 günlük pulsuz sınaqla başlayırsınız — kart tələb olunmur. Sınaq bitəndən sonra sizə uyğun planı (Start, Salon və ya Pro) seçib davam edirsiniz. Əgər ilk ödənişli ay ərzində razı qalmasanız, pulunuzu geri qaytarırıq."
       },
       {
         "q": "Ödəniş necə aparılır?",
-        "a": "Hazırda ödənişlər manualdır — planınızı seçirsiniz, biz aktivləşdiririk. Avtomatik onlayn ödəniş və depozitlər (no-show qoruması) Pro üçün hazırlanır."
+        "a": "Sabit aylıq abunə — rezervasiyalardan heç bir komissiya yoxdur. İllik ödəniş də mövcuddur. Hazırda ödənişlər əl ilə aparılır: planınızı seçirsiniz, biz aktivləşdiririk. Avtomatik onlayn ödəniş və depozitlər (no-show qoruması) Pro üçün hazırlanır."
       }
     ]
   }

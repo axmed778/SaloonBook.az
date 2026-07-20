@@ -7,8 +7,8 @@ import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
-import { TRIAL_MONTHS } from "@/lib/plans";
-import { addMonths } from "@/lib/time";
+import { TRIAL_DAYS } from "@/lib/plans";
+import { addDays } from "@/lib/time";
 import { LEGAL_VERSIONS } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
   const slug = await uniqueSlug(slugify(salonName));
   const passwordHash = hashPassword(password);
 
-  // Every self-serve signup gets the full Basic trial with a real end date —
+  // Every self-serve signup gets a no-card trial with a real end date —
   // effectivePlan() downgrades to FREE limits the moment it lapses.
-  const trialEndsAt = addMonths(new Date(), TRIAL_MONTHS);
+  const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
 
   let userId: string;
   try {
