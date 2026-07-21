@@ -22,10 +22,20 @@ import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Faq } from "@/components/faq";
+import { ProWhatsAppToggle } from "@/components/pro-whatsapp-toggle";
 import heroBookingDark from "../../../public/hero/booking-dark.png";
 import heroBookingLight from "../../../public/hero/booking-light.png";
 
-type Row = { label: string; value: boolean | string };
+type Row = { label: string; value: boolean | string; id?: string };
+
+/** Pro-only: labels/values for the embedded "own number" WhatsApp toggle. */
+type WhatsAppToggle = {
+  ourLabel: string;
+  ownLabel: string;
+  ownValue: string;
+  /** Caveat shown when "own number" is selected (Meta costs paid by the salon). */
+  ownNote: string;
+};
 
 /* ------------------------------ Primitives ------------------------------- */
 
@@ -54,6 +64,7 @@ function PricingCard({
   rows,
   perMonth,
   annualLabel,
+  whatsappToggle,
 }: {
   plan: {
     name: string;
@@ -67,6 +78,7 @@ function PricingCard({
   rows: Row[];
   perMonth: string;
   annualLabel: string;
+  whatsappToggle?: WhatsAppToggle;
 }) {
   const price = (plan.monthlyMinor / 100).toString();
 
@@ -109,6 +121,8 @@ function PricingCard({
       <ul className="mt-7 space-y-3 border-t border-border pt-6">
         {rows.map((row) => {
           const included = row.value !== false;
+          const isToggle =
+            row.id === "whatsapp" && whatsappToggle && typeof row.value === "string";
           return (
             <li
               key={row.label}
@@ -122,12 +136,23 @@ function PricingCard({
               ) : (
                 <X className="mt-0.5 h-4 w-4 shrink-0 text-border-strong" strokeWidth={2} />
               )}
-              <span>
-                {row.label}
-                {typeof row.value === "string" && (
-                  <span className="text-muted-foreground"> — {row.value}</span>
-                )}
-              </span>
+              {isToggle ? (
+                <ProWhatsAppToggle
+                  label={row.label}
+                  ourLabel={whatsappToggle.ourLabel}
+                  ownLabel={whatsappToggle.ownLabel}
+                  ourValue={row.value as string}
+                  ownValue={whatsappToggle.ownValue}
+                  ownNote={whatsappToggle.ownNote}
+                />
+              ) : (
+                <span>
+                  {row.label}
+                  {typeof row.value === "string" && (
+                    <span className="text-muted-foreground"> — {row.value}</span>
+                  )}
+                </span>
+              )}
             </li>
           );
         })}
@@ -166,6 +191,7 @@ export default async function Home() {
       { label: t("pricing.rows.monthlyBookings"), value: t("pricing.unlimited") },
       { label: t("pricing.rows.branches"), value: fmtLimit(plan.maxBranches) },
       {
+        id: "whatsapp",
         label: t("pricing.rows.whatsappReminders"),
         value: t("pricing.rows.whatsappRemindersValue", { count: plan.waRemindersPerMonth }),
       },
@@ -342,6 +368,16 @@ export default async function Home() {
                   rows={planRows(plan)}
                   perMonth={t("pricing.perMonth")}
                   annualLabel={t("pricing.annual", { price: plan.annualMinor / 100 })}
+                  whatsappToggle={
+                    plan.key === "pro"
+                      ? {
+                          ourLabel: t("pricing.rows.whatsappOwnToggleOur"),
+                          ownLabel: t("pricing.rows.whatsappOwnToggleOwn"),
+                          ownValue: t("pricing.rows.whatsappOwnValue"),
+                          ownNote: t("pricing.rows.whatsappOwnNote"),
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>
