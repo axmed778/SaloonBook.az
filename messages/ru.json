@@ -487,6 +487,18 @@
           "Роли и права сотрудников (скоро)"
         ]
       }
+    },
+    "waSender": {
+      "title": "Свой номер WhatsApp",
+      "badge": { "active": "Подключён", "pending": "На проверке", "disabled": "Отключён" },
+      "proTeaserTitle": "Функция плана Pro",
+      "proTeaserBody": "Отправляйте сообщения с собственного номера WhatsApp салона — перейдите на Pro.",
+      "connected": "Отправка с вашего номера: {name} · {phone}",
+      "noLimit": "WhatsApp: свой номер (без лимита)",
+      "pendingBody": "Ваш номер проверяется. После активации сообщения пойдут с него.",
+      "platformBody": "Сообщения отправляются с общего номера SalonBook.",
+      "requestMessage": "Здравствуйте! {salon} — хотим отправлять сообщения WhatsApp со своего номера.",
+      "requestCta": "Подключить свой номер"
     }
   },
   "Admin": {
@@ -520,6 +532,27 @@
     "branchesNote": "Каждый доп. филиал — {price} ₼. Уменьшение не создаёт платёж.",
     "extrasLabel": "Доп. слоты (всего)",
     "errExtrasRange": "Доп. слоты должны быть от 0 до 50.",
+    "waSender": {
+      "button": "WhatsApp",
+      "buttonTitle": "Свой номер WhatsApp салона",
+      "title": "Номер WhatsApp — {name}",
+      "status": {
+        "PLATFORM_DEFAULT": "Общий номер",
+        "PENDING": "На проверке",
+        "ACTIVE": "Активен (свой номер)",
+        "DISABLED": "Отключён"
+      },
+      "notProWarning": "Салон не на плане Pro — номер заработает только при активном Pro.",
+      "phoneNumberId": "Phone number ID",
+      "accessToken": "Access token",
+      "tokenSetPlaceholder": "Введите новый токен, чтобы заменить",
+      "wabaId": "WABA ID",
+      "optional": "необязательно",
+      "validateNote": "При сохранении данные проверяются в Meta; при успехе номер активируется.",
+      "save": "Сохранить и проверить",
+      "disable": "Отключить (вернуть общий номер)",
+      "errRequired": "Нужны Phone number ID и токен."
+    },
     "paymentLabel": "{amount} ₼ · {months} мес. · {date}",
     "errMonthsRange": "Месяцев должно быть от 1 до 24.",
     "errAmountInvalid": "Некорректная сумма.",
@@ -533,7 +566,11 @@
     "errors": {
       "unauthorized": "Нет доступа.",
       "invalidData": "Некорректные данные.",
-      "subNotFound": "Подписка не найдена."
+      "subNotFound": "Подписка не найдена.",
+      "encKeyMissing": "Не задан ключ шифрования (WHATSAPP_ENCRYPTION_KEY).",
+      "salonNotFound": "Салон не найден.",
+      "senderPending": "Данные сохранены, но проверка Meta не прошла — номер в ожидании.",
+      "senderNotFound": "Номер WhatsApp не найден."
     }
   },
   "Payroll": {

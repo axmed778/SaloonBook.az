@@ -6,6 +6,7 @@ import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
+import { maskPhone } from "@/lib/whatsapp-sender";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,18 @@ export default async function AdminPage() {
             },
           },
         },
-        salons: { select: { id: true, name: true, slug: true }, take: 1 },
+        salons: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            // Own-number sender status (never select the encrypted token here).
+            whatsAppSender: {
+              select: { status: true, verifiedName: true, displayPhone: true },
+            },
+          },
+          take: 1,
+        },
         _count: {
           select: { salons: { where: { status: { not: "DELETED" } } } },
         },
@@ -70,8 +82,14 @@ export default async function AdminPage() {
     return {
       accountId: a.id,
       accountName: a.name,
+      salonId: salon?.id ?? null,
       salonName: salon?.name ?? "—",
       slug: salon?.slug ?? null,
+      // Own-number sender (Pro): status + safe-to-show display fields only.
+      senderStatus: salon?.whatsAppSender?.status ?? null,
+      senderVerifiedName: salon?.whatsAppSender?.verifiedName ?? null,
+      senderPhoneMasked: maskPhone(salon?.whatsAppSender?.displayPhone),
+      ownNumberEligible: featuresFor(effective).ownWhatsappNumber,
       ownerEmail: a.memberships[0]?.user.email ?? "—",
       createdLabel: formatBakuDate(bakuYmd(a.createdAt), df),
       plan: sub?.plan ?? "FREE",

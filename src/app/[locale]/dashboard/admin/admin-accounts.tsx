@@ -4,11 +4,17 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
-import { activateSubscription, setExtraBranches } from "./actions";
+import {
+  activateSubscription,
+  setExtraBranches,
+  setWhatsAppSender,
+  disableWhatsAppSender,
+} from "./actions";
 
 export type AccountRow = {
   accountId: string;
   accountName: string;
+  salonId: string | null;
   salonName: string;
   slug: string | null;
   ownerEmail: string;
@@ -25,6 +31,12 @@ export type AccountRow = {
   branchCount: number;
   /** Effective total branch limit (plan base + extras). */
   branchLimit: number;
+  /** Own-number WhatsApp sender: PLATFORM_DEFAULT | PENDING | ACTIVE | DISABLED, or null. */
+  senderStatus: string | null;
+  senderVerifiedName: string | null;
+  senderPhoneMasked: string | null;
+  /** Whether the effective plan (Pro) entitles this salon to its own number. */
+  ownNumberEligible: boolean;
   payments: { id: string; label: string }[];
 };
 
@@ -40,6 +52,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const t = useTranslations("Admin");
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
   const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
+  const [senderFor, setSenderFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -80,6 +93,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                   }
                   onActivate={() => setActivateFor(r)}
                   onBranches={() => setBranchesFor(r)}
+                  onSender={() => setSenderFor(r)}
                 />
               ))}
             </tbody>
@@ -93,6 +107,9 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
       {branchesFor && (
         <ExtraBranchesModal row={branchesFor} onClose={() => setBranchesFor(null)} />
       )}
+      {senderFor && (
+        <WhatsAppSenderModal row={senderFor} onClose={() => setSenderFor(null)} />
+      )}
     </div>
   );
 }
@@ -103,12 +120,14 @@ function RowGroup({
   onToggle,
   onActivate,
   onBranches,
+  onSender,
 }: {
   row: AccountRow;
   expanded: boolean;
   onToggle: () => void;
   onActivate: () => void;
   onBranches: () => void;
+  onSender: () => void;
 }) {
   const t = useTranslations("Admin");
   return (
@@ -167,6 +186,21 @@ function RowGroup({
             >
               {t("branchesBtn", { count: r.branchCount, limit: r.branchLimit })}
             </button>
+            {r.salonId && (
+              <button
+                onClick={onSender}
+                title={t("waSender.buttonTitle")}
+                className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
+              >
+                {t("waSender.button")}
+                {r.senderStatus === "ACTIVE" && (
+                  <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle" />
+                )}
+                {r.senderStatus === "PENDING" && (
+                  <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-500 align-middle" />
+                )}
+              </button>
+            )}
             <button
               onClick={onActivate}
               className="rounded-lg bg-rose-500 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-rose-400"
@@ -414,6 +448,174 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
             >
               {pending ? tc("pleaseWait") : t("confirm")}
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Set / activate a salon's OWN WhatsApp number (Pro feature). Saving validates
+// the credentials against Meta server-side; ACTIVE means this salon now sends
+// from its own number. The access token is write-only here — it's encrypted on
+// the server and never sent back to the client.
+function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () => void }) {
+  const t = useTranslations("Admin");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [wabaId, setWabaId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const statusKey = row.senderStatus ?? "PLATFORM_DEFAULT";
+  const isActive = statusKey === "ACTIVE";
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!row.salonId) return;
+    if (phoneNumberId.trim() === "" || accessToken.trim() === "") {
+      return setError(t("waSender.errRequired"));
+    }
+    startTransition(async () => {
+      const res = await setWhatsAppSender({
+        salonId: row.salonId,
+        phoneNumberId: phoneNumberId.trim(),
+        accessToken: accessToken.trim(),
+        wabaId: wabaId.trim() || null,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  function disable() {
+    setError(null);
+    if (!row.salonId) return;
+    startTransition(async () => {
+      const res = await disableWhatsAppSender({ salonId: row.salonId });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  const inputCls =
+    "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+
+  const statusChip: Record<string, string> = {
+    ACTIVE: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    PENDING: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    DISABLED: "bg-secondary text-faint-foreground",
+    PLATFORM_DEFAULT: "bg-secondary text-faint-foreground",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-semibold text-foreground">
+          {t("waSender.title", { name: r_name(row) })}
+        </h2>
+        <div className="mt-2 flex items-center gap-2">
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusChip[statusKey] ?? statusChip.PLATFORM_DEFAULT}`}
+          >
+            {t(`waSender.status.${statusKey}`)}
+          </span>
+          {isActive && row.senderVerifiedName && (
+            <span className="text-xs text-secondary-foreground">
+              {row.senderVerifiedName}
+              {row.senderPhoneMasked ? ` · ${row.senderPhoneMasked}` : ""}
+            </span>
+          )}
+        </div>
+
+        {!row.ownNumberEligible && (
+          <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+            {t("waSender.notProWarning")}
+          </p>
+        )}
+
+        <form onSubmit={submit} className="mt-4 space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t("waSender.phoneNumberId")}
+            </label>
+            <input
+              className={inputCls + " w-full"}
+              value={phoneNumberId}
+              onChange={(e) => setPhoneNumberId(e.target.value)}
+              placeholder="1234567890"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t("waSender.accessToken")}
+            </label>
+            <input
+              type="password"
+              autoComplete="off"
+              className={inputCls + " w-full"}
+              value={accessToken}
+              onChange={(e) => setAccessToken(e.target.value)}
+              placeholder={isActive ? t("waSender.tokenSetPlaceholder") : "EAAG..."}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t("waSender.wabaId")}
+            </label>
+            <input
+              className={inputCls + " w-full"}
+              value={wabaId}
+              onChange={(e) => setWabaId(e.target.value)}
+              placeholder={t("waSender.optional")}
+            />
+          </div>
+          <p className="text-xs text-faint-foreground">{t("waSender.validateNote")}</p>
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={disable}
+                  disabled={pending}
+                  className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm text-rose-700 transition hover:bg-rose-500/5 disabled:opacity-60 dark:text-rose-400"
+                >
+                  {t("waSender.disable")}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
+              >
+                {tc("cancel")}
+              </button>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              >
+                {pending ? tc("pleaseWait") : t("waSender.save")}
+              </button>
+            </div>
           </div>
         </form>
       </div>

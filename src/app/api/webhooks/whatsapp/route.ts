@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import type { NotifStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { salonForPhoneNumberId } from "@/lib/whatsapp-sender";
 
 export const dynamic = "force-dynamic";
 
@@ -64,26 +65,58 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = JSON.parse(rawBody);
-    const statuses =
+
+    // Iterate changes (not a flat status list) so we keep each change's
+    // metadata.phone_number_id — the number the callback is FOR. With per-salon
+    // own numbers, this lets us scope the update to the owning salon; the wamid
+    // (providerMsgId) is globally unique on its own, so this is a tightening, not
+    // a correctness dependency (platform-number sends resolve to no salon and
+    // match by wamid alone, exactly as before).
+    const changes =
       body?.entry?.flatMap(
-        (e: { changes?: Array<{ value?: { statuses?: unknown[] } }> }) =>
-          e.changes?.flatMap((c) => c.value?.statuses ?? []) ?? [],
+        (e: { changes?: unknown[] }) => e.changes ?? [],
       ) ?? [];
 
-    for (const s of statuses as Array<{ id?: string; status?: string }>) {
-      if (!s.id || !s.status) continue;
-      const target = STATUS_MAP[s.status];
-      if (!target) continue;
+    for (const c of changes as Array<{
+      value?: { statuses?: unknown[]; metadata?: { phone_number_id?: string } };
+    }>) {
+      const statuses = c.value?.statuses ?? [];
+      if (statuses.length === 0) continue;
 
-      // Monotonic guard: Meta callbacks can arrive out of order (a late
-      // "delivered" after "read"). Only advance forward in the lifecycle
-      // QUEUED -> SENT -> DELIVERED -> READ, and never let a late "failed"
-      // undo a message already delivered/read. The status filter makes this
-      // atomic — a stale callback simply matches zero rows.
-      await prisma.notification.updateMany({
-        where: { providerMsgId: s.id, status: { in: target.from } },
-        data: { status: target.to },
-      });
+      const phoneNumberId = c.value?.metadata?.phone_number_id;
+      const salonId = phoneNumberId ? await salonForPhoneNumberId(phoneNumberId) : null;
+
+      for (const s of statuses as Array<{ id?: string; status?: string }>) {
+        if (!s.id || !s.status) continue;
+        const target = STATUS_MAP[s.status];
+        if (!target) continue;
+
+        // Monotonic guard: Meta callbacks can arrive out of order (a late
+        // "delivered" after "read"). Only advance forward in the lifecycle
+        // QUEUED -> SENT -> DELIVERED -> READ, and never let a late "failed"
+        // undo a message already delivered/read. The status filter makes this
+        // atomic — a stale callback simply matches zero rows. When the number
+        // maps to a salon we also scope by salonId (defense in depth).
+        const res = await prisma.notification.updateMany({
+          where: {
+            providerMsgId: s.id,
+            status: { in: target.from },
+            ...(salonId ? { salonId } : {}),
+          },
+          data: { status: target.to },
+        });
+
+        // If the salon scope matched nothing, the wamid still uniquely
+        // identifies the row — fall back to wamid-only so a number that was
+        // reassigned across salons between send and callback can't strand a
+        // legitimate status update. (No-op when nothing genuinely matches.)
+        if (salonId && res.count === 0) {
+          await prisma.notification.updateMany({
+            where: { providerMsgId: s.id, status: { in: target.from } },
+            data: { status: target.to },
+          });
+        }
+      }
     }
   } catch (e) {
     console.error("[whatsapp:webhook] error", e);

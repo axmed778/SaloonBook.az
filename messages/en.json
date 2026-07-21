@@ -487,6 +487,18 @@
           "Staff roles and permissions (coming soon)"
         ]
       }
+    },
+    "waSender": {
+      "title": "Your own WhatsApp number",
+      "badge": { "active": "Connected", "pending": "In review", "disabled": "Disabled" },
+      "proTeaserTitle": "Pro plan feature",
+      "proTeaserBody": "Send messages from the salon's own WhatsApp number — upgrade to Pro.",
+      "connected": "Sending from your number: {name} · {phone}",
+      "noLimit": "WhatsApp: your own number (no limit)",
+      "pendingBody": "Your number is being verified. Once active, messages will go out from it.",
+      "platformBody": "Messages are sent from SalonBook's shared number.",
+      "requestMessage": "Hi! {salon} — we'd like to send WhatsApp messages from our own number.",
+      "requestCta": "Connect your number"
     }
   },
   "Admin": {
@@ -520,6 +532,27 @@
     "branchesNote": "Each extra branch — {price} ₼. Lowering records no payment.",
     "extrasLabel": "Extra slots (total)",
     "errExtrasRange": "Extra slots must be 0–50.",
+    "waSender": {
+      "button": "WhatsApp",
+      "buttonTitle": "Salon's own WhatsApp number",
+      "title": "WhatsApp number — {name}",
+      "status": {
+        "PLATFORM_DEFAULT": "Shared number",
+        "PENDING": "In review",
+        "ACTIVE": "Active (own number)",
+        "DISABLED": "Disabled"
+      },
+      "notProWarning": "This salon is not on Pro — the number only takes effect while Pro is active.",
+      "phoneNumberId": "Phone number ID",
+      "accessToken": "Access token",
+      "tokenSetPlaceholder": "Enter a new token to change it",
+      "wabaId": "WABA ID",
+      "optional": "optional",
+      "validateNote": "On save the credentials are validated against Meta; on success the number is activated.",
+      "save": "Save & validate",
+      "disable": "Disable (revert to shared number)",
+      "errRequired": "Phone number ID and token are required."
+    },
     "paymentLabel": "{amount} ₼ · {months} mo · {date}",
     "errMonthsRange": "Months must be between 1 and 24.",
     "errAmountInvalid": "The amount is invalid.",
@@ -533,7 +566,11 @@
     "errors": {
       "unauthorized": "Not allowed.",
       "invalidData": "Invalid data.",
-      "subNotFound": "Subscription not found."
+      "subNotFound": "Subscription not found.",
+      "encKeyMissing": "Encryption key is not set (WHATSAPP_ENCRYPTION_KEY).",
+      "salonNotFound": "Salon not found.",
+      "senderPending": "Credentials saved, but Meta validation failed — the number is pending.",
+      "senderNotFound": "WhatsApp number not found."
     }
   },
   "Payroll": {

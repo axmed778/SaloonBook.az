@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
+import { resolveWhatsAppSender } from "../../src/lib/whatsapp-sender";
 import { formatBakuDateTime } from "../../src/lib/time";
 import type { NotificationJob } from "../../src/lib/queue";
 
@@ -108,10 +109,16 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   }
 
   try {
+    // Resolve which number this salon sends from: its own (PRO + ACTIVE own-number
+    // sender) or the shared platform number. Never throws — falls back to platform.
+    const sender = await resolveWhatsAppSender(n.salonId);
+
     const res = await sendWhatsAppTemplate({
       toPhone: n.toPhone,
       template: n.template,
       languageCode: "az",
+      token: sender.token,
+      phoneNumberId: sender.phoneNumberId,
       components: buildComponents(
         n.template,
         n.payload,
@@ -126,6 +133,10 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
       data: {
         status: "SENT",
         providerMsgId: res.providerMsgId ?? null,
+        // Stamp the sending number so inbound status webhooks can be scoped to
+        // the owning salon (null in sandbox/platform-unset — the wamid still
+        // uniquely identifies the row).
+        phoneNumberId: sender.phoneNumberId ?? null,
         attempts: { increment: 1 },
         lastError: null,
       },

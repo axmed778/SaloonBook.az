@@ -37,6 +37,10 @@ DECLARE
   t text;
   -- Every table carrying tenant data. Salon is keyed by its own id; the rest by
   -- salonId. Keep in sync with the schema when a new salon-scoped table is added.
+  -- Deliberately EXCLUDED: WhatsAppSender — it is admin/worker-managed, accessed
+  -- outside withTenantScope (worker send path, admin panel, owner billing page),
+  -- and holds an encrypted secret; scoping it to app.current_salon would break
+  -- those paths. Its own-number token is protected by encryption, not RLS.
   tenant_tables text[] := ARRAY[
     'Salon', 'Employee', 'Service', 'Customer', 'Appointment',
     'Notification', 'Payout', 'CustomerNote', 'UsageCounter'

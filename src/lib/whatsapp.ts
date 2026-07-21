@@ -30,6 +30,12 @@ export interface SendTemplateInput {
   languageCode?: string; // "az" | "ru"
   // Template variable components; shape per Meta's API.
   components?: unknown;
+  // Sender credentials. When provided (e.g. a PRO salon's own number, resolved
+  // by src/lib/whatsapp-sender.ts) they override the platform env defaults. When
+  // omitted we fall back to WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID, and when
+  // neither resolves we run in sandbox (log-only) mode — unchanged behavior.
+  token?: string;
+  phoneNumberId?: string;
 }
 
 export interface SendResult {
@@ -38,8 +44,8 @@ export interface SendResult {
 }
 
 export async function sendWhatsAppTemplate(input: SendTemplateInput): Promise<SendResult> {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = input.token ?? process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = input.phoneNumberId ?? process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   if (!token || !phoneNumberId) {
     console.log(
@@ -77,4 +83,38 @@ export async function sendWhatsAppTemplate(input: SendTemplateInput): Promise<Se
 
   const data = (await res.json()) as { messages?: Array<{ id?: string }> };
   return { sandbox: false, providerMsgId: data.messages?.[0]?.id };
+}
+
+export interface WhatsAppNumberInfo {
+  verifiedName?: string;
+  displayPhone?: string;
+}
+
+/**
+ * Fetch a WhatsApp phone number's public info from Meta, used to VALIDATE a
+ * salon's own-number credentials before activating them: a successful call
+ * proves the token can act on that phone_number_id. Throws on any non-2xx so the
+ * admin action can keep the sender PENDING and surface the error.
+ */
+export async function fetchWhatsAppNumberInfo(
+  token: string,
+  phoneNumberId: string,
+): Promise<WhatsAppNumberInfo> {
+  const res = await fetch(
+    `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}` +
+      `?fields=verified_name,display_phone_number`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`WhatsApp number validation failed (${res.status}): ${body}`);
+  }
+  const data = (await res.json()) as {
+    verified_name?: string;
+    display_phone_number?: string;
+  };
+  return {
+    verifiedName: data.verified_name,
+    displayPhone: data.display_phone_number,
+  };
 }
