@@ -39,6 +39,13 @@ export interface PlanFeatures {
   deposits: boolean;
   /** Employee salary/commission payroll (/dashboard/payroll). Pro only. */
   payroll: boolean;
+  /**
+   * Send WhatsApp messages from the salon's OWN Meta number instead of the
+   * shared platform number (see src/lib/whatsapp-sender.ts). Pro only. This flag
+   * is the source of truth: even if credentials are filled in and ACTIVE, a
+   * non-Pro plan always falls back to the platform number.
+   */
+  ownWhatsappNumber: boolean;
 }
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
@@ -49,6 +56,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     exports: false,
     deposits: false,
     payroll: false,
+    ownWhatsappNumber: false,
   },
   BASIC: {
     multiBranch: false,
@@ -57,6 +65,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     exports: false,
     deposits: false,
     payroll: false,
+    ownWhatsappNumber: false,
   },
   PRO: {
     multiBranch: true,
@@ -65,6 +74,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     exports: true,
     deposits: true,
     payroll: true,
+    ownWhatsappNumber: true,
   },
 };
 

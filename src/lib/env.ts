@@ -52,6 +52,19 @@ export function assertEnv(): void {
       "WHATSAPP_TOKEN is unset — notification sender will run in sandbox (log-only) mode.",
     ],
   ];
+
+  // WHATSAPP_ENCRYPTION_KEY encrypts per-salon "own number" access tokens at rest
+  // (src/lib/crypto.ts). Only needed once a salon is switched to its own number;
+  // until then it's harmless to omit — warn-only, and the admin activation action
+  // refuses cleanly if it's missing. Not a security hole when unset (no secret to
+  // protect yet), so it never blocks boot.
+  if (whatsAppLive) {
+    warnings.push([
+      process.env.WHATSAPP_ENCRYPTION_KEY,
+      "WHATSAPP_ENCRYPTION_KEY is unset — per-salon 'own number' WhatsApp senders " +
+        "cannot be activated (token encryption unavailable). Harmless until you use the feature.",
+    ]);
+  }
   if (!whatsAppLive) {
     warnings.push([
       process.env.WHATSAPP_APP_SECRET,

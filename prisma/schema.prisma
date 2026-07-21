@@ -124,6 +124,7 @@ model Salon {
   memberships  Membership[]
   payouts      Payout[]
   customerNotes CustomerNote[]
+  whatsAppSender WhatsAppSender?
   createdAt    DateTime      @default(now())
 
   @@index([accountId])
@@ -348,6 +349,11 @@ model Notification {
   toPhone       String
   status        NotifStatus  @default(QUEUED)
   providerMsgId String? // WhatsApp wamid
+  // The Meta phone_number_id this message was actually sent from, stamped at
+  // send time by the worker (null for sandbox/unsent). Lets inbound status
+  // webhooks be scoped to the owning salon when salons use their own numbers
+  // (see WhatsAppSender); the wamid still uniquely identifies the row.
+  phoneNumberId String?
   payload       Json
   sendAfter     DateTime     @default(now()) @db.Timestamptz(6)
   attempts      Int          @default(0)
@@ -366,6 +372,46 @@ enum NotifStatus {
   READ
   FAILED
   CANCELLED // appointment was cancelled/no-showed before the send fired
+}
+
+// ---------------------------------------------------------------------------
+// Per-salon WhatsApp sender (PRO "own number" feature)
+// ---------------------------------------------------------------------------
+// By default every salon sends via the shared platform number (env
+// WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID) and has NO row here (or a row with
+// status PLATFORM_DEFAULT). A PRO salon can be switched to its own Meta number:
+// a platform admin fills in the credentials, we validate them against Meta and
+// flip status to ACTIVE. From then on resolveWhatsAppSender() (src/lib/
+// whatsapp-sender.ts) sends this salon's messages from ITS number. The access
+// token is stored ENCRYPTED (AES-256-GCM, see src/lib/crypto.ts) — never plain.
+//
+// 1:1 with Salon (PK = salonId). Deliberately NOT in the tenant RLS list: it is
+// admin/worker-managed, accessed outside withTenantScope, and holds a secret the
+// salon owner must never read.
+model WhatsAppSender {
+  salonId        String               @id
+  status         WhatsAppSenderStatus @default(PLATFORM_DEFAULT)
+  // Meta Cloud API credentials for this salon's own number.
+  phoneNumberId  String? // Meta phone_number_id (also the webhook routing key)
+  wabaId         String? // WhatsApp Business Account id
+  accessTokenEnc String? // AES-256-GCM ciphertext of the access token — NEVER plaintext
+  // Denormalized display fields fetched from Meta at activation (safe to surface
+  // to the owner; the token/ids are not).
+  displayPhone   String? // e.g. "+994 50 123 45 67"
+  verifiedName   String? // Meta-verified business display name
+  lastError      String? // last activation/validation failure, for the admin UI
+  salon          Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([phoneNumberId])
+}
+
+enum WhatsAppSenderStatus {
+  PLATFORM_DEFAULT // sends via the shared platform number (the default)
+  PENDING // credentials stored but not yet validated / awaiting Meta
+  ACTIVE // validated — this salon sends from its own number
+  DISABLED // manually turned off; reverts to the platform number
 }
 
 // ---------------------------------------------------------------------------

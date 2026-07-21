@@ -2,7 +2,9 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
-import { MARKETING_PLANS, type MarketingPlanKey } from "@/lib/plans";
+import { MARKETING_PLANS, type MarketingPlanKey, featuresFor } from "@/lib/plans";
+import { effectivePlan } from "@/lib/subscription";
+import { maskPhone } from "@/lib/whatsapp-sender";
 import { intlLocale } from "@/i18n/format";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 
@@ -64,10 +66,21 @@ export default async function BillingPage() {
 
   const salon = await prisma.salon.findUnique({
     where: { id: session.salonId },
-    select: { name: true, account: { select: { subscription: true } } },
+    select: {
+      name: true,
+      account: { select: { subscription: true } },
+      // Own-number sender status — never select the encrypted token/ids here.
+      whatsAppSender: { select: { status: true, verifiedName: true, displayPhone: true } },
+    },
   });
   const salonName = salon?.name ?? t("defaultSalonName");
   const sub = salon?.account?.subscription ?? null;
+
+  // Own WhatsApp number (Pro). Plan is the source of truth for eligibility.
+  const ownNumberEligible = featuresFor(effectivePlan(sub)).ownWhatsappNumber;
+  const senderStatus = salon?.whatsAppSender?.status ?? "PLATFORM_DEFAULT";
+  const senderVerifiedName = salon?.whatsAppSender?.verifiedName ?? null;
+  const senderPhoneMasked = maskPhone(salon?.whatsAppSender?.displayPhone);
 
   // Trial days-left, Baku-safe (same rule as the analytics nudge).
   let daysLeft: number | null = null;
@@ -189,6 +202,61 @@ export default async function BillingPage() {
           </div>
         ))}
       </div>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-foreground">{t("waSender.title")}</h2>
+          {ownNumberEligible && senderStatus === "ACTIVE" && (
+            <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              {t("waSender.badge.active")}
+            </span>
+          )}
+          {ownNumberEligible && senderStatus === "PENDING" && (
+            <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              {t("waSender.badge.pending")}
+            </span>
+          )}
+          {ownNumberEligible && senderStatus === "DISABLED" && (
+            <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-faint-foreground">
+              {t("waSender.badge.disabled")}
+            </span>
+          )}
+        </div>
+
+        {!ownNumberEligible ? (
+          <div className="mt-3 rounded-lg border border-rose-500/25 bg-rose-500/5 p-4">
+            <p className="text-sm font-medium text-foreground">{t("waSender.proTeaserTitle")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("waSender.proTeaserBody")}</p>
+          </div>
+        ) : senderStatus === "ACTIVE" ? (
+          <div className="mt-3 space-y-1 text-sm">
+            <p className="text-secondary-foreground">
+              {t("waSender.connected", {
+                name: senderVerifiedName ?? "—",
+                phone: senderPhoneMasked ?? "—",
+              })}
+            </p>
+            <p className="font-medium text-emerald-700 dark:text-emerald-400">
+              {t("waSender.noLimit")}
+            </p>
+          </div>
+        ) : senderStatus === "PENDING" ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t("waSender.pendingBody")}</p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">{t("waSender.platformBody")}</p>
+            <a
+              href={waLink(t("waSender.requestMessage", { salon: salonName }))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+              {t("waSender.requestCta")}
+            </a>
+          </div>
+        )}
+      </section>
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5">
         <div>

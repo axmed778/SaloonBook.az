@@ -487,6 +487,18 @@
           "İşçi rolları və icazələr (tezliklə)"
         ]
       }
+    },
+    "waSender": {
+      "title": "Öz WhatsApp nömrəniz",
+      "badge": { "active": "Qoşulub", "pending": "Yoxlanılır", "disabled": "Söndürülüb" },
+      "proTeaserTitle": "Pro plan funksiyası",
+      "proTeaserBody": "Mesajları salonun öz WhatsApp nömrəsindən göndərin — Pro plana keçin.",
+      "connected": "Öz nömrənizdən göndərilir: {name} · {phone}",
+      "noLimit": "WhatsApp: öz nömrə (limitsiz)",
+      "pendingBody": "Nömrəniz yoxlanılır. Aktivləşəndən sonra mesajlar sizin nömrədən gedəcək.",
+      "platformBody": "Mesajlar SalonBook-un ümumi nömrəsindən göndərilir.",
+      "requestMessage": "Salam! {salon} — WhatsApp mesajlarını öz nömrəmizdən göndərmək istəyirik.",
+      "requestCta": "Öz nömrəni qoş"
     }
   },
   "Admin": {
@@ -523,6 +535,27 @@
     "branchesNote": "Hər əlavə filial — {price} ₼. Azaltmaq ödəniş yaratmır.",
     "extrasLabel": "Əlavə slot (cəmi)",
     "errExtrasRange": "Əlavə slot 0–50 arası olmalıdır.",
+    "waSender": {
+      "button": "WhatsApp",
+      "buttonTitle": "Salonun öz WhatsApp nömrəsi",
+      "title": "WhatsApp nömrəsi — {name}",
+      "status": {
+        "PLATFORM_DEFAULT": "Ümumi nömrə",
+        "PENDING": "Yoxlanılır",
+        "ACTIVE": "Aktiv (öz nömrə)",
+        "DISABLED": "Söndürülüb"
+      },
+      "notProWarning": "Bu salon Pro planında deyil — nömrə yalnız Pro aktiv olanda işləyəcək.",
+      "phoneNumberId": "Phone number ID",
+      "accessToken": "Access token",
+      "tokenSetPlaceholder": "Dəyişmək üçün yeni token daxil edin",
+      "wabaId": "WABA ID",
+      "optional": "istəyə bağlı",
+      "validateNote": "Yadda saxlayanda məlumatlar Meta-da yoxlanılır; uğurlu olarsa nömrə aktivləşir.",
+      "save": "Yadda saxla və yoxla",
+      "disable": "Söndür (ümumi nömrəyə qaytar)",
+      "errRequired": "Phone number ID və token tələb olunur."
+    },
     "subStatus": {
       "ACTIVE": "Aktiv",
       "TRIALING": "Sınaq",
@@ -533,7 +566,11 @@
     "errors": {
       "unauthorized": "İcazə yoxdur.",
       "invalidData": "Yanlış məlumat.",
-      "subNotFound": "Abunəlik tapılmadı."
+      "subNotFound": "Abunəlik tapılmadı.",
+      "encKeyMissing": "Şifrələmə açarı təyin edilməyib (WHATSAPP_ENCRYPTION_KEY).",
+      "salonNotFound": "Salon tapılmadı.",
+      "senderPending": "Məlumatlar saxlandı, amma Meta yoxlaması alınmadı — nömrə gözləmədədir.",
+      "senderNotFound": "WhatsApp nömrəsi tapılmadı."
     }
   },
   "Payroll": {
