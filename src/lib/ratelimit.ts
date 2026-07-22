@@ -118,6 +118,28 @@ export async function consumeOutboundQuota(
 }
 
 /**
+ * Read-only check of the outbound quota WITHOUT consuming a permit. Used to gate
+ * a booking BEFORE it is attempted: a failed attempt (slot taken, validation,
+ * 500) must cost nothing, otherwise a customer retrying a just-taken slot would
+ * burn their own daily quota and lock themselves out of legitimate
+ * notifications. The permit is only consumed (consumeOutboundQuota) once a
+ * booking actually succeeds. Returns true when still under the cap.
+ *
+ * Fail-open: a Redis error allows the request (abuse protection is best-effort).
+ */
+export async function peekOutboundQuota(phone: string, max: number): Promise<boolean> {
+  const redisKey = `out:${phone}`;
+  try {
+    const raw = await rl.get(redisKey);
+    const count = raw ? Number.parseInt(raw, 10) || 0 : 0;
+    return count < max;
+  } catch (e) {
+    console.error("[ratelimit] outbound quota peek redis error, failing open", e);
+    return true;
+  }
+}
+
+/**
  * Best-effort client IP from proxy headers. Railway/Cloudflare sit in front, so
  * trust the left-most x-forwarded-for entry, then x-real-ip. Never throws.
  */

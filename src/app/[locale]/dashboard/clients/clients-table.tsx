@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { createCustomer } from "./actions";
 
 export type SortKey = "name" | "last" | "visits" | "spent";
 
@@ -40,6 +41,145 @@ function StatusChip({ active }: { active: boolean }) {
       <span className="h-1.5 w-1.5 rounded-full bg-border-strong" />
       {t("statusInactive")}
     </span>
+  );
+}
+
+// Manual "add client" — the migration path for salons moving off paper. Opens a
+// small modal, creates the customer (deduped by phone server-side), then jumps
+// straight to their new profile.
+function AddClientButton() {
+  const t = useTranslations("Clients");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [digits, setDigits] = useState("");
+  const [waOptIn, setWaOptIn] = useState(false);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function close() {
+    setOpen(false);
+    setName("");
+    setDigits("");
+    setWaOptIn(false);
+    setNote("");
+    setError(null);
+  }
+
+  function submit() {
+    setError(null);
+    const d = digits.replace(/\D/g, "");
+    if (!name.trim()) return setError(t("add.errName"));
+    if (d.length !== 9) return setError(t("add.errPhone"));
+    startTransition(async () => {
+      const res = await createCustomer({
+        name: name.trim(),
+        phone: "+994" + d,
+        waOptIn,
+        note: note.trim() || undefined,
+      });
+      if (res.ok) {
+        close();
+        router.push(`/dashboard/clients/${res.id}`);
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+
+  const inputCls =
+    "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex shrink-0 items-center justify-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+      >
+        + {t("add.button")}
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={close}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-soft"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-foreground">{t("add.title")}</h2>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("add.name")}
+                </label>
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("add.namePlaceholder")}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("add.phone")}
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg border border-border bg-muted px-2.5 py-2 text-sm text-faint-foreground">
+                    +994
+                  </span>
+                  <input
+                    inputMode="numeric"
+                    value={digits}
+                    onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                    placeholder="501234567"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("add.note")}
+                </label>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("add.notePlaceholder")}
+                  className={inputCls}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+                <input
+                  type="checkbox"
+                  checked={waOptIn}
+                  onChange={(e) => setWaOptIn(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-rose-500"
+                />
+                {t("add.waOptIn")}
+              </label>
+              {error && <p className="text-sm text-rose-500">{error}</p>}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={close}
+                className="rounded-lg border border-border px-3 py-2 text-sm text-secondary-foreground transition hover:bg-hover"
+              >
+                {t("add.cancel")}
+              </button>
+              <button
+                onClick={submit}
+                disabled={pending}
+                className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              >
+                {pending ? t("add.saving") : t("add.save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -103,6 +243,7 @@ export function ClientsTable({
           {total > 0 ? t("subtitleWithCount", { count: total }) : t("subtitleEmpty")}
         </p>
       </div>
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
       <div className="relative w-full sm:w-72">
         <svg
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground"
@@ -132,6 +273,8 @@ export function ClientsTable({
           </button>
         )}
       </div>
+        <AddClientButton />
+      </div>
     </div>
   );
 
@@ -152,12 +295,15 @@ export function ClientsTable({
           <p className="mt-1 max-w-sm text-sm text-faint-foreground">
             {t("emptyBody")}
           </p>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-flex items-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
-          >
-            {t("goToCalendar")}
-          </Link>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <AddClientButton />
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
+            >
+              {t("goToCalendar")}
+            </Link>
+          </div>
         </div>
       </div>
     );

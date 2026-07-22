@@ -106,6 +106,12 @@ export function BookingWidget({
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  // Distinguish a genuine "no free slots" (empty array) from a transient
+  // network/500 failure — the two need different UX (pick another day vs. retry).
+  const [slotsError, setSlotsError] = useState(false);
+  // Bumped to force the availability effect to refetch (retry button; and after
+  // a slot is taken out from under the customer on submit).
+  const [slotsReload, setSlotsReload] = useState(0);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetId = useRef<string | null>(null);
@@ -183,13 +189,20 @@ export function BookingWidget({
     let cancelled = false;
     setSlotsLoading(true);
     setSlots(null);
+    setSlotsError(false);
     fetch(`/api/public/${slug}/availability?serviceId=${serviceId}&employeeId=${employeeId}&date=${day}`)
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        // A non-2xx (e.g. a transient 500) must NOT read as "no free slots" —
+        // treat it as a load error so the customer sees a retry, not a dead end.
+        if (!r.ok) throw new Error(`availability ${r.status}`);
+        const data = await r.json();
         if (!cancelled) setSlots(Array.isArray(data.slots) ? data.slots : []);
       })
       .catch(() => {
-        if (!cancelled) setSlots([]);
+        if (!cancelled) {
+          setSlots(null);
+          setSlotsError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setSlotsLoading(false);
@@ -197,7 +210,7 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [activeKey, serviceId, employeeId, day, slug]);
+  }, [activeKey, serviceId, employeeId, day, slug, slotsReload]);
 
   // Render the Turnstile widget while the contact step is active (only when a
   // site key is configured). Tearing it down on step change keeps the token
@@ -311,6 +324,17 @@ export function BookingWidget({
       if (!res.ok) {
         // The server consumed the token during verification; get a new one.
         resetTurnstile();
+        // 409 = the chosen slot was taken (or became unbookable) between picking
+        // and submitting — the single most likely real-customer failure. Don't
+        // strand them on the contact form: clear the stale slot, send them back
+        // to the time step and force a fresh availability load.
+        if (res.status === 409) {
+          setSlot(null);
+          setSlotsReload((n) => n + 1);
+          setCurrent(idx("time"));
+          setError(t("errors.slotTaken"));
+          return;
+        }
         setError(data.error ?? t("errors.bookingFailed"));
         return;
       }
@@ -526,7 +550,18 @@ export function BookingWidget({
                       ))}
                     </div>
                   )}
-                  {!slotsLoading && slots && slots.length === 0 && (
+                  {!slotsLoading && slotsError && (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-muted-foreground">{t("slotsLoadError")}</p>
+                      <button
+                        onClick={() => setSlotsReload((n) => n + 1)}
+                        className="mt-2 text-sm font-medium text-accent hover:underline"
+                      >
+                        {t("retry")}
+                      </button>
+                    </div>
+                  )}
+                  {!slotsLoading && !slotsError && slots && slots.length === 0 && (
                     <div className="py-4 text-center">
                       <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
                       <button

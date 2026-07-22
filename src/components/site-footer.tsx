@@ -21,6 +21,7 @@ export async function SiteFooter() {
         { label: t("contact"), href: "https://wa.me/994502990440" },
         { label: t("privacy"), href: "/privacy" },
         { label: t("terms"), href: "/terms" },
+        { label: t("dataDeletion"), href: "/data-deletion" },
       ],
     },
   ];

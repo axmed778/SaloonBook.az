@@ -24,7 +24,7 @@ async function requireAdmin(): Promise<string> {
 
 const activateSchema = z.object({
   accountId: z.string().uuid(),
-  plan: z.enum(["BASIC", "PRO"]),
+  plan: z.enum(["START", "BASIC", "PRO"]),
   months: z.number().int().min(1).max(24),
   /** Payment received, in qəpik. Defaults to list price × months. */
   amountMinor: z.number().int().min(0).max(10_000_000).nullish(),

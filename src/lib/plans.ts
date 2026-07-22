@@ -16,6 +16,8 @@ export interface PlanLimits {
 // paid/trial tier (marketed as "Salon"), PRO is the top tier.
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   FREE: { maxEmployees: 1, maxBookingsPerMonth: 30, maxBranches: 1, priceMinor: 0 },
+  // "Start" — see MARKETING_PLANS. 2 staff, 1 branch, 15 ₼/mo.
+  START: { maxEmployees: 2, maxBookingsPerMonth: Infinity, maxBranches: 1, priceMinor: 1500 },
   BASIC: { maxEmployees: 8, maxBookingsPerMonth: Infinity, maxBranches: 1, priceMinor: 3500 },
   PRO: {
     maxEmployees: Infinity,
@@ -50,6 +52,17 @@ export interface PlanFeatures {
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   FREE: {
+    multiBranch: false,
+    advancedAnalytics: false,
+    staffRoles: false,
+    exports: false,
+    deposits: false,
+    payroll: false,
+    ownWhatsappNumber: false,
+  },
+  // Start = same feature floor as Basic/Free (no advanced features); it differs
+  // only in enforcement limits (2 staff / 1 branch, see PLAN_LIMITS).
+  START: {
     multiBranch: false,
     advancedAnalytics: false,
     staffRoles: false,

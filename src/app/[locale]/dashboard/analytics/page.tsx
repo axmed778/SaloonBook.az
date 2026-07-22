@@ -105,7 +105,9 @@ export default async function AnalyticsPage() {
       _count: { _all: true },
       _sum: { priceMinor: true },
     }),
-    // Realized revenue this month (COMPLETED only).
+    // Realized revenue this month (COMPLETED only). _count doubles as the
+    // no-show-rate denominator (completed + no-show = appointments that reached
+    // their time).
     prisma.appointment.aggregate({
       where: {
         salonId,
@@ -113,6 +115,7 @@ export default async function AnalyticsPage() {
         startsAt: { gte: monthStartUtc, lt: monthEndUtc },
       },
       _sum: { priceMinor: true },
+      _count: { _all: true },
     }),
     // Realized revenue over the SAME elapsed slice of last month (month-to-date),
     // so the MoM delta is like-for-like.
@@ -276,8 +279,9 @@ export default async function AnalyticsPage() {
   }
   const canExport = featuresFor(effectivePlan(sub)).exports;
   const planPriceMinor = PLAN_LIMITS[sub?.plan ?? "BASIC"].priceMinor;
-  // Internal BASIC tier is marketed as "Salon" (see MARKETING_PLANS).
-  const planLabel = sub?.plan === "PRO" ? "Pro" : "Salon";
+  // Internal BASIC tier is marketed as "Salon"; START/PRO keep their names
+  // (see MARKETING_PLANS).
+  const planLabel = sub?.plan === "PRO" ? "Pro" : sub?.plan === "START" ? "Start" : "Salon";
   const periodEndLabel = sub?.currentPeriodEnd
     ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;
@@ -306,6 +310,13 @@ export default async function AnalyticsPage() {
   // --- Returning customers (Appointment aggregation only) ---
   const returning = prior.length;
   const rate = thisMonthIds.length > 0 ? Math.round((returning / thisMonthIds.length) * 100) : 0;
+
+  // --- No-show rate: share of appointments that reached their time (completed
+  // or no-show) where the client didn't show. This is the number that sells the
+  // WhatsApp-reminder feature ("X% no-shows → reminders cut it"). ---
+  const completedCount = revCur._count._all;
+  const noShowDenom = completedCount + noShowCount;
+  const noShowRate = noShowDenom > 0 ? Math.round((noShowCount / noShowDenom) * 100) : null;
 
   // --- WhatsApp ---
   const waComingSoon = waTotal === 0;
@@ -390,7 +401,11 @@ export default async function AnalyticsPage() {
         <StatCard
           label={t("cards.totalBookings")}
           value={String(totalCount)}
-          subline={noShowCount > 0 ? t("cards.noShowSub", { count: noShowCount }) : null}
+          subline={
+            noShowCount > 0
+              ? t("cards.noShowSub", { count: noShowCount, rate: noShowRate ?? 0 })
+              : null
+          }
           sublineTone="amber"
         />
 
@@ -404,7 +419,13 @@ export default async function AnalyticsPage() {
           label={t("cards.whatsapp")}
           value={waComingSoon ? t("cards.comingSoon") : String(waDelivered)}
           valueTone={waComingSoon ? "muted" : "emerald"}
-          subline={waComingSoon ? null : t("cards.waSent")}
+          subline={
+            waComingSoon
+              ? noShowRate !== null
+                ? t("cards.waHook", { rate: noShowRate })
+                : null
+              : t("cards.waSent")
+          }
         />
 
         <TopServices rows={topServiceRows} />

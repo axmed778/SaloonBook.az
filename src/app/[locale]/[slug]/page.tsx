@@ -88,6 +88,8 @@ export default async function BookingPage({
       id: true,
       name: true,
       description: true,
+      address: true,
+      phone: true,
       status: true,
       audience: true,
       account: {
@@ -119,7 +121,7 @@ export default async function BookingPage({
   const selected =
     branches?.find((b) => b.slug === branchParam) ??
     siblings.find((b) => b.id === salon.id) ??
-    { id: salon.id, slug, name: salon.name, address: null, audience: salon.audience };
+    { id: salon.id, slug, name: salon.name, address: salon.address, audience: salon.audience };
 
   // Catalog of the SELECTED branch (each branch has its own staff + services).
   const [services, employees] = await Promise.all([
@@ -170,8 +172,34 @@ export default async function BookingPage({
     serviceIds: e.services.map((se) => se.serviceId),
   }));
 
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const prices = bookingServices.map((s) => s.priceMinor).filter((p) => p > 0);
+  // LocalBusiness structured data for the SELECTED branch — helps the salon
+  // surface in local/maps results (a booking link is their growth loop).
+  const salonJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "HealthAndBeautyBusiness",
+    name: selected.name,
+    url: `${appUrl}/${selected.slug}`,
+    image: `${appUrl}/hero/booking-dark.png`,
+    areaServed: "AZ",
+    ...(salon.description ? { description: salon.description } : {}),
+    ...(selected.address
+      ? { address: { "@type": "PostalAddress", streetAddress: selected.address, addressCountry: "AZ" } }
+      : {}),
+    ...(salon.phone ? { telephone: salon.phone } : {}),
+    ...(prices.length
+      ? { priceRange: `${Math.min(...prices) / 100}–${Math.max(...prices) / 100} AZN` }
+      : {}),
+    potentialAction: { "@type": "ReserveAction", target: `${appUrl}/${selected.slug}` },
+  };
+
   return (
     <div className="relative min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(salonJsonLd) }}
+      />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] glow-accent opacity-70" />
 
       <header className="border-b border-border">

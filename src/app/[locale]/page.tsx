@@ -14,6 +14,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { MARKETING_PLANS, type MarketingPlan } from "@/lib/plans";
@@ -22,10 +23,20 @@ import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Faq } from "@/components/faq";
+import { ProWhatsAppToggle } from "@/components/pro-whatsapp-toggle";
 import heroBookingDark from "../../../public/hero/booking-dark.png";
 import heroBookingLight from "../../../public/hero/booking-light.png";
 
-type Row = { label: string; value: boolean | string };
+type Row = { label: string; value: boolean | string; id?: string };
+
+/** Pro-only: labels/values for the embedded "own number" WhatsApp toggle. */
+type WhatsAppToggle = {
+  ourLabel: string;
+  ownLabel: string;
+  ownValue: string;
+  /** Caveat shown when "own number" is selected (Meta costs paid by the salon). */
+  ownNote: string;
+};
 
 /* ------------------------------ Primitives ------------------------------- */
 
@@ -54,6 +65,7 @@ function PricingCard({
   rows,
   perMonth,
   annualLabel,
+  whatsappToggle,
 }: {
   plan: {
     name: string;
@@ -67,6 +79,7 @@ function PricingCard({
   rows: Row[];
   perMonth: string;
   annualLabel: string;
+  whatsappToggle?: WhatsAppToggle;
 }) {
   const price = (plan.monthlyMinor / 100).toString();
 
@@ -109,6 +122,8 @@ function PricingCard({
       <ul className="mt-7 space-y-3 border-t border-border pt-6">
         {rows.map((row) => {
           const included = row.value !== false;
+          const isToggle =
+            row.id === "whatsapp" && whatsappToggle && typeof row.value === "string";
           return (
             <li
               key={row.label}
@@ -122,12 +137,23 @@ function PricingCard({
               ) : (
                 <X className="mt-0.5 h-4 w-4 shrink-0 text-border-strong" strokeWidth={2} />
               )}
-              <span>
-                {row.label}
-                {typeof row.value === "string" && (
-                  <span className="text-muted-foreground"> — {row.value}</span>
-                )}
-              </span>
+              {isToggle ? (
+                <ProWhatsAppToggle
+                  label={row.label}
+                  ourLabel={whatsappToggle.ourLabel}
+                  ownLabel={whatsappToggle.ownLabel}
+                  ourValue={row.value as string}
+                  ownValue={whatsappToggle.ownValue}
+                  ownNote={whatsappToggle.ownNote}
+                />
+              ) : (
+                <span>
+                  {row.label}
+                  {typeof row.value === "string" && (
+                    <span className="text-muted-foreground"> — {row.value}</span>
+                  )}
+                </span>
+              )}
             </li>
           );
         })}
@@ -138,8 +164,54 @@ function PricingCard({
 
 /* --------------------------------- Page ---------------------------------- */
 
+// The marketing homepage is the site's canonical root: set its own canonical +
+// hreflang here (the layout deliberately leaves these unset so subpages don't
+// inherit a homepage canonical).
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const path = locale === "az" ? "/" : `/${locale}`;
+  return {
+    alternates: {
+      canonical: path,
+      languages: { az: "/", en: "/en", ru: "/ru" },
+    },
+    openGraph: { url: path },
+  };
+}
+
 export default async function Home() {
   const t = await getTranslations("Landing");
+  const tMeta = await getTranslations("metadata");
+
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  // Organization + WebSite structured data so search engines render a rich
+  // knowledge card and understand the site. Salon pages carry their own
+  // LocalBusiness JSON-LD (see [slug]/page.tsx).
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${appUrl}/#organization`,
+        name: "SalonBook.az",
+        url: appUrl,
+        logo: `${appUrl}/icon.svg`,
+        description: tMeta("description"),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${appUrl}/#website`,
+        url: appUrl,
+        name: "SalonBook.az",
+        publisher: { "@id": `${appUrl}/#organization` },
+        inLanguage: ["az", "en", "ru"],
+      },
+    ],
+  };
 
   const fmtLimit = (n: number) => (n === Infinity ? t("pricing.unlimited") : String(n));
 
@@ -166,6 +238,7 @@ export default async function Home() {
       { label: t("pricing.rows.monthlyBookings"), value: t("pricing.unlimited") },
       { label: t("pricing.rows.branches"), value: fmtLimit(plan.maxBranches) },
       {
+        id: "whatsapp",
         label: t("pricing.rows.whatsappReminders"),
         value: t("pricing.rows.whatsappRemindersValue", { count: plan.waRemindersPerMonth }),
       },
@@ -181,6 +254,10 @@ export default async function Home() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteHeader />
 
       <main>
@@ -342,6 +419,16 @@ export default async function Home() {
                   rows={planRows(plan)}
                   perMonth={t("pricing.perMonth")}
                   annualLabel={t("pricing.annual", { price: plan.annualMinor / 100 })}
+                  whatsappToggle={
+                    plan.key === "pro"
+                      ? {
+                          ourLabel: t("pricing.rows.whatsappOwnToggleOur"),
+                          ownLabel: t("pricing.rows.whatsappOwnToggleOwn"),
+                          ownValue: t("pricing.rows.whatsappOwnValue"),
+                          ownNote: t("pricing.rows.whatsappOwnNote"),
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>

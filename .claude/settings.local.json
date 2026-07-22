@@ -27,7 +27,9 @@
       "Bash(ls -R src/app/dashboard/payroll)",
       "Bash(ls src/app/privacy src/app/terms)",
       "Bash(head -20 src/lib/email.ts)",
-      "PowerShell(Get-ChildItem -Recurse src -Directory | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\('C:\\\\Users\\\\User\\\\Desktop\\\\SaloonBook.az\\\\', ''\\) })"
+      "PowerShell(Get-ChildItem -Recurse src -Directory | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\('C:\\\\Users\\\\User\\\\Desktop\\\\SaloonBook.az\\\\', ''\\) })",
+      "PowerShell(Get-Content *)",
+      "Bash(npm run *)"
     ]
   }
 }

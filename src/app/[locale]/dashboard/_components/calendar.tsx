@@ -14,6 +14,7 @@ import { DayGrid } from "./day-grid";
 import { WeekGrid } from "./week-grid";
 import { AppointmentPopup } from "./appointment-popup";
 import { BookingModal } from "./booking-modal";
+import { ReconcileBar } from "./reconcile-bar";
 
 // Calendar shell: toolbar (view toggle, period nav, "new booking"), the day or
 // week grid, and the two overlays (appointment detail, manual-booking form).
@@ -135,6 +136,8 @@ export function Calendar({
           </button>
         </div>
       </div>
+
+      <ReconcileBar blocks={blocks} />
 
       {isWeek ? (
         <WeekGrid

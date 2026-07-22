@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { ogLocale } from "@/i18n/format";
 import { ThemeSync } from "@/components/theme-sync";
 import "../globals.css";
 
@@ -20,9 +21,34 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const title = t("title");
+  const description = t("description");
+  // Site-wide defaults. metadataBase makes every relative OG/canonical URL below
+  // (and in child pages) absolute. Per-page canonical/hreflang is set on the
+  // pages that need it (home, salon, legal) — NOT here, so subpages don't all
+  // inherit a homepage canonical. The default OG image is the product hero.
   return {
-    title: t("title"),
-    description: t("description"),
+    metadataBase: new URL(appUrl),
+    applicationName: "SalonBook.az",
+    title: { default: title, template: "%s | SalonBook.az" },
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: "SalonBook.az",
+      locale: ogLocale(locale),
+      type: "website",
+      images: [{ url: "/hero/booking-dark.png", width: 1200, height: 630, alt: "SalonBook.az" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/hero/booking-dark.png"],
+    },
+    robots: { index: true, follow: true },
+    icons: { icon: "/icon.svg" },
   };
 }
 

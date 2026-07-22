@@ -235,7 +235,9 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
   const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [plan, setPlan] = useState<"BASIC" | "PRO">(row.plan === "PRO" ? "PRO" : "BASIC");
+  const [plan, setPlan] = useState<"START" | "BASIC" | "PRO">(
+    row.plan === "PRO" ? "PRO" : row.plan === "START" ? "START" : "BASIC",
+  );
   const [months, setMonths] = useState("1");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -293,9 +295,10 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               <select
                 className={inputCls + " w-full"}
                 value={plan}
-                onChange={(e) => setPlan(e.target.value as "BASIC" | "PRO")}
+                onChange={(e) => setPlan(e.target.value as "START" | "BASIC" | "PRO")}
               >
-                <option value="BASIC">Basic</option>
+                <option value="START">Start</option>
+                <option value="BASIC">Salon</option>
                 <option value="PRO">Pro</option>
               </select>
             </div>
