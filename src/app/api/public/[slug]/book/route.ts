@@ -8,7 +8,7 @@ import {
   PlanLimitError,
   MAX_BOOKING_AHEAD_DAYS,
 } from "@/lib/booking";
-import { rateLimit, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
+import { rateLimit, peekOutboundQuota, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { LEGAL_VERSIONS } from "@/lib/legal";
 
@@ -22,8 +22,9 @@ const LIMITS = {
   phone: { limit: 5, windowSec: 3600 }, // 5 attempts / hour / phone
   salon: { limit: 60, windowSec: 600 }, // 60 attempts / 10 min / salon
   // Hard cap on outbound notifications targeting one phone (each booking sends
-  // it a confirmation + a reminder). Consumed only on a successful booking.
-  outboundPerPhone: { max: 10, windowSec: 86_400 },
+  // it a confirmation + a reminder). Consumed only on a successful booking, so
+  // this bounds real notifications per number/day — not retry attempts.
+  outboundPerPhone: { max: 20, windowSec: 86_400 },
 } as const;
 
 const bodySchema = z.object({
@@ -131,13 +132,12 @@ export async function POST(
     return NextResponse.json({ error: "This employee can't perform that service" }, { status: 400 });
   }
 
-  // 4) Outbound notification hard cap for this phone. Consume a permit before
-  // booking; if the cap is reached, refuse so we never spam a single number.
-  const outboundOk = await consumeOutboundQuota(
-    parsed.data.phone,
-    LIMITS.outboundPerPhone.max,
-    LIMITS.outboundPerPhone.windowSec,
-  );
+  // 4) Outbound notification hard cap for this phone. PEEK (read-only) before
+  // booking so a failed attempt costs no permit; the permit is only CONSUMED
+  // after a booking actually succeeds (see below). Without this split, a client
+  // retrying a just-taken slot would burn their own daily quota and then be
+  // refused their legitimate booking's notifications.
+  const outboundOk = await peekOutboundQuota(parsed.data.phone, LIMITS.outboundPerPhone.max);
   if (!outboundOk) {
     return tooMany(
       LIMITS.outboundPerPhone.windowSec,
@@ -156,6 +156,15 @@ export async function POST(
       consent: { version: LEGAL_VERSIONS.clientConsent },
       source: "PUBLIC",
     });
+
+    // Booking accepted → now consume one outbound permit (one booking sends this
+    // phone a confirmation + reminder). Best-effort; the peek above already
+    // gated over-cap callers, so a rare race here only nudges the soft cap.
+    await consumeOutboundQuota(
+      parsed.data.phone,
+      LIMITS.outboundPerPhone.max,
+      LIMITS.outboundPerPhone.windowSec,
+    );
     const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
     return NextResponse.json({
       ok: true,

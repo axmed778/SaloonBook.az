@@ -296,6 +296,10 @@ model Appointment {
   startsAt      DateTime          @db.Timestamptz(6)
   endsAt        DateTime          @db.Timestamptz(6) // startsAt + duration + buffer
   status        AppointmentStatus @default(CONFIRMED)
+  // Set true when the 48h reconcile sweep auto-closed a past CONFIRMED booking
+  // (→ COMPLETED) that staff never marked. Surfaced as "unconfirmed" so a
+  // no-show can still be corrected by hand. See worker/processors/reconcile.ts.
+  autoCompleted Boolean           @default(false)
   priceMinor    Int // snapshot at booking time
   source        BookingSource     @default(PUBLIC)
   notes         String?
@@ -443,6 +447,10 @@ enum Plan {
   FREE
   BASIC
   PRO
+  // Lowest paid tier (marketed as "Start"): 2 employees, 1 branch. Appended last
+  // so the physical Postgres enum order matches this declaration (the migration
+  // uses ALTER TYPE ... ADD VALUE, which appends).
+  START
 }
 
 enum SubStatus {

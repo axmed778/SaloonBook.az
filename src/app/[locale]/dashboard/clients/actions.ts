@@ -68,6 +68,62 @@ export async function updateCustomer(input: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+// --- Create customer (manual entry) ------------------------------------------
+
+const newCustomerSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Ad tələb olunur.")
+    .max(120)
+    .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
+  phone: z
+    .string()
+    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+  // Owner-entered opt-in: the salon confirms the client agreed to WhatsApp
+  // messages. Defaults off — no consent, no messages (see booking waOptIn gate).
+  waOptIn: z.boolean().optional(),
+  note: z.string().trim().max(1000).optional(),
+});
+
+export type CreateCustomerResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string };
+
+/**
+ * Manually add a client to the CRM — the migration path for a salon moving off
+ * paper/another tool. Deduped by phone via @@unique([salonId, phone]); a repeat
+ * number returns a clear "already exists" error rather than a 500.
+ */
+export async function createCustomer(input: unknown): Promise<CreateCustomerResult> {
+  const salonId = await requireSalonId();
+  const t = await getTranslations("Clients.errors");
+  const parsed = newCustomerSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  try {
+    const customer = await prisma.customer.create({
+      data: { salonId, name: d.name, phone: d.phone, waOptIn: d.waOptIn ?? false },
+      select: { id: true },
+    });
+    if (d.note) {
+      await prisma.customerNote.create({
+        data: { salonId, customerId: customer.id, body: d.note },
+      });
+    }
+    revalidateClients(customer.id);
+    return { ok: true, id: customer.id };
+  } catch (e) {
+    // @@unique([salonId, phone]) — this number is already a client of this salon.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: t("phoneTaken") };
+    }
+    console.error("[clients] createCustomer error", e);
+    return { ok: false, error: t("saveFailed") };
+  }
+}
+
 // --- Notes --------------------------------------------------------------------
 
 const noteSchema = z.object({

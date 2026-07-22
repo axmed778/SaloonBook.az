@@ -21,6 +21,7 @@
     "contact": "Əlaqə",
     "privacy": "Məxfilik Siyasəti",
     "terms": "İstifadə Şərtləri",
+    "dataDeletion": "Məlumatların Silinməsi",
     "tagline": "Azərbaycan salonları, bərbərxanalar və klinikalar üçün onlayn qeydiyyat. Müştərilər özləri yer ayırsın — 24/7.",
     "madeIn": "Bakıda hazırlanıb · Asia/Baku (UTC+4)"
   },
@@ -85,6 +86,14 @@
     },
     "overdue": "Vaxtı keçib",
     "overdueHint": "Bu görüşü bağlayın — tamamlandı və ya gəlmədi.",
+    "conflictTitle": "Bu vaxta {count} görüş üst-üstə düşür — təcili həll edin.",
+    "reconcile": {
+      "pending": "{count} keçmiş görüş statusu gözləyir",
+      "closeDay": "Günü bağla",
+      "title": "Günü bağlayın",
+      "hint": "Hər görüşü tamamlandı və ya gəlmədi kimi qeyd edin.",
+      "done": "Hamısı bağlandı ✓"
+    },
     "popup": {
       "customer": "Müştəri",
       "phone": "Telefon",
@@ -100,7 +109,15 @@
       "sendViaWhatsapp": "WhatsApp-la göndər",
       "complete": "Tamamla",
       "markNoShow": "Gəlmədi",
-      "waMessage": "Salam, {name}! Görüşünüzə baxmaq, vaxtını dəyişmək və ya ləğv etmək üçün: {url}"
+      "autoCompleted": "Avtomatik tamamlandı (təsdiqlənməyib). Müştəri gəlmədisə, qeyd edin.",
+      "waMessage": "Salam, {name}! Görüşünüzə baxmaq, vaxtını dəyişmək və ya ləğv etmək üçün: {url}",
+      "reschedule": {
+        "button": "Vaxtı dəyiş",
+        "title": "Yeni vaxt seçin",
+        "back": "Geri",
+        "noSlots": "Bu gün üçün boş vaxt yoxdur.",
+        "loadError": "Vaxtları yükləmək alınmadı."
+      }
     },
     "modal": {
       "employee": "Mütəxəssis",
@@ -322,6 +339,21 @@
     "emptyTitle": "Hələ müştəri yoxdur",
     "emptyBody": "Müştərilər ilk görüşdən sonra avtomatik burada görünəcək — istər onlayn qeydiyyatdan, istər təqvimdən əlavə etdiyiniz görüşlərdən.",
     "goToCalendar": "Təqvimə keç",
+    "add": {
+      "button": "Müştəri əlavə et",
+      "title": "Yeni müştəri",
+      "name": "Ad",
+      "namePlaceholder": "Ad Soyad",
+      "phone": "Telefon",
+      "note": "Qeyd (istəyə bağlı)",
+      "notePlaceholder": "Məs. VIP, adətən gecikir",
+      "waOptIn": "WhatsApp bildirişlərinə razıdır",
+      "cancel": "Ləğv et",
+      "save": "Əlavə et",
+      "saving": "Əlavə olunur…",
+      "errName": "Müştəri adını daxil edin.",
+      "errPhone": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır."
+    },
     "colCustomer": "Müştəri",
     "colVisits": "Vizitlər",
     "colLastVisit": "Son vizit",
@@ -635,6 +667,8 @@
     "planLimit": "Aylıq qeydiyyat limitinə çatmısınız.",
     "bookingFailed": "Görüş yaradıla bilmədi. Yenidən cəhd edin.",
     "apptNotFound": "Görüş tapılmadı.",
+    "futureStatus": "Gələcək görüşü hələ tamamlanmış və ya gəlmədi kimi qeyd etmək olmaz.",
+    "rescheduleNotConfirmed": "Yalnız təsdiqlənmiş görüşün vaxtını dəyişmək olar.",
     "slotReason": {
       "service": "Xidmət tapılmadı.",
       "past": "Bu vaxt keçmişdə qalıb.",
@@ -666,13 +700,14 @@
       "expected": "Gözlənilən gəlir",
       "expectedSub": "{count} təsdiqlənmiş görüş qarşıda",
       "totalBookings": "Ümumi görüşlər",
-      "noShowSub": "Gəlmədi: {count}",
+      "noShowSub": "Gəlmədi: {count} ({rate}%)",
       "returning": "Qayıdan müştərilər",
       "returnRate": "{rate}% qayıdış",
       "noCustomers": "Hələ müştəri yoxdur",
       "whatsapp": "WhatsApp xatırlatmaları",
       "comingSoon": "Tezliklə",
-      "waSent": "avtomatik göndərildi"
+      "waSent": "avtomatik göndərildi",
+      "waHook": "Xatırlatmalar {rate}% gəlməməni azaldır"
     },
     "onlineShare": {
       "title": "Onlayn pay",
@@ -800,6 +835,19 @@
         { "title": "7. Şəxsi məlumatlar", "body": ["__privacyLink__"] },
         { "title": "8. Dəyişikliklər və xitam", "body": ["Bu şərtlər zaman-zaman yenilənə bilər; davam edən istifadə yenilənmiş şərtlərin qəbulu sayılır. Hesabınızı istənilən vaxt bağlaya bilərsiniz — bunun üçün bizimlə əlaqə saxlayın."] },
         { "title": "9. Tətbiq olunan hüquq və əlaqə", "body": ["__contact__"] }
+      ]
+    },
+    "dataDeletion": {
+      "metaTitle": "Məlumatların Silinməsi — SalonBook.az",
+      "metaDescription": "SalonBook.az-dan şəxsi məlumatlarınızın silinməsini necə tələb etmək olar.",
+      "title": "Məlumatların Silinməsi",
+      "updated": "22 iyul 2026",
+      "contactLine": "Silinmə tələbi üçün bizimlə WhatsApp {wa} vasitəsilə əlaqə saxlayın.",
+      "sections": [
+        { "title": "1. Ümumi məlumat", "body": ["Bu səhifə SalonBook.az-ın sizin haqqınızda saxladığı şəxsi məlumatların silinməsini necə tələb edə biləcəyinizi izah edir. O həm Platformadan istifadə edən salonlara, həm də salonun səhifəsi vasitəsilə görüş üçün qeydiyyatdan keçmiş müştərilərə aiddir."] },
+        { "title": "2. Hansı məlumatlar silinə bilər", "body": ["Tələb əsasında aşağıdakıları silirik:", { "items": ["Salon hesabı məlumatları: e-poçt ünvanı, salon profili (ünvan, telefon, iş saatları), işçilər və xidmətlər;", "Müştəri məlumatları: onlayn qeydiyyat zamanı daxil edilən ad, telefon nömrəsi və görüş tarixçəsi;", "Hesabınıza və ya telefon nömrənizə bağlı texniki qeydlər."] }] },
+        { "title": "3. Silinməni necə tələb etmək olar", "body": ["Aşağıdakı əlaqə kanalı vasitəsilə bizə müraciət edin və məlumatı müəyyən edib silə bilməyimiz üçün onunla bağlı telefon nömrəsini və ya e-poçt ünvanını qeyd edin. Müştəri kimi qeydiyyatdan keçmisinizsə, qeydinizin silinməsini birbaşa salondan da istəyə bilərsiniz.", "__contact__"] },
+        { "title": "4. Emal müddəti", "body": ["Silinmə tələblərini 30 gün ərzində emal edirik. Bəzi məlumatlar yalnız qanunvericiliyin tələb etdiyi hallarda (məsələn, mühasibat qeydləri) daha uzun saxlanıla bilər. Silindikdən sonra məlumatlar bərpa edilə bilməz."] }
       ]
     }
   },
@@ -938,6 +986,8 @@
     "noEmployees": "Bu xidmət üçün mütəxəssis yoxdur.",
     "noSlots": "Bu gün üçün boş vaxt yoxdur.",
     "pickAnotherDay": "Başqa gün seçin",
+    "slotsLoadError": "Vaxtları yükləmək alınmadı.",
+    "retry": "Yenidən cəhd et",
     "minutesShort": "{min} dəq",
     "nameLabel": "Adınız",
     "namePlaceholder": "Ad Soyad",
@@ -956,7 +1006,8 @@
       "consentRequired": "Davam etmək üçün fərdi məlumatların emalına razılıq verməlisiniz.",
       "confirmHuman": "Robot olmadığınızı təsdiqləyin.",
       "bookingFailed": "Qeydiyyat alınmadı. Yenidən cəhd edin.",
-      "network": "Şəbəkə xətası. Yenidən cəhd edin."
+      "network": "Şəbəkə xətası. Yenidən cəhd edin.",
+      "slotTaken": "Təəssüf, bu vaxt yenicə tutuldu. Başqa vaxt seçin."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",

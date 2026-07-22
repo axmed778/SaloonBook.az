@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
-import { setAppointmentStatus } from "../actions";
+import { setAppointmentStatus, rescheduleSlots, rescheduleAppointment } from "../actions";
+import type { Slot } from "@/lib/availability";
 import {
   blockBadge,
   azn,
@@ -27,6 +28,59 @@ export function AppointmentPopup({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Reschedule ("move") mode: pick a new day, load that day's free slots for
+  // this appointment's own employee+service, then move it in place — no
+  // cancellation is sent to the customer (unlike cancel-and-rebook).
+  const [mode, setMode] = useState<"view" | "reschedule">("view");
+  const [rDay, setRDay] = useState("");
+  const [rSlots, setRSlots] = useState<Slot[] | null>(null);
+  const [rLoading, setRLoading] = useState(false);
+  const todayYmd = new Date().toISOString().slice(0, 10);
+  // Guards against a slow slots request for an earlier day resolving after a
+  // later one and overwriting it (the user changed the date meanwhile).
+  const rReqRef = useRef(0);
+
+  function loadRSlots(day: string) {
+    setRDay(day);
+    setRSlots(null);
+    setError(null);
+    if (!day) return;
+    const req = ++rReqRef.current;
+    setRLoading(true);
+    rescheduleSlots({ id: block.id, day })
+      .then((res) => {
+        if (req !== rReqRef.current) return; // a newer request superseded this one
+        if (res.ok) setRSlots(res.slots);
+        else setError(res.error);
+      })
+      .catch(() => {
+        if (req === rReqRef.current) setError(t("popup.reschedule.loadError"));
+      })
+      .finally(() => {
+        if (req === rReqRef.current) setRLoading(false);
+      });
+  }
+
+  function exitReschedule() {
+    setMode("view");
+    setRDay("");
+    setRSlots(null);
+    setError(null);
+  }
+
+  function doReschedule(slot: Slot) {
+    setError(null);
+    startTransition(async () => {
+      const res = await rescheduleAppointment({ id: block.id, startUtc: slot.startUtc });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      router.refresh();
+      onClose();
+    });
+  }
 
   // Customer self-service page for this appointment (view / cancel /
   // reschedule). Until WhatsApp templates are approved, this is how the salon
@@ -121,7 +175,23 @@ export function AppointmentPopup({
 
         {error && <p className="mt-4 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
-        {block.status === "CONFIRMED" && (
+        {block.status === "COMPLETED" && block.autoCompleted && (
+          <div className="mt-4 rounded-xl border border-violet-500/40 bg-violet-500/10 p-3">
+            <p className="text-xs font-medium text-violet-800 dark:text-violet-200">
+              {t("popup.autoCompleted")}
+            </p>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => apply("NO_SHOW")}
+              className="mt-2 w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 transition hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              {t("popup.markNoShow")}
+            </button>
+          </div>
+        )}
+
+        {block.status === "CONFIRMED" && mode === "view" && (
           <div className="mt-4 rounded-xl border border-border bg-muted p-3">
             <p className="text-xs font-medium text-muted-foreground">
               {t("popup.manageLinkLabel")}
@@ -146,7 +216,7 @@ export function AppointmentPopup({
           </div>
         )}
 
-        {block.status === "CONFIRMED" && (
+        {block.status === "CONFIRMED" && mode === "view" && (
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -166,14 +236,78 @@ export function AppointmentPopup({
                 {t("popup.markNoShow")}
               </button>
             </div>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => apply("CANCELLED")}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-50"
-            >
-              {tc("cancel")}
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setMode("reschedule")}
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-50"
+              >
+                {t("popup.reschedule.button")}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => apply("CANCELLED")}
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-50"
+              >
+                {tc("cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {block.status === "CONFIRMED" && mode === "reschedule" && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("popup.reschedule.title")}
+              </p>
+              <button
+                type="button"
+                onClick={exitReschedule}
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                {t("popup.reschedule.back")}
+              </button>
+            </div>
+            <input
+              type="date"
+              min={todayYmd}
+              value={rDay}
+              onChange={(e) => loadRSlots(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-rose-500 focus:outline-none"
+            />
+            {rLoading && (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" aria-busy="true">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="h-[36px] animate-pulse rounded-lg border border-border bg-muted"
+                  />
+                ))}
+              </div>
+            )}
+            {!rLoading && rDay && rSlots && rSlots.length === 0 && (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                {t("popup.reschedule.noSlots")}
+              </p>
+            )}
+            {!rLoading && rSlots && rSlots.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {rSlots.map((s) => (
+                  <button
+                    key={s.startUtc}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => doReschedule(s)}
+                    className="rounded-lg border border-border bg-muted py-2 text-center text-sm text-muted-foreground transition hover:border-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    {s.time}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

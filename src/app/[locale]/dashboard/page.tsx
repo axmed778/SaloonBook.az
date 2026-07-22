@@ -36,6 +36,7 @@ const APPT_SELECT = {
   status: true,
   priceMinor: true,
   source: true,
+  autoCompleted: true,
   manageToken: true,
   service: { select: { name: true } },
   employee: { select: { name: true, position: true } },
@@ -52,6 +53,7 @@ type ApptRow = {
   status: string;
   priceMinor: number;
   source: string;
+  autoCompleted: boolean;
   manageToken: string;
   service: { name: string };
   employee: { name: string; position: string | null };
@@ -79,6 +81,7 @@ function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock
     // Show who the booking is for; the phone stays the contact's.
     subtitle: a.attendeeName ?? a.customer.name,
     status: a.status as CalendarBlock["status"],
+    autoCompleted: a.autoCompleted,
     // Past-due but still CONFIRMED → needs closing (completed / no-show).
     overdue: a.status === "CONFIRMED" && a.endsAt.getTime() < Date.now(),
     priceMinor: a.priceMinor,

@@ -4,6 +4,7 @@ import { QUEUE_NAMES, type NotificationJob } from "../src/lib/queue";
 import { processNotification } from "./processors/notifications";
 import { sweepSubscriptions } from "./processors/subscriptions";
 import { sweepNotifications } from "./processors/notification-sweep";
+import { reconcileOverdue } from "./processors/reconcile";
 
 // The worker is a separate long-lived process (Railway "worker" service). It
 // handles WhatsApp sending, scheduled reminders, and the nightly subscription
@@ -54,9 +55,24 @@ const sweepTimer = setInterval(() => {
 }, SWEEP_INTERVAL_MS);
 console.log("[worker] notification sweep scheduled (every 10 min)");
 
+// Reconcile sweep: auto-close (COMPLETED, autoCompleted=true) past CONFIRMED
+// appointments the salon never reconciled after 48h, so the ROI dashboard and
+// payroll don't read empty. Hourly is plenty — the cutoff is measured in days.
+const RECONCILE_INTERVAL_MS = 60 * 60_000;
+void reconcileOverdue().catch((e) =>
+  console.error("[worker] initial reconcile sweep failed", e),
+);
+const reconcileTimer = setInterval(() => {
+  void reconcileOverdue().catch((e) =>
+    console.error("[worker] reconcile sweep failed", e),
+  );
+}, RECONCILE_INTERVAL_MS);
+console.log("[worker] reconcile sweep scheduled (hourly)");
+
 async function shutdown(signal: string) {
   console.log(`[worker] ${signal} received, shutting down...`);
   clearInterval(sweepTimer);
+  clearInterval(reconcileTimer);
   await Promise.all([worker.close(), subsWorker.close(), subsQueue.close()]);
   await connection.quit();
   process.exit(0);

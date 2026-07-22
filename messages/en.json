@@ -21,6 +21,7 @@
     "contact": "Contact",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "dataDeletion": "Data Deletion",
     "tagline": "Online booking for salons, barbershops and clinics in Azerbaijan. Let clients book themselves — 24/7.",
     "madeIn": "Made in Baku · Asia/Baku (UTC+4)"
   },
@@ -85,6 +86,14 @@
     },
     "overdue": "Overdue",
     "overdueHint": "Close this booking — mark completed or no-show.",
+    "conflictTitle": "{count} appointments overlap at this time — resolve it urgently.",
+    "reconcile": {
+      "pending": "{count} past appointments awaiting a status",
+      "closeDay": "Close day",
+      "title": "Close the day",
+      "hint": "Mark each appointment completed or no-show.",
+      "done": "All closed ✓"
+    },
     "popup": {
       "customer": "Customer",
       "phone": "Phone",
@@ -100,7 +109,15 @@
       "sendViaWhatsapp": "Send via WhatsApp",
       "complete": "Complete",
       "markNoShow": "No-show",
-      "waMessage": "Hi, {name}! To view, reschedule or cancel your appointment: {url}"
+      "autoCompleted": "Auto-completed (unconfirmed). If the client didn't show, mark it.",
+      "waMessage": "Hi, {name}! To view, reschedule or cancel your appointment: {url}",
+      "reschedule": {
+        "button": "Reschedule",
+        "title": "Pick a new time",
+        "back": "Back",
+        "noSlots": "No free slots for this day.",
+        "loadError": "Couldn't load times."
+      }
     },
     "modal": {
       "employee": "Specialist",
@@ -322,6 +339,21 @@
     "emptyTitle": "No clients yet",
     "emptyBody": "Clients appear here automatically after their first appointment — whether from online booking or ones you add from the calendar.",
     "goToCalendar": "Go to calendar",
+    "add": {
+      "button": "Add client",
+      "title": "New client",
+      "name": "Name",
+      "namePlaceholder": "Full name",
+      "phone": "Phone",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. VIP, usually late",
+      "waOptIn": "Agreed to WhatsApp messages",
+      "cancel": "Cancel",
+      "save": "Add",
+      "saving": "Adding…",
+      "errName": "Enter the client's name.",
+      "errPhone": "Phone must be +994 and 9 digits."
+    },
     "colCustomer": "Customer",
     "colVisits": "Visits",
     "colLastVisit": "Last visit",
@@ -635,6 +667,8 @@
     "planLimit": "You've reached the monthly booking limit.",
     "bookingFailed": "The appointment couldn't be created. Please try again.",
     "apptNotFound": "Appointment not found.",
+    "futureStatus": "A future appointment can't be marked completed or no-show yet.",
+    "rescheduleNotConfirmed": "Only a confirmed appointment can be rescheduled.",
     "slotReason": {
       "service": "Service not found.",
       "past": "This time is in the past.",
@@ -666,13 +700,14 @@
       "expected": "Expected revenue",
       "expectedSub": "{count} confirmed appointments ahead",
       "totalBookings": "Total appointments",
-      "noShowSub": "No-shows: {count}",
+      "noShowSub": "No-shows: {count} ({rate}%)",
       "returning": "Returning customers",
       "returnRate": "{rate}% return rate",
       "noCustomers": "No customers yet",
       "whatsapp": "WhatsApp reminders",
       "comingSoon": "Coming soon",
-      "waSent": "sent automatically"
+      "waSent": "sent automatically",
+      "waHook": "Reminders cut the {rate}% no-show rate"
     },
     "onlineShare": {
       "title": "Online share",
@@ -800,6 +835,19 @@
         { "title": "7. Personal data", "body": ["__privacyLink__"] },
         { "title": "8. Changes and termination", "body": ["These terms may be updated from time to time; continued use constitutes acceptance of the updated terms. You may close your account at any time — contact us to do so."] },
         { "title": "9. Governing law and contact", "body": ["__contact__"] }
+      ]
+    },
+    "dataDeletion": {
+      "metaTitle": "Data Deletion — SalonBook.az",
+      "metaDescription": "How to request deletion of your personal data from SalonBook.az.",
+      "title": "Data Deletion",
+      "updated": "22 July 2026",
+      "contactLine": "To request deletion, contact us on WhatsApp {wa}.",
+      "sections": [
+        { "title": "1. Overview", "body": ["This page explains how to request deletion of the personal data that SalonBook.az stores about you. It applies both to salons that use the Platform and to customers who booked an appointment through a salon's page."] },
+        { "title": "2. What data can be deleted", "body": ["On request we delete:", { "items": ["Salon account data: email address, salon profile (address, phone, business hours), staff and services;", "Customer data: name, phone number and appointment history entered during online booking;", "Technical records tied to your account or phone number."] }] },
+        { "title": "3. How to request deletion", "body": ["Send us a request through the contact channel below and include the phone number or email address linked to the data, so we can identify and remove it. If you booked as a customer, you can also ask the salon directly to delete your record.", "__contact__"] },
+        { "title": "4. Processing time", "body": ["We process deletion requests within 30 days. Some data may be kept longer only where the law requires it (for example, accounting records). Once deleted, the data cannot be recovered."] }
       ]
     }
   },
@@ -938,6 +986,8 @@
     "noEmployees": "No specialist for this service.",
     "noSlots": "No free slots for this day.",
     "pickAnotherDay": "Pick another day",
+    "slotsLoadError": "Couldn't load times.",
+    "retry": "Try again",
     "minutesShort": "{min} min",
     "nameLabel": "Your name",
     "namePlaceholder": "Full name",
@@ -956,7 +1006,8 @@
       "consentRequired": "You must agree to the processing of personal data to continue.",
       "confirmHuman": "Please confirm you're not a robot.",
       "bookingFailed": "Booking failed. Please try again.",
-      "network": "Network error. Please try again."
+      "network": "Network error. Please try again.",
+      "slotTaken": "Sorry, that time was just taken. Please pick another."
     },
     "success": {
       "title": "Booking confirmed!",

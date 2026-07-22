@@ -14,6 +14,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { MARKETING_PLANS, type MarketingPlan } from "@/lib/plans";
@@ -163,8 +164,54 @@ function PricingCard({
 
 /* --------------------------------- Page ---------------------------------- */
 
+// The marketing homepage is the site's canonical root: set its own canonical +
+// hreflang here (the layout deliberately leaves these unset so subpages don't
+// inherit a homepage canonical).
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const path = locale === "az" ? "/" : `/${locale}`;
+  return {
+    alternates: {
+      canonical: path,
+      languages: { az: "/", en: "/en", ru: "/ru" },
+    },
+    openGraph: { url: path },
+  };
+}
+
 export default async function Home() {
   const t = await getTranslations("Landing");
+  const tMeta = await getTranslations("metadata");
+
+  const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  // Organization + WebSite structured data so search engines render a rich
+  // knowledge card and understand the site. Salon pages carry their own
+  // LocalBusiness JSON-LD (see [slug]/page.tsx).
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${appUrl}/#organization`,
+        name: "SalonBook.az",
+        url: appUrl,
+        logo: `${appUrl}/icon.svg`,
+        description: tMeta("description"),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${appUrl}/#website`,
+        url: appUrl,
+        name: "SalonBook.az",
+        publisher: { "@id": `${appUrl}/#organization` },
+        inLanguage: ["az", "en", "ru"],
+      },
+    ],
+  };
 
   const fmtLimit = (n: number) => (n === Infinity ? t("pricing.unlimited") : String(n));
 
@@ -207,6 +254,10 @@ export default async function Home() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteHeader />
 
       <main>

@@ -6,9 +6,10 @@ import { getTranslations } from "next-intl/server";
 import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { enqueueNotification } from "@/lib/queue";
-import { getAvailableSlots, type Slot } from "@/lib/availability";
+import { getAvailableSlots, isSlotBookable, type Slot } from "@/lib/availability";
 import {
   createBooking,
+  isOverlapError,
   SlotTakenError,
   SlotUnavailableError,
   PlanLimitError,
@@ -191,12 +192,20 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
     select: {
       status: true,
       startsAt: true,
-      customer: { select: { phone: true } },
+      customer: { select: { phone: true, waOptIn: true } },
       service: { select: { name: true } },
       salon: { select: { name: true } },
     },
   });
   if (!appt) return { ok: false, error: t("apptNotFound") };
+
+  // A COMPLETED/NO_SHOW outcome only makes sense once the appointment time has
+  // passed: marking a FUTURE booking completed (or no-show) would book revenue
+  // and payroll commission before the service happened, and corrupt the very
+  // numbers the ROI dashboard sells on. CANCELLED stays valid at any time.
+  if ((status === "COMPLETED" || status === "NO_SHOW") && appt.startsAt > new Date()) {
+    return { ok: false, error: t("futureStatus") };
+  }
 
   // salonId in the filter is the tenant guard; only CONFIRMED/COMPLETED/NO_SHOW
   // appointments are shown, so any of them is a valid transition target.
@@ -219,7 +228,14 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
   // Salon cancelled an upcoming confirmed appointment → tell the customer so
   // they don't show up. Created AFTER the sweep above so it stays QUEUED; the
   // worker exempts cancellation notices from the cancelled-appointment guard.
-  if (status === "CANCELLED" && appt.status === "CONFIRMED" && appt.startsAt > new Date()) {
+  // Gated on waOptIn: a customer who never consented (or texted STOP) must not
+  // receive even this template message (Meta policy).
+  if (
+    status === "CANCELLED" &&
+    appt.status === "CONFIRMED" &&
+    appt.startsAt > new Date() &&
+    appt.customer.waOptIn
+  ) {
     const notice = await prisma.notification.create({
       data: {
         salonId,
@@ -239,6 +255,158 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       await enqueueNotification(notice.id);
     } catch (e) {
       console.error("[status] cancel-notice enqueue failed (row persisted)", e);
+    }
+  }
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Reschedule an appointment (staff-initiated move) ------------------------
+// The dashboard equivalent of the customer self-service reschedule (/a/{token}).
+// Moving in place — rather than cancel-and-rebook — means the customer is NOT
+// sent a cancellation; instead they get a fresh confirmation for the new time
+// (opt-in permitting). The availability engine already supports excluding the
+// appointment's own interval so it doesn't block its own move.
+
+const rescheduleSlotsSchema = z.object({
+  id: z.string().uuid(),
+  day: z.string().regex(YMD_RE),
+});
+
+/** Free slots for the reschedule picker: the appointment's own (employee,
+ *  service) on the given day, excluding its current interval. */
+export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
+  const salonId = await requireSalonId();
+  const t = await getTranslations("Actions");
+  const parsed = rescheduleSlotsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  const appt = await prisma.appointment.findFirst({
+    where: { id: parsed.data.id, salonId },
+    select: { employeeId: true, serviceId: true },
+  });
+  if (!appt) return { ok: false, error: t("apptNotFound") };
+
+  const slots = await getAvailableSlots({
+    employeeId: appt.employeeId,
+    serviceId: appt.serviceId,
+    dayYmd: parsed.data.day,
+    excludeAppointmentId: parsed.data.id,
+  });
+  return { ok: true, slots };
+}
+
+const rescheduleSchema = z.object({
+  id: z.string().uuid(),
+  startUtc: z.string().datetime(),
+});
+
+export async function rescheduleAppointment(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const t = await getTranslations("Actions");
+  const parsed = rescheduleSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const startUtc = new Date(parsed.data.startUtc);
+
+  const appt = await prisma.appointment.findFirst({
+    where: { id: parsed.data.id, salonId },
+    select: {
+      status: true,
+      employeeId: true,
+      serviceId: true,
+      salon: { select: { name: true } },
+      service: { select: { name: true } },
+      customer: { select: { phone: true, waOptIn: true } },
+    },
+  });
+  if (!appt) return { ok: false, error: t("apptNotFound") };
+  // Only a live (CONFIRMED) booking can be moved; completed/cancelled/no-show
+  // are terminal states.
+  if (appt.status !== "CONFIRMED") return { ok: false, error: t("rescheduleNotConfirmed") };
+
+  const check = await isSlotBookable(prisma, {
+    employeeId: appt.employeeId,
+    serviceId: appt.serviceId,
+    startUtc,
+    excludeAppointmentId: parsed.data.id,
+  });
+  if (!check.ok) {
+    if (check.reason === "overlap") return { ok: false, error: t("slotTaken") };
+    return {
+      ok: false,
+      error: t.has(`slotReason.${check.reason}`) ? t(`slotReason.${check.reason}`) : t("slotUnavailable"),
+    };
+  }
+
+  let toEnqueue: Array<{ id: string; delayMs?: number }> = [];
+  try {
+    toEnqueue = await prisma.$transaction(async (tx) => {
+      const res = await tx.appointment.updateMany({
+        where: { id: parsed.data.id, salonId, status: "CONFIRMED" },
+        data: { startsAt: startUtc, endsAt: check.endUtc },
+      });
+      if (res.count === 0) throw new Error("conflict");
+
+      // Old queued notifications carry the OLD time — cancel them.
+      await tx.notification.updateMany({
+        where: { appointmentId: parsed.data.id, salonId, status: "QUEUED" },
+        data: { status: "CANCELLED" },
+      });
+
+      const out: Array<{ id: string; delayMs?: number }> = [];
+      // Fresh confirmation + reminder to the customer — only with opt-in (same
+      // gate as booking). No owner alert: the salon performed this itself.
+      if (appt.customer.waOptIn) {
+        const payload = {
+          salon: appt.salon.name,
+          service: appt.service.name,
+          startsAt: startUtc.toISOString(),
+        };
+        const confirmation = await tx.notification.create({
+          data: {
+            salonId,
+            appointmentId: parsed.data.id,
+            template: "booking_confirmation",
+            toPhone: appt.customer.phone,
+            payload,
+          },
+          select: { id: true },
+        });
+        out.push({ id: confirmation.id });
+
+        const reminderAt = new Date(startUtc.getTime() - 24 * 60 * 60_000);
+        if (reminderAt > new Date()) {
+          const reminder = await tx.notification.create({
+            data: {
+              salonId,
+              appointmentId: parsed.data.id,
+              template: "appointment_reminder",
+              toPhone: appt.customer.phone,
+              sendAfter: reminderAt,
+              payload,
+            },
+            select: { id: true },
+          });
+          out.push({ id: reminder.id, delayMs: reminderAt.getTime() - Date.now() });
+        }
+      }
+      return out;
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "conflict") return { ok: false, error: t("apptNotFound") };
+    if (isOverlapError(e)) return { ok: false, error: t("slotTaken") };
+    console.error("[reschedule] error", e);
+    return { ok: false, error: t("bookingFailed") };
+  }
+
+  // Best-effort enqueue; rows persist QUEUED and the sweep re-enqueues on failure.
+  for (const it of toEnqueue) {
+    if (it.delayMs !== undefined && it.delayMs <= 0) continue;
+    try {
+      await enqueueNotification(it.id, it.delayMs);
+    } catch (e) {
+      console.error("[reschedule] enqueue failed (row persisted)", e);
     }
   }
 

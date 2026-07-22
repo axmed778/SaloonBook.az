@@ -31,6 +31,9 @@ export type CalendarBlock = {
   title: string; // service name
   subtitle: string; // customer name
   status: "CONFIRMED" | "COMPLETED" | "NO_SHOW";
+  // True when the 48h reconcile sweep auto-closed this (→ COMPLETED) rather than
+  // staff confirming it. Shown as "unconfirmed" and still correctable to NO_SHOW.
+  autoCompleted: boolean;
   // A CONFIRMED booking whose time has already passed but hasn't been closed
   // (completed / no-show). Rendered distinctly so staff clear it at day's end.
   overdue: boolean;

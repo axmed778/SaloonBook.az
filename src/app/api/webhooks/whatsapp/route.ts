@@ -15,6 +15,17 @@ const STATUS_MAP: Record<string, { to: NotifStatus; from: NotifStatus[] }> = {
   failed: { to: "FAILED", from: ["QUEUED", "SENT"] },
 };
 
+// Customer opt-out keywords (EN + AZ + RU). An inbound message whose text is (or
+// begins with) one of these flips the customer to waOptIn=false. Liberal on
+// purpose: honoring a STOP too eagerly is safe; missing one damages the number's
+// WhatsApp quality rating and breaches Meta policy.
+const OPT_OUT_WORDS = ["stop", "unsubscribe", "dayan", "ləğv", "imtina", "стоп", "отписаться"];
+function isOptOut(body: string): boolean {
+  const t = body.trim().toLowerCase().replace(/[.!?,]+$/, "");
+  if (!t) return false;
+  return OPT_OUT_WORDS.some((w) => t === w || t.startsWith(`${w} `));
+}
+
 /**
  * Verifies Meta's X-Hub-Signature-256 HMAC over the RAW request body using
  * WHATSAPP_APP_SECRET. Returns true to proceed, false to reject.
@@ -78,8 +89,35 @@ export async function POST(req: NextRequest) {
       ) ?? [];
 
     for (const c of changes as Array<{
-      value?: { statuses?: unknown[]; metadata?: { phone_number_id?: string } };
+      value?: {
+        statuses?: unknown[];
+        messages?: unknown[];
+        metadata?: { phone_number_id?: string };
+      };
     }>) {
+      // Inbound customer messages: honor STOP / opt-out keywords. A customer who
+      // texts "STOP" (or "dayan"/"ləğv"/"стоп") must never be messaged again.
+      // Global by phone — one opt-out silences that number across every salon.
+      for (const m of (c.value?.messages ?? []) as Array<{
+        from?: string;
+        type?: string;
+        text?: { body?: string };
+        button?: { text?: string };
+      }>) {
+        const body = m.text?.body ?? m.button?.text ?? "";
+        if (!m.from || !isOptOut(body)) continue;
+        // Meta sends `from` as bare digits (e.g. "994501234567"); our Customer
+        // phones are stored E.164 with a leading "+".
+        const phone = m.from.startsWith("+") ? m.from : `+${m.from}`;
+        const res = await prisma.customer.updateMany({
+          where: { phone, waOptIn: true },
+          data: { waOptIn: false },
+        });
+        if (res.count > 0) {
+          console.log(`[whatsapp:webhook] opt-out honored for ${phone} (${res.count} record(s))`);
+        }
+      }
+
       const statuses = c.value?.statuses ?? [];
       if (statuses.length === 0) continue;
 

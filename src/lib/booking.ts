@@ -162,7 +162,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             name: safeName,
             ...(input.customer.waOptIn !== undefined ? { waOptIn: input.customer.waOptIn } : {}),
           },
-      select: { id: true },
+      select: { id: true, waOptIn: true },
     });
 
     let appointment;
@@ -192,35 +192,23 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       throw e;
     }
 
-    // Persist the WhatsApp notifications (worker sends them).
-    const confirmation = await tx.notification.create({
-      data: {
-        salonId: input.salonId,
-        appointmentId: appointment.id,
-        template: "booking_confirmation",
-        toPhone: input.customer.phone,
-        payload: {
-          salon: salon.name,
-          service: service.name,
-          startsAt: appointment.startsAt.toISOString(),
-        } satisfies Prisma.InputJsonValue,
-      },
-      select: { id: true },
-    });
-
-    // Only persist a reminder when it's still in the future. For a booking less
-    // than 24h out the reminder is moot, and creating it would leave a QUEUED
-    // row that never enqueues (delay <= 0) and lingers forever.
+    // Customer-facing WhatsApp (confirmation + reminder) require the customer's
+    // opt-in: Meta policy forbids business-initiated template messages without
+    // consent, and sending anyway erodes the number's quality rating. Without
+    // opt-in we still record the booking and alert the owner — we just never
+    // message the customer. waOptIn is the stored consent (public form checkbox
+    // / prior customer record). The reminder is additionally gated on being far
+    // enough out (a <24h booking's reminder is moot and would linger QUEUED).
     const reminderAt = new Date(appointment.startsAt.getTime() - 24 * 60 * 60_000);
+    let confirmationId: string | null = null;
     let reminderId: string | null = null;
-    if (reminderAt > new Date()) {
-      const reminder = await tx.notification.create({
+    if (customer.waOptIn) {
+      const confirmation = await tx.notification.create({
         data: {
           salonId: input.salonId,
           appointmentId: appointment.id,
-          template: "appointment_reminder",
+          template: "booking_confirmation",
           toPhone: input.customer.phone,
-          sendAfter: reminderAt,
           payload: {
             salon: salon.name,
             service: service.name,
@@ -229,7 +217,26 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
         },
         select: { id: true },
       });
-      reminderId = reminder.id;
+      confirmationId = confirmation.id;
+
+      if (reminderAt > new Date()) {
+        const reminder = await tx.notification.create({
+          data: {
+            salonId: input.salonId,
+            appointmentId: appointment.id,
+            template: "appointment_reminder",
+            toPhone: input.customer.phone,
+            sendAfter: reminderAt,
+            payload: {
+              salon: salon.name,
+              service: service.name,
+              startsAt: appointment.startsAt.toISOString(),
+            } satisfies Prisma.InputJsonValue,
+          },
+          select: { id: true },
+        });
+        reminderId = reminder.id;
+      }
     }
 
     let ownerAlertId: string | null = null;
@@ -253,7 +260,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
     return {
       appointment,
-      confirmationId: confirmation.id,
+      confirmationId,
       ownerAlertId,
       reminderId,
       reminderSendAfter: reminderAt,
@@ -267,7 +274,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   try {
     await Promise.race([
       (async () => {
-        await enqueueNotification(result.confirmationId);
+        if (result.confirmationId) await enqueueNotification(result.confirmationId);
         if (result.ownerAlertId) await enqueueNotification(result.ownerAlertId);
 
         if (result.reminderId) {

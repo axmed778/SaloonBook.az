@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { minutesToHHMM } from "@/lib/time";
 import {
   blockStyle,
+  packLanes,
   type CalendarColumn,
   type CalendarBlock,
 } from "./calendar-shared";
@@ -94,20 +95,39 @@ export function DayGrid({
                     style={{ top: i * ROW_H, height: 0 }}
                   />
                 ))}
-                {colBlocks.map((b) => {
+                {packLanes(colBlocks).map(({ item: b, lane, lanes }) => {
                   const top = (b.startMin - windowStartMin) * PX_PER_MIN;
                   const height = Math.max((b.endMin - b.startMin) * PX_PER_MIN - 2, 20);
+                  // lanes > 1 => this block overlaps another in the SAME master's
+                  // column. The DB forbids two CONFIRMED bookings from overlapping,
+                  // so this only arises from mixed statuses (a NO_SHOW/COMPLETED
+                  // slot reused) or imported data — but when it does, BOTH must
+                  // stay visible and clickable (never stacked one atop the other),
+                  // and the clash flagged loudly so staff resolve it.
+                  const conflict = lanes > 1;
                   return (
                     <button
                       key={b.id}
                       type="button"
                       onClick={() => onSelect(b)}
+                      title={conflict ? t("conflictTitle", { count: lanes }) : undefined}
                       className={
-                        "absolute left-1 right-1 overflow-hidden rounded-md border px-2 py-1 text-left transition-colors " +
-                        blockStyle(b)
+                        "absolute overflow-hidden rounded-md border px-2 py-1 text-left transition-colors " +
+                        blockStyle(b) +
+                        (conflict ? " z-10 ring-2 ring-inset ring-red-600" : "")
                       }
-                      style={{ top, height }}
+                      style={{
+                        top,
+                        height,
+                        left: `calc(${(lane / lanes) * 100}% + 1px)`,
+                        width: `calc(${100 / lanes}% - 2px)`,
+                      }}
                     >
+                      {conflict && (
+                        <span className="absolute right-0.5 top-0.5 rounded bg-red-600 px-1 text-[9px] font-bold leading-none text-white">
+                          ⚠{lanes}
+                        </span>
+                      )}
                       <p className="truncate text-xs font-semibold">
                         {minutesToHHMM(b.startMin)} · {b.title}
                       </p>
