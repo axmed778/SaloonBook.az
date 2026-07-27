@@ -22,6 +22,8 @@ export default async function SettingsPage() {
       phone: true,
       slug: true,
       businessHours: true,
+      latitude: true,
+      longitude: true,
     },
   });
   if (!salon) return <p className="text-sm text-muted-foreground">{t("noSalonTitle")}</p>;
@@ -60,6 +62,8 @@ export default async function SettingsPage() {
         phone: salon.phone,
         slug: linkSlug,
         businessHours: parseBusinessHours(salon.businessHours),
+        latitude: salon.latitude,
+        longitude: salon.longitude,
       }}
       appUrl={appUrl}
       branchSection={

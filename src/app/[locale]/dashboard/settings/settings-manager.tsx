@@ -14,6 +14,7 @@ import {
   updateProfile,
   updateSlug,
   updateBusinessHours,
+  updateLocation,
   createBranch,
   updateBranch,
   setBranchStatus,
@@ -21,6 +22,7 @@ import {
 } from "./actions";
 import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
+import { LocationPicker } from "@/components/location-picker";
 import { Link } from "@/i18n/navigation";
 import { MapPin, Store } from "lucide-react";
 
@@ -38,6 +40,8 @@ type SalonData = {
   phone: string | null;
   slug: string;
   businessHours: BusinessHour[];
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type BranchRow = {
@@ -95,6 +99,10 @@ export function SettingsManager({
         <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
         <p className="mt-0.5 text-sm text-faint-foreground">{t("subtitle")}</p>
       </div>
+
+      {/* Location pin (full width so the map has room): puts this salon on the
+          public discovery map, where clients find and book it without a link. */}
+      <LocationCard salon={salon} onSaved={() => router.refresh()} />
 
       {/* Two columns on wide screens so the page fills the width instead of
           leaving a tall empty gutter: salon config on the left, the shareable
@@ -184,6 +192,82 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
           {pending ? t("saving") : t("save")}
         </button>
         {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>{msg.text}</span>}
+      </div>
+    </section>
+  );
+}
+
+// --- Location (map pin) ----------------------------------------------------
+
+// Drops this salon onto the public discovery map. The owner places the pin by
+// clicking the map or using device GPS (in LocationPicker); this card owns the
+// coordinate state and persists it. Clearing removes the salon from the map.
+function LocationCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void }) {
+  const t = useTranslations("Settings");
+  const [pending, start] = useTransition();
+  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>({
+    lat: salon.latitude,
+    lng: salon.longitude,
+  });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const hasPin = coords.lat !== null && coords.lng !== null;
+  const dirty = coords.lat !== salon.latitude || coords.lng !== salon.longitude;
+
+  function save() {
+    setMsg(null);
+    start(async () => {
+      const res = await updateLocation({ lat: coords.lat, lng: coords.lng });
+      if (res.ok) {
+        setMsg({ ok: true, text: t("saved") });
+        onSaved();
+      } else {
+        setMsg({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  return (
+    <section className={cardCls}>
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <MapPin className="h-4 w-4 text-rose-700 dark:text-rose-400" strokeWidth={2} />
+        {t("location.title")}
+      </h2>
+      <p className="mt-1 text-sm text-faint-foreground">{t("location.subtitle")}</p>
+
+      <div className="mt-4">
+        <LocationPicker
+          lat={coords.lat}
+          lng={coords.lng}
+          onChange={(lat, lng) => setCoords({ lat, lng })}
+        />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button onClick={save} disabled={pending || !dirty} className={saveBtn}>
+          {pending ? t("saving") : t("save")}
+        </button>
+        {hasPin && (
+          <button
+            onClick={() => setCoords({ lat: null, lng: null })}
+            disabled={pending}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
+          >
+            {t("location.clear")}
+          </button>
+        )}
+        {hasPin ? (
+          <span className="font-mono text-xs text-faint-foreground">
+            {coords.lat!.toFixed(5)}, {coords.lng!.toFixed(5)}
+          </span>
+        ) : (
+          <span className="text-xs text-faint-foreground">{t("location.noPin")}</span>
+        )}
+        {msg && (
+          <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
+            {msg.text}
+          </span>
+        )}
       </div>
     </section>
   );

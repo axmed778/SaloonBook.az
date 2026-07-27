@@ -106,6 +106,12 @@ model Salon {
   description  String?
   logoUrl      String?
   address      String?
+  // Pinned location for the public discovery map (WGS84 degrees). Both null
+  // until the owner drops a pin in Settings; a salon only appears on the map
+  // once both are set. Not an address geocode — the owner places it by hand (or
+  // via device GPS), so it can be more precise than the free-text `address`.
+  latitude     Float?
+  longitude    Float?
   phone        String?
   timezone     String        @default("Asia/Baku")
   currency     String        @default("AZN")

@@ -184,3 +184,86 @@
 .shadow-frame {
   box-shadow: var(--shadow-frame);
 }
+
+/* ---- Leaflet map (discovery map + location picker) ----------------------- */
+
+.leaflet-container {
+  background: var(--muted);
+  font: inherit;
+  /* Rounded corners come from the wrapping element's overflow-hidden. */
+}
+
+/* OSM raster tiles are light-only. In dark mode, invert + re-hue them so the
+   basemap reads as a dark map instead of a glaring white sheet. Only tiles are
+   filtered — markers, popups and controls live in other panes. */
+.dark .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+
+/* Brand pin (see pinIcon in leaflet-setup.ts): colour tracks the theme accent,
+   with a soft shadow so it lifts off the map. */
+.salon-pin {
+  color: var(--accent);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* Popups */
+.leaflet-popup-content-wrapper {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  box-shadow: var(--shadow-frame);
+}
+.leaflet-popup-tip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.leaflet-popup-content {
+  margin: 0.75rem 0.9rem;
+}
+.leaflet-popup-close-button {
+  color: var(--faint-foreground) !important;
+}
+.salon-popup-name {
+  font-weight: 600;
+  color: var(--foreground);
+}
+.salon-popup-addr {
+  margin-top: 0.15rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+.salon-popup-book {
+  display: inline-flex;
+  margin-top: 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.salon-popup-book:hover {
+  background: var(--accent-hover);
+}
+
+/* Zoom / attribution controls, themed for both palettes. */
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.leaflet-bar a:hover {
+  background: var(--hover);
+}
+.leaflet-control-attribution {
+  background: color-mix(in oklab, var(--card) 80%, transparent) !important;
+  color: var(--faint-foreground);
+}
+.leaflet-control-attribution a {
+  color: var(--muted-foreground);
+}
