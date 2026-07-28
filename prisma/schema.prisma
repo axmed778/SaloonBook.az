@@ -138,6 +138,7 @@ model Salon {
   payouts      Payout[]
   customerNotes CustomerNote[]
   whatsAppSender WhatsAppSender?
+  reviews      Review[]
   createdAt    DateTime      @default(now())
 
   @@index([accountId])
@@ -349,6 +350,7 @@ model Appointment {
   service       Service           @relation(fields: [serviceId], references: [id])
   customer      Customer          @relation(fields: [customerId], references: [id])
   notifications Notification[]
+  review        Review?
   createdAt     DateTime          @default(now())
 
   // The no-overlap exclusion constraint is added in prisma/constraints.sql
@@ -491,6 +493,27 @@ model Client {
   consentVersion String?
   createdAt      DateTime  @default(now())
   lastLoginAt    DateTime? @db.Timestamptz(6)
+  reviews        Review[]
+}
+
+// A client's review of a completed appointment. One per appointment. Feeds the
+// salon's denormalized rating aggregate (Salon.ratingCount/ratingSum) and the
+// discovery min-rating filter. Written only via the client review action, which
+// checks the appointment is COMPLETED and belongs to the client's own phone.
+model Review {
+  id            String      @id @default(uuid())
+  clientId      String
+  salonId       String
+  appointmentId String      @unique // one review per visit
+  rating        Int // 1..5 (CHECK constraint in the migration)
+  comment       String?
+  client        Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  salon         Salon       @relation(fields: [salonId], references: [id])
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([salonId, createdAt])
+  @@index([clientId])
 }
 
 // ---------------------------------------------------------------------------

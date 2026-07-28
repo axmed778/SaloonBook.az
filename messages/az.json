@@ -165,6 +165,22 @@
       "OTHER": "Digər"
     }
   },
+  "Reviews": {
+    "writeReview": "Rəy yaz",
+    "prompt": "Ziyarətinizi dəyərləndirin",
+    "stars": "{n} ulduz",
+    "commentPlaceholder": "Rəyiniz (istəyə bağlı)",
+    "submit": "Göndər",
+    "submitting": "Göndərilir…",
+    "cancel": "İmtina",
+    "errors": {
+      "unauthorized": "Əvvəlcə daxil olun.",
+      "invalid": "Məlumat düzgün deyil.",
+      "not_allowed": "Bu görüşü dəyərləndirə bilməzsiniz.",
+      "already_reviewed": "Bu görüş artıq dəyərləndirilib.",
+      "failed": "Alınmadı. Yenidən cəhd edin."
+    }
+  },
   "Common": {
     "cancel": "Ləğv et",
     "pleaseWait": "Gözləyin…",

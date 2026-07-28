@@ -165,6 +165,22 @@
       "OTHER": "Other"
     }
   },
+  "Reviews": {
+    "writeReview": "Write a review",
+    "prompt": "Rate your visit",
+    "stars": "{n} stars",
+    "commentPlaceholder": "Your review (optional)",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "cancel": "Cancel",
+    "errors": {
+      "unauthorized": "Please sign in first.",
+      "invalid": "Invalid data.",
+      "not_allowed": "You can't review this visit.",
+      "already_reviewed": "This visit is already reviewed.",
+      "failed": "Something went wrong. Please try again."
+    }
+  },
   "Common": {
     "cancel": "Cancel",
     "pleaseWait": "Please wait…",

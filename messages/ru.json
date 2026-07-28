@@ -165,6 +165,22 @@
       "OTHER": "Другое"
     }
   },
+  "Reviews": {
+    "writeReview": "Оставить отзыв",
+    "prompt": "Оцените визит",
+    "stars": "{n} звёзд",
+    "commentPlaceholder": "Ваш отзыв (необязательно)",
+    "submit": "Отправить",
+    "submitting": "Отправка…",
+    "cancel": "Отмена",
+    "errors": {
+      "unauthorized": "Сначала войдите.",
+      "invalid": "Неверные данные.",
+      "not_allowed": "Вы не можете оценить этот визит.",
+      "already_reviewed": "Этот визит уже оценён.",
+      "failed": "Что-то пошло не так. Попробуйте снова."
+    }
+  },
   "Common": {
     "cancel": "Отмена",
     "pleaseWait": "Подождите…",
