@@ -23,6 +23,7 @@ import {
 import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { LocationPicker } from "@/components/location-picker";
+import { NotificationToggle } from "@/components/pwa/notification-toggle";
 import { Link } from "@/i18n/navigation";
 import { MapPin, Store } from "lucide-react";
 
@@ -83,10 +84,12 @@ export function SettingsManager({
   salon,
   appUrl,
   branchSection = null,
+  vapidPublicKey = null,
 }: {
   salon: SalonData;
   appUrl: string;
   branchSection?: BranchSection | null;
+  vapidPublicKey?: string | null;
 }) {
   const t = useTranslations("Settings");
   const router = useRouter();
@@ -109,6 +112,9 @@ export function SettingsManager({
           booking link + QR on the right. Collapses to one column below lg. */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <div className="space-y-6">
+          {/* Per-device push notifications (installable PWA). Hides itself when
+              the browser can't receive push or the server has no VAPID key. */}
+          <NotificationToggle vapidPublicKey={vapidPublicKey} />
           <ProfileCard salon={salon} onSaved={() => router.refresh()} />
           <HoursCard businessHours={salon.businessHours} onSaved={() => router.refresh()} />
         </div>

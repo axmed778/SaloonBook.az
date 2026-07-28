@@ -51,6 +51,17 @@ export function assertEnv(): void {
       process.env.WHATSAPP_TOKEN,
       "WHATSAPP_TOKEN is unset — notification sender will run in sandbox (log-only) mode.",
     ],
+    // Web Push (installable PWA notifications). Without VAPID keys the push
+    // sender runs in sandbox (log-only) mode and the Settings toggle hides
+    // itself — harmless until you want push, so warn-only.
+    [
+      process.env.VAPID_PUBLIC_KEY,
+      "VAPID_PUBLIC_KEY is unset — Web Push runs in sandbox (log-only) mode; the notification toggle is hidden.",
+    ],
+    [
+      process.env.VAPID_PRIVATE_KEY,
+      "VAPID_PRIVATE_KEY is unset — Web Push cannot send.",
+    ],
   ];
 
   // WHATSAPP_ENCRYPTION_KEY encrypts per-salon "own number" access tokens at rest

@@ -62,7 +62,15 @@
     "iosBody": "To install the app in Safari:",
     "iosStep1": "Tap the Share button below",
     "iosStep2": "Choose “Add to Home Screen”",
-    "iosStep3": "Confirm with “Add”"
+    "iosStep3": "Confirm with “Add”",
+    "notifTitle": "Notifications",
+    "notifBody": "Get push alerts for new bookings, cancellations and upcoming appointments.",
+    "notifEnable": "Enable",
+    "notifDisable": "Turn off",
+    "notifWorking": "Please wait…",
+    "notifDenied": "Notifications are blocked in the browser. Allow them in your browser settings.",
+    "notifIosInstall": "On iOS, notifications only work once the app is added to the home screen. Follow the “Add to Home Screen” steps above.",
+    "notifError": "Something went wrong. Please try again."
   },
   "Common": {
     "cancel": "Cancel",

@@ -1,7 +1,8 @@
 import { Queue, Worker } from "bullmq";
 import { connection } from "../src/lib/redis";
-import { QUEUE_NAMES, type NotificationJob } from "../src/lib/queue";
+import { QUEUE_NAMES, type NotificationJob, type PushJob } from "../src/lib/queue";
 import { processNotification } from "./processors/notifications";
+import { processPush } from "./processors/push";
 import { sweepSubscriptions } from "./processors/subscriptions";
 import { sweepNotifications } from "./processors/notification-sweep";
 import { reconcileOverdue } from "./processors/reconcile";
@@ -21,6 +22,18 @@ worker.on("failed", (job, err) =>
 );
 
 console.log("[worker] notifications worker started");
+
+// Web Push (PWA) worker: delivers new-booking / cancellation / reminder alerts
+// to a salon's installed devices. Its own queue so push retries/backoff are
+// independent of WhatsApp delivery.
+const pushWorker = new Worker<PushJob>(QUEUE_NAMES.push, processPush, {
+  connection,
+  concurrency: 5,
+});
+pushWorker.on("failed", (job, err) =>
+  console.error(`[worker] push failed ${job?.id}: ${err?.message}`),
+);
+console.log("[worker] push worker started");
 
 // Subscription sweep: repeatable daily job (03:30 Baku = 23:30 UTC), plus one
 // run at startup so a worker that was down over the boundary catches up.
@@ -73,7 +86,12 @@ async function shutdown(signal: string) {
   console.log(`[worker] ${signal} received, shutting down...`);
   clearInterval(sweepTimer);
   clearInterval(reconcileTimer);
-  await Promise.all([worker.close(), subsWorker.close(), subsQueue.close()]);
+  await Promise.all([
+    worker.close(),
+    pushWorker.close(),
+    subsWorker.close(),
+    subsQueue.close(),
+  ]);
   await connection.quit();
   process.exit(0);
 }

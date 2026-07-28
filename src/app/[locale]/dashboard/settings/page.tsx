@@ -29,6 +29,10 @@ export default async function SettingsPage() {
   if (!salon) return <p className="text-sm text-muted-foreground">{t("noSalonTitle")}</p>;
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
+  // Public VAPID key for the notification toggle's PushManager.subscribe. Read
+  // server-side (runtime) and passed as a prop so it isn't build-time inlined;
+  // null in dev means the toggle hides itself.
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY?.trim() || null;
 
   // Branch management (owners only): every non-deleted salon of the account,
   // oldest first — the oldest is the "primary" one carrying the public link.
@@ -66,6 +70,7 @@ export default async function SettingsPage() {
         longitude: salon.longitude,
       }}
       appUrl={appUrl}
+      vapidPublicKey={vapidPublicKey}
       branchSection={
         session.role === "OWNER"
           ? {

@@ -46,7 +46,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Keep server-only packages out of the client bundle.
-  serverExternalPackages: ["@prisma/client", "bullmq", "ioredis"],
+  serverExternalPackages: ["@prisma/client", "bullmq", "ioredis", "web-push"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

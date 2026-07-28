@@ -425,6 +425,33 @@ enum WhatsAppSenderStatus {
 }
 
 // ---------------------------------------------------------------------------
+// Web Push subscriptions (installable PWA — owner/staff notifications)
+// ---------------------------------------------------------------------------
+// One row per browser/device push endpoint. Written by the session-scoped
+// subscribe/unsubscribe API routes and read by the notifications worker to push
+// new-booking / cancellation / reminder alerts to a salon's installed devices.
+//
+// userId/salonId are plain scalars (no relations) so this stays a purely
+// additive model — it touches neither User nor Salon. Like WhatsAppSender it is
+// deliberately OUT of the tenant RLS list (worker- and session-managed, accessed
+// outside withTenantScope). Dead endpoints are pruned when a push returns
+// 404/410, not via FK cascade.
+model PushSubscription {
+  id         String   @id @default(uuid())
+  userId     String // the owner/staff user this device belongs to
+  salonId    String // the salon whose events this device should receive
+  endpoint   String   @unique // the browser's push endpoint URL (the identity)
+  p256dh     String // client public key (base64url), for payload encryption
+  auth       String // client auth secret (base64url)
+  userAgent  String? // captured at subscribe time, for the "your devices" UI
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now()) @db.Timestamptz(6) // bumped on re-subscribe
+
+  @@index([userId])
+  @@index([salonId])
+}
+
+// ---------------------------------------------------------------------------
 // Billing (manual activation in MVP; tables ready for a future PSP)
 // ---------------------------------------------------------------------------
 

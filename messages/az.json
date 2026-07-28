@@ -62,7 +62,15 @@
     "iosBody": "Safari-də tətbiqi quraşdırmaq üçün:",
     "iosStep1": "Aşağıda Paylaş düyməsinə toxunun",
     "iosStep2": "«Ana ekrana əlavə et»i seçin",
-    "iosStep3": "«Əlavə et» ilə təsdiqləyin"
+    "iosStep3": "«Əlavə et» ilə təsdiqləyin",
+    "notifTitle": "Bildirişlər",
+    "notifBody": "Yeni rezervasiya, ləğv və yaxınlaşan görüşlər üçün push bildirişləri alın.",
+    "notifEnable": "Aktiv et",
+    "notifDisable": "Söndür",
+    "notifWorking": "Gözləyin…",
+    "notifDenied": "Brauzer bildirişləri bloklayıb. İcazəni brauzer parametrlərindən verin.",
+    "notifIosInstall": "iOS-da bildirişlər yalnız tətbiq ana ekrana əlavə edildikdə işləyir. Yuxarıdakı «Ana ekrana əlavə edin» addımlarını izləyin.",
+    "notifError": "Alınmadı. Yenidən cəhd edin."
   },
   "Common": {
     "cancel": "Ləğv et",

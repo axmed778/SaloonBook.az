@@ -56,3 +56,51 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// --- Web Push -------------------------------------------------------------
+// Render the notification the BullMQ push worker sent (see worker/processors/
+// push.ts -> src/lib/push.ts), and focus/open the dashboard when it's tapped.
+interface PushPayload {
+  title?: string;
+  body?: string;
+  url?: string;
+  tag?: string;
+}
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let data: PushPayload = {};
+  try {
+    data = event.data.json() as PushPayload;
+  } catch {
+    data = { body: event.data.text() };
+  }
+  const title = data.title || "SalonBook";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body,
+      tag: data.tag,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url || "/dashboard" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data as { url?: string } | undefined)?.url || "/dashboard";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      // Focus an existing app window (and navigate it) rather than opening a new one.
+      for (const client of clients) {
+        if ("focus" in client) {
+          void client.focus();
+          if ("navigate" in client) void client.navigate(target);
+          return;
+        }
+      }
+      return self.clients.openWindow(target).then(() => undefined);
+    }),
+  );
+});

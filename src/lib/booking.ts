@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { enqueueNotification } from "./queue";
+import { enqueueNotification, enqueuePush } from "./queue";
 import { limitsFor } from "./plans";
 import { effectivePlan } from "./subscription";
 import { bakuPeriodYm } from "./time";
@@ -282,6 +282,20 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           if (reminderDelay > 0) {
             await enqueueNotification(result.reminderId, reminderDelay);
           }
+        }
+
+        // PWA push to the salon's installed devices: a new-booking alert (parity
+        // with the owner WhatsApp alert, but independent of salon.phone), plus a
+        // T-2h reminder (the WhatsApp reminder is at T-24h). Skip the reminder if
+        // the appointment is already within 2h.
+        await enqueuePush({ type: "new_booking", appointmentId: result.appointment.id });
+        const pushReminderDelay =
+          result.appointment.startsAt.getTime() - 2 * 60 * 60_000 - Date.now();
+        if (pushReminderDelay > 0) {
+          await enqueuePush(
+            { type: "reminder", appointmentId: result.appointment.id },
+            pushReminderDelay,
+          );
         }
       })(),
       new Promise((_, reject) =>

@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots, isSlotBookable } from "@/lib/availability";
 import { isOverlapError, MAX_BOOKING_AHEAD_DAYS } from "@/lib/booking";
-import { enqueueNotification } from "@/lib/queue";
+import { enqueueNotification, enqueuePush } from "@/lib/queue";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
 
@@ -158,6 +158,12 @@ export async function POST(
     if (ownerNoticeId) {
       await enqueueBestEffort([{ id: ownerNoticeId }]);
     }
+    // PWA push to the salon's installed devices — fires regardless of whether the
+    // salon has a phone for the WhatsApp alert. Fire-and-forget: the cancel is
+    // already committed, so a push-enqueue hiccup must not fail the response.
+    void enqueuePush({ type: "booking_cancelled", appointmentId: appt.id }).catch((e) =>
+      console.error("[manage] cancel push enqueue failed", e),
+    );
     return NextResponse.json({ ok: true });
   }
 
