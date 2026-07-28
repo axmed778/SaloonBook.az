@@ -187,6 +187,19 @@
     "saved": "Yadda saxlanıldı.",
     "save": "Saxla",
     "saving": "Saxlanılır…",
+    "location": {
+      "title": "Xəritədə yer",
+      "subtitle": "Salonunuzu xəritədə işarələyin — müştərilər sizi linksiz tapıb qeydiyyatdan keçsin.",
+      "useMyLocation": "Yerimi tap",
+      "locating": "Tapılır…",
+      "hint": "Xəritəyə toxunaraq iynəni yerləşdirin, sürükləyərək dəqiqləşdirin və ya cihazın GPS-i ilə dəqiq yeri tapın.",
+      "clear": "İşarəni sil",
+      "noPin": "Yer işarələnməyib",
+      "geoDenied": "Yerə giriş rədd edildi. Brauzer icazəsini yoxlayın.",
+      "geoUnsupported": "Cihaz GPS-i dəstəkləmir.",
+      "geoError": "Yer təyin edilə bilmədi. Yenidən cəhd edin.",
+      "mapAria": "Yer seçimi xəritəsi"
+    },
     "profile": {
       "title": "Salon məlumatları",
       "name": "Ad",
@@ -254,7 +267,8 @@
       "invalidLink": "Yanlış link.",
       "slugTooShort": "Link ən az 2 hərf və ya rəqəmdən ibarət olmalıdır.",
       "slugTaken": "Bu link artıq istifadə olunur. Başqasını seçin.",
-      "invalidHours": "Yanlış saatlar."
+      "invalidHours": "Yanlış saatlar.",
+      "invalidLocation": "Yanlış koordinatlar."
     }
   },
   "Weekdays": {
@@ -1075,6 +1089,17 @@
     }
   },
   "Landing": {
+    "map": {
+      "eyebrow": "Salonları kəşf edin",
+      "title": "Salonları xəritədə tapın",
+      "subtitle": "Qeydiyyatdan keçmiş salonları xəritədə görün və linkə ehtiyac olmadan birbaşa yer ayırın.",
+      "book": "Yer ayır",
+      "loading": "Xəritə yüklənir…",
+      "error": "Xəritə yüklənmədi.",
+      "retry": "Yenidən cəhd et",
+      "empty": "Hələ heç bir salon xəritədə deyil — ilk siz olun!",
+      "ariaLabel": "Salonların xəritəsi"
+    },
     "badgeNew": "14 gün",
     "badgePromo": "Pulsuz sınaq — kart tələb olunmur",
     "heroTitle": "Müştərilər özləri qeydiyyatdan keçsin — 24/7.",

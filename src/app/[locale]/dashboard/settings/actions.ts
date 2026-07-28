@@ -58,6 +58,34 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+// --- Map location (pin) ----------------------------------------------------
+
+// Latitude/longitude for the public discovery map. Both null clears the pin
+// (salon drops off the map). Sent together — a lone coordinate is meaningless.
+const locationSchema = z
+  .object({
+    lat: z.number().min(-90).max(90).nullable(),
+    lng: z.number().min(-180).max(180).nullable(),
+  })
+  .refine((d) => (d.lat === null) === (d.lng === null), {
+    message: "Koordinatlar birlikdə göndərilməlidir.",
+  });
+
+export async function updateLocation(input: unknown): Promise<ActionResult> {
+  const salonId = await requireSalonId();
+  const t = await getTranslations("Settings.errors");
+  const parsed = locationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: t("invalidLocation") };
+  }
+  await prisma.salon.update({
+    where: { id: salonId },
+    data: { latitude: parsed.data.lat, longitude: parsed.data.lng },
+  });
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
+}
+
 // --- Booking link (slug) ---------------------------------------------------
 
 function slugify(input: string): string {

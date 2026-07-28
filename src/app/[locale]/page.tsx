@@ -24,6 +24,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Faq } from "@/components/faq";
 import { ProWhatsAppToggle } from "@/components/pro-whatsapp-toggle";
+import { SalonMap } from "@/components/salon-map";
 import heroBookingDark from "../../../public/hero/booking-dark.png";
 import heroBookingLight from "../../../public/hero/booking-light.png";
 
@@ -336,6 +337,20 @@ export default async function Home() {
                 />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* --------------------------- Discovery map -------------------- */}
+        <section id="map" className="scroll-mt-24 border-t border-border">
+          <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+            <SectionHeader
+              eyebrow={t("map.eyebrow")}
+              title={t("map.title")}
+              subtitle={t("map.subtitle")}
+            />
+            <div className="mt-14">
+              <SalonMap />
             </div>
           </div>
         </section>

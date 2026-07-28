@@ -187,6 +187,19 @@
     "saved": "Saved.",
     "save": "Save",
     "saving": "Saving…",
+    "location": {
+      "title": "Location on the map",
+      "subtitle": "Pin your salon on the map so clients can find and book you without a link.",
+      "useMyLocation": "Use my location",
+      "locating": "Locating…",
+      "hint": "Tap the map to drop the pin, drag it to fine-tune, or use your device GPS for a precise spot.",
+      "clear": "Remove pin",
+      "noPin": "No location pinned",
+      "geoDenied": "Location access denied. Check your browser permission.",
+      "geoUnsupported": "This device doesn't support GPS.",
+      "geoError": "Couldn't get your location. Please try again.",
+      "mapAria": "Location picker map"
+    },
     "profile": {
       "title": "Salon details",
       "name": "Name",
@@ -254,7 +267,8 @@
       "invalidLink": "Invalid link.",
       "slugTooShort": "The link must be at least 2 letters or digits.",
       "slugTaken": "This link is already in use. Choose another.",
-      "invalidHours": "Invalid hours."
+      "invalidHours": "Invalid hours.",
+      "invalidLocation": "Invalid coordinates."
     }
   },
   "Weekdays": {
@@ -1075,6 +1089,17 @@
     }
   },
   "Landing": {
+    "map": {
+      "eyebrow": "Discover salons",
+      "title": "Find salons on the map",
+      "subtitle": "See registered salons on the map and book directly — no link needed.",
+      "book": "Book",
+      "loading": "Loading map…",
+      "error": "Couldn't load the map.",
+      "retry": "Try again",
+      "empty": "No salons on the map yet — be the first!",
+      "ariaLabel": "Map of salons"
+    },
     "badgeNew": "14 days",
     "badgePromo": "Free trial — no card required",
     "heroTitle": "Let clients book themselves — 24/7.",

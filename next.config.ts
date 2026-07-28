@@ -19,7 +19,9 @@ const csp = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "img-src 'self' data: blob:",
+  // OpenStreetMap raster tiles power the salon discovery map + location picker
+  // (Leaflet). Tiles load as <img>, so the tile host must be allowed here.
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org",
   "font-src 'self' data:",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
@@ -35,7 +37,9 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // geolocation=(self): the Settings location picker uses the device GPS
+  // (navigator.geolocation) to let a salon drop a precise pin. Same-origin only.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
 ];
 
 const nextConfig: NextConfig = {
