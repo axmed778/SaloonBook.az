@@ -37,6 +37,12 @@ export default async function DashboardTodayPage() {
   const { startUtc, endUtc } = bakuDayBoundsUtc(today);
   const now = Date.now();
 
+  // Salon name for the WhatsApp message templates on each row.
+  const salon = await prisma.salon.findUnique({
+    where: { id: salonId },
+    select: { name: true },
+  });
+
   // Today's bookings, chronological. CANCELLED are excluded (same as the calendar).
   const appts = await prisma.appointment.findMany({
     where: {
@@ -72,5 +78,11 @@ export default async function DashboardTodayPage() {
     priceLabel: `${azn(a.priceMinor)} ₼`,
   }));
 
-  return <TodayView items={items} dateLabel={formatBakuDate(today, locale)} />;
+  return (
+    <TodayView
+      items={items}
+      dateLabel={formatBakuDate(today, locale)}
+      salonName={salon?.name ?? ""}
+    />
+  );
 }

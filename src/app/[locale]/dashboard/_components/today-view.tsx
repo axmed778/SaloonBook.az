@@ -30,9 +30,11 @@ type Override = { status?: TodayApptStatus; hidden?: boolean; pending?: boolean 
 export function TodayView({
   items,
   dateLabel,
+  salonName,
 }: {
   items: TodayAppointment[];
   dateLabel: string;
+  salonName: string;
 }) {
   const t = useTranslations("Today");
   const router = useRouter();
@@ -105,6 +107,8 @@ export function TodayView({
                 key={appt.id}
                 appt={{ ...appt, status: ov?.status ?? appt.status }}
                 pending={ov?.pending ?? false}
+                salonName={salonName}
+                dateLabel={dateLabel}
                 onComplete={() => changeStatus(appt.id, "COMPLETED")}
                 onNoShow={() => changeStatus(appt.id, "NO_SHOW")}
                 onCancel={() => changeStatus(appt.id, "CANCELLED")}

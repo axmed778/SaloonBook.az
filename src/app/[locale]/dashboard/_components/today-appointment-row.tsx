@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { buildWhatsAppLink } from "@/lib/whatsapp-link";
 import type { TodayAppointment } from "./today-view";
 
 // Minimum 44x44px touch targets (thumb-friendly). Colour by intent.
@@ -14,15 +15,11 @@ const BTN_WA = BTN + " bg-[#25D366]/15 text-[#128C4B] hover:bg-[#25D366]/25 dark
 
 const ICON = "h-4 w-4";
 
-// Basic wa.me link (open a chat with the client). Commit 4 replaces this with
-// buildWhatsAppLink + Azerbaijani message templates.
-function waLink(phoneE164: string): string {
-  return `https://wa.me/${phoneE164.replace(/\D/g, "")}`;
-}
-
 export function TodayAppointmentRow({
   appt,
   pending,
+  salonName,
+  dateLabel,
   onComplete,
   onNoShow,
   onCancel,
@@ -30,6 +27,8 @@ export function TodayAppointmentRow({
 }: {
   appt: TodayAppointment;
   pending: boolean;
+  salonName: string;
+  dateLabel: string;
   onComplete: () => void;
   onNoShow: () => void;
   onCancel: () => void;
@@ -40,6 +39,19 @@ export function TodayAppointmentRow({
   const isConfirmed = appt.status === "CONFIRMED";
   const upcoming = isConfirmed && !appt.overdue;
   const needsClosing = isConfirmed && appt.overdue;
+
+  // Contextual WhatsApp message: a reminder while the booking is still upcoming,
+  // a thank-you/review request once it's completed (or a no-show follow-up).
+  const waHref = buildWhatsAppLink(
+    appt.clientPhone,
+    upcoming ? "reminder" : "reviewRequest",
+    {
+      salon: salonName,
+      service: appt.service,
+      client: appt.clientName,
+      when: `${dateLabel}, ${appt.time}`,
+    },
+  );
 
   const statusBadge = appt.overdue
     ? { label: t("overdue"), cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
@@ -109,9 +121,9 @@ export function TodayAppointmentRow({
           </button>
         )}
 
-        {/* Message the client (WhatsApp). Available in every state. */}
+        {/* Message the client (WhatsApp) with a prefilled, contextual message. */}
         <a
-          href={waLink(appt.clientPhone)}
+          href={waHref}
           target="_blank"
           rel="noreferrer"
           className={BTN_WA + " ml-auto"}
