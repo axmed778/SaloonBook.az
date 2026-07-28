@@ -6,6 +6,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SidebarNav } from "./sidebar-nav";
+import { BottomTabBar } from "./bottom-tab-bar";
 import { BranchSwitcher, type BranchOption } from "./branch-switcher";
 import { LogoutButton } from "../logout-button";
 
@@ -124,8 +125,14 @@ export function DashboardShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        {/* Bottom padding clears the fixed mobile tab bar (none on lg). */}
+        <main className="min-w-0 flex-1 px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 lg:px-8 lg:pb-6">
+          {children}
+        </main>
       </div>
+
+      {/* Phone-only bottom navigation (hidden on lg, which keeps the sidebar). */}
+      <BottomTabBar />
 
       {/* Installable-PWA prompt (Android beforeinstallprompt / iOS instructions).
           Client-side; renders nothing when already installed or dismissed. */}

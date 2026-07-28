@@ -34,6 +34,8 @@
     "label": "Language"
   },
   "Nav": {
+    "today": "Today",
+    "settingsShort": "Settings",
     "calendar": "Calendar",
     "clients": "Clients",
     "services": "Services",
@@ -71,6 +73,26 @@
     "notifDenied": "Notifications are blocked in the browser. Allow them in your browser settings.",
     "notifIosInstall": "On iOS, notifications only work once the app is added to the home screen. Follow the “Add to Home Screen” steps above.",
     "notifError": "Something went wrong. Please try again."
+  },
+  "Today": {
+    "title": "Today",
+    "count": "{count} appointments",
+    "empty": "No appointments today.",
+    "complete": "Complete",
+    "noShow": "No-show",
+    "cancel": "Cancel",
+    "reschedule": "Reschedule",
+    "message": "Message",
+    "statusConfirmed": "Confirmed",
+    "statusCompleted": "Completed",
+    "statusNoShow": "No-show",
+    "overdue": "Needs closing",
+    "rescheduleTitle": "Reschedule",
+    "noSlots": "No free slots on this day.",
+    "loadingSlots": "Loading…",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "close": "Close"
   },
   "Common": {
     "cancel": "Cancel",

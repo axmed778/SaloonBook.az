@@ -89,7 +89,7 @@ export function InstallPrompt({ dismissed }: { dismissed: boolean }) {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
       role="dialog"
       aria-label={ios ? t("iosTitle") : t("installTitle")}
     >

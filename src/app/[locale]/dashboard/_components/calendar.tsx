@@ -56,7 +56,7 @@ export function Calendar({
   const next = isWeek ? shiftYmd(weekStartOf(day), 7) : shiftYmd(day, 1);
   const atNow = isWeek ? weekStartOf(day) === weekStartOf(today) : day === today;
   const href = (target: string, v: "day" | "week" = view) =>
-    `/dashboard?view=${v}&day=${target}`;
+    `/dashboard/calendar?view=${v}&day=${target}`;
 
   const canBook = catalog.some((e) => e.services.length > 0);
 

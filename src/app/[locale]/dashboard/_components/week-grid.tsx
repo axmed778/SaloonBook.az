@@ -61,7 +61,7 @@ export function WeekGrid({
               className="min-w-[120px] flex-1 border-r border-border last:border-r-0"
             >
               <Link
-                href={`/dashboard?view=day&day=${wd.ymd}`}
+                href={`/dashboard/calendar?view=day&day=${wd.ymd}`}
                 className={
                   "flex h-12 flex-col items-center justify-center border-b border-border px-2 transition hover:bg-hover " +
                   (wd.isToday ? "bg-rose-500/10" : "")

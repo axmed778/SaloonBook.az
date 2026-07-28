@@ -34,6 +34,8 @@
     "label": "Dil"
   },
   "Nav": {
+    "today": "Bu gün",
+    "settingsShort": "Ayarlar",
     "calendar": "Təqvim",
     "clients": "Müştərilər",
     "services": "Xidmətlər",
@@ -71,6 +73,26 @@
     "notifDenied": "Brauzer bildirişləri bloklayıb. İcazəni brauzer parametrlərindən verin.",
     "notifIosInstall": "iOS-da bildirişlər yalnız tətbiq ana ekrana əlavə edildikdə işləyir. Yuxarıdakı «Ana ekrana əlavə edin» addımlarını izləyin.",
     "notifError": "Alınmadı. Yenidən cəhd edin."
+  },
+  "Today": {
+    "title": "Bu gün",
+    "count": "{count} görüş",
+    "empty": "Bu gün üçün görüş yoxdur.",
+    "complete": "Tamamla",
+    "noShow": "Gəlmədi",
+    "cancel": "Ləğv et",
+    "reschedule": "Vaxtı dəyiş",
+    "message": "Mesaj",
+    "statusConfirmed": "Təsdiqlənib",
+    "statusCompleted": "Tamamlanıb",
+    "statusNoShow": "Gəlmədi",
+    "overdue": "Bağlanmayıb",
+    "rescheduleTitle": "Vaxtı dəyiş",
+    "noSlots": "Bu gün üçün boş vaxt yoxdur.",
+    "loadingSlots": "Yüklənir…",
+    "prevDay": "Əvvəlki gün",
+    "nextDay": "Növbəti gün",
+    "close": "Bağla"
   },
   "Common": {
     "cancel": "Ləğv et",
