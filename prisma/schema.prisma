@@ -112,6 +112,9 @@ model Salon {
   // via device GPS), so it can be more precise than the free-text `address`.
   latitude     Float?
   longitude    Float?
+  // Coarse locality (rayon/district), e.g. "Nəsimi" — a label on the discovery
+  // card and a coarse filter. Free text; not a geocode.
+  district     String?
   phone        String?
   timezone     String        @default("Asia/Baku")
   currency     String        @default("AZN")
@@ -121,6 +124,10 @@ model Salon {
   businessHours Json?
   // Who the salon serves. MALE/FEMALE for gendered salons, ALL for unisex.
   audience     Audience      @default(ALL)
+  // Denormalized review aggregate for the discovery min-rating filter (a cheap
+  // read). Maintained in the Review write path. avg = ratingSum / ratingCount.
+  ratingCount  Int           @default(0)
+  ratingSum    Int           @default(0)
   status       SalonStatus   @default(ACTIVE)
   account      Account       @relation(fields: [accountId], references: [id])
   employees    Employee[]
@@ -135,6 +142,8 @@ model Salon {
 
   @@index([accountId])
   @@index([slug])
+  // Bounding-box viewport scans for the discovery map.
+  @@index([latitude, longitude])
 }
 
 enum SalonStatus {
@@ -149,6 +158,18 @@ enum Audience {
   MALE
   FEMALE
   ALL
+}
+
+// Broad service categories for the discovery-map category filter. Intentionally
+// coarse (not a full taxonomy) — enough to answer "salons that do nails / hair".
+enum ServiceCategory {
+  HAIR
+  NAILS
+  BROWS_LASHES
+  MAKEUP
+  SPA
+  BARBER
+  OTHER
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +230,8 @@ model Service {
   durationMin  Int // service length, minutes
   bufferMin    Int               @default(0) // turnover/cleanup after, minutes
   isActive     Boolean           @default(true)
+  // Broad category for the discovery-map filter (see ServiceCategory).
+  category     ServiceCategory   @default(OTHER)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
   audience     Audience          @default(ALL)
   salon        Salon             @relation(fields: [salonId], references: [id])

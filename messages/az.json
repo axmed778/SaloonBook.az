@@ -130,6 +130,41 @@
       "too_many_attempts": "Çox yanlış cəhd. Yeni kod alın."
     }
   },
+  "Discovery": {
+    "metaTitle": "Salonları xəritədə tap — SalonBook.az",
+    "metaDescription": "Yaxınlığındakı gözəllik salonlarını xəritədə tap və birbaşa onlayn rezervasiya et.",
+    "title": "Salonları tap",
+    "subtitle": "Xəritədə salonları gör, süz və birbaşa rezervasiya et.",
+    "listTitle": "Salonlar",
+    "ariaLabel": "Salonların xəritəsi",
+    "loading": "Yüklənir…",
+    "error": "Yüklənmədi.",
+    "empty": "Bu ərazidə salon tapılmadı.",
+    "truncated": "Çox nəticə var — daha dəqiq görmək üçün yaxınlaşdırın.",
+    "geoDenied": "Yerləşmə əlçatan deyil. İcazəni yoxlayın.",
+    "close": "Bağla",
+    "book": "Rezerv et",
+    "reviews": "{count} rəy",
+    "noRating": "Hələ rəy yoxdur",
+    "filters": {
+      "category": "Kateqoriya",
+      "allCategories": "Bütün xidmətlər",
+      "rating": "Reytinq",
+      "anyRating": "İstənilən reytinq",
+      "ratingPlus": "{n}+",
+      "openNow": "İndi açıq",
+      "nearMe": "Yaxınımda"
+    },
+    "category": {
+      "HAIR": "Saç",
+      "NAILS": "Dırnaq",
+      "BROWS_LASHES": "Qaş / Kirpik",
+      "MAKEUP": "Makiyaj",
+      "SPA": "SPA",
+      "BARBER": "Kişi bərbəri",
+      "OTHER": "Digər"
+    }
+  },
   "Common": {
     "cancel": "Ləğv et",
     "pleaseWait": "Gözləyin…",

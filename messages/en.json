@@ -130,6 +130,41 @@
       "too_many_attempts": "Too many wrong attempts. Request a new code."
     }
   },
+  "Discovery": {
+    "metaTitle": "Find salons on the map — SalonBook.az",
+    "metaDescription": "Find beauty salons near you on the map and book online directly.",
+    "title": "Find salons",
+    "subtitle": "See salons on the map, filter, and book directly.",
+    "listTitle": "Salons",
+    "ariaLabel": "Map of salons",
+    "loading": "Loading…",
+    "error": "Couldn't load.",
+    "empty": "No salons found in this area.",
+    "truncated": "Too many results — zoom in to see them all.",
+    "geoDenied": "Location unavailable. Check your permission.",
+    "close": "Close",
+    "book": "Book",
+    "reviews": "{count} reviews",
+    "noRating": "No reviews yet",
+    "filters": {
+      "category": "Category",
+      "allCategories": "All services",
+      "rating": "Rating",
+      "anyRating": "Any rating",
+      "ratingPlus": "{n}+",
+      "openNow": "Open now",
+      "nearMe": "Near me"
+    },
+    "category": {
+      "HAIR": "Hair",
+      "NAILS": "Nails",
+      "BROWS_LASHES": "Brows / Lashes",
+      "MAKEUP": "Makeup",
+      "SPA": "Spa",
+      "BARBER": "Barber",
+      "OTHER": "Other"
+    }
+  },
   "Common": {
     "cancel": "Cancel",
     "pleaseWait": "Please wait…",

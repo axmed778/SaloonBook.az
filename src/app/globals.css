@@ -250,6 +250,23 @@
   background: var(--accent-hover);
 }
 
+/* Marker clusters (leaflet.markercluster) recoloured to the brand accent — the
+   plugin's default CSS is green/orange/blue. Outer ring translucent, inner solid. */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: color-mix(in oklab, var(--accent) 28%, transparent) !important;
+}
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: var(--accent) !important;
+}
+.marker-cluster div {
+  color: #fff;
+  font: 600 12px/30px var(--font-sans);
+}
+
 /* Zoom / attribution controls, themed for both palettes. */
 .leaflet-bar a,
 .leaflet-bar a:hover {
