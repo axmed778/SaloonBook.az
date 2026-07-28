@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -48,9 +48,40 @@ export async function generateMetadata({
       images: ["/hero/booking-dark.png"],
     },
     robots: { index: true, follow: true },
-    icons: { icon: "/icon.svg" },
+    icons: {
+      icon: "/icon.svg",
+      // iOS home-screen icon (installed PWA / "Add to Home Screen").
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    },
+    // iOS standalone (installed-to-home-screen) chrome: status-bar-style + the
+    // app title. `capable` maps to the modern `mobile-web-app-capable` in this
+    // Next version; we add the legacy apple-prefixed tag below for older iOS.
+    appleWebApp: {
+      capable: true,
+      title: "SalonBook",
+      statusBarStyle: "black-translucent",
+    },
+    other: {
+      // Older iOS Safari only honours the apple-prefixed capability flag; keep it
+      // alongside Next's `mobile-web-app-capable` so standalone mode works there.
+      "apple-mobile-web-app-capable": "yes",
+    },
   };
 }
+
+// Split out from generateMetadata per the Next metadata API. viewport-fit=cover
+// lets content extend under the iOS notch/home-indicator; the safe-area padding
+// utilities (see globals.css) then keep fixed bars clear of them. theme-color
+// tints the mobile browser / installed-app status bar to match the active theme.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+    { media: "(prefers-color-scheme: light)", color: "#fffffc" },
+  ],
+};
 
 // Runs before paint: applies the saved theme (or the OS preference) so there's
 // no flash of the wrong theme. Kept tiny and dependency-free.

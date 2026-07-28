@@ -53,6 +53,17 @@
     "branchSwitcherLabel": "Aktiv filial",
     "manageBranches": "Filialları idarə et"
   },
+  "Pwa": {
+    "installTitle": "SalonBook-u ana ekrana əlavə edin",
+    "installBody": "Tətbiq kimi quraşdırın — daha sürətli giriş və bildirişlər.",
+    "installAction": "Quraşdır",
+    "dismiss": "İndi yox",
+    "iosTitle": "Ana ekrana əlavə edin",
+    "iosBody": "Safari-də tətbiqi quraşdırmaq üçün:",
+    "iosStep1": "Aşağıda Paylaş düyməsinə toxunun",
+    "iosStep2": "«Ana ekrana əlavə et»i seçin",
+    "iosStep3": "«Əlavə et» ilə təsdiqləyin"
+  },
   "Common": {
     "cancel": "Ləğv et",
     "pleaseWait": "Gözləyin…",

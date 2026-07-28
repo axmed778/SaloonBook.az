@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import withSerwistInit from "@serwist/next";
 
 // Content-Security-Policy. Kept compatible with Next (which injects inline
 // bootstrap scripts/styles) and Cloudflare Turnstile.
@@ -53,4 +54,14 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-export default withNextIntl(nextConfig);
+// Serwist compiles the service worker (src/app/sw.ts) to public/sw.js and injects
+// the precache manifest + client registration. Disabled in dev so the SW never
+// caches during `next dev` (which relies on eval/HMR the prod-strict CSP blocks).
+// The generated public/sw.js is gitignored — it's a build artifact.
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+});
+
+export default withSerwist(withNextIntl(nextConfig));

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SidebarNav } from "./sidebar-nav";
 import { BranchSwitcher, type BranchOption } from "./branch-switcher";
 import { LogoutButton } from "../logout-button";
@@ -19,11 +20,13 @@ export function DashboardShell({
   user,
   isAdmin = false,
   branch = null,
+  installDismissed = false,
   children,
 }: {
   user: User;
   isAdmin?: boolean;
   branch?: BranchData | null;
+  installDismissed?: boolean;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Nav");
@@ -123,6 +126,10 @@ export function DashboardShell({
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
+
+      {/* Installable-PWA prompt (Android beforeinstallprompt / iOS instructions).
+          Client-side; renders nothing when already installed or dismissed. */}
+      <InstallPrompt dismissed={installDismissed} />
     </div>
   );
 }

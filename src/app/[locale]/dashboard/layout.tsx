@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
+import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { DashboardShell } from "./_components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +38,16 @@ export default async function DashboardLayout({
       ? { branches: session.branches, activeId: session.salonId }
       : null;
 
+  // Whether the owner already dismissed (or completed) the "Add to Home Screen"
+  // prompt — read server-side so it never flashes for someone who dismissed it.
+  const installDismissed = (await cookies()).get(A2HS_DISMISS_COOKIE)?.value === "1";
+
   return (
     <DashboardShell
       user={{ name: displayName, role: roleLabel, initial }}
       isAdmin={session.isAdmin}
       branch={branch}
+      installDismissed={installDismissed}
     >
       {children}
     </DashboardShell>

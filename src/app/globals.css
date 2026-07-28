@@ -267,3 +267,26 @@
 .leaflet-control-attribution a {
   color: var(--muted-foreground);
 }
+
+/* ---- Safe-area insets (installed PWA: notch + home indicator) ------------ */
+/* env(safe-area-inset-*) is only non-zero when the viewport is `viewport-fit=cover`
+   (set in the root layout's viewport export). Fixed top/bottom bars use these so
+   their content clears the iOS status bar and home indicator once the app is
+   added to the home screen. The max(..., 0px) guards against any negative value. */
+@utility pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+@utility pl-safe {
+  padding-left: max(env(safe-area-inset-left), 0px);
+}
+@utility pr-safe {
+  padding-right: max(env(safe-area-inset-right), 0px);
+}
+/* Bottom tab bar gutter: base breathing room PLUS the home-indicator inset, so
+   the fixed bar looks right on phones both with and without a home indicator. */
+@utility pb-safe-bar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.375rem);
+}

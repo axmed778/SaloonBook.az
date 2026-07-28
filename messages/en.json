@@ -53,6 +53,17 @@
     "branchSwitcherLabel": "Active branch",
     "manageBranches": "Manage branches"
   },
+  "Pwa": {
+    "installTitle": "Add SalonBook to your home screen",
+    "installBody": "Install it as an app — faster access and notifications.",
+    "installAction": "Install",
+    "dismiss": "Not now",
+    "iosTitle": "Add to Home Screen",
+    "iosBody": "To install the app in Safari:",
+    "iosStep1": "Tap the Share button below",
+    "iosStep2": "Choose “Add to Home Screen”",
+    "iosStep3": "Confirm with “Add”"
+  },
   "Common": {
     "cancel": "Cancel",
     "pleaseWait": "Please wait…",

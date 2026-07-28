@@ -1,0 +1,11 @@
+{
+  "//": "Isolated program for the service worker. The main tsconfig excludes src/app/sw.ts because loading the WebWorker lib alongside DOM there conflicts. `pnpm typecheck` runs this separately so the SW stays type-checked.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "webworker"],
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["src/app/sw.ts"],
+  "exclude": ["node_modules"]
+}
