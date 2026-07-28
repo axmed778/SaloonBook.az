@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { minutesToHHMM } from "@/lib/time";
 import { setAppointmentStatus, rescheduleSlots, rescheduleAppointment } from "../actions";
+import { buildWhatsAppLink } from "@/lib/whatsapp-link";
 import type { Slot } from "@/lib/availability";
 import {
   blockBadge,
@@ -17,9 +18,11 @@ import {
 
 export function AppointmentPopup({
   block,
+  salonName,
   onClose,
 }: {
   block: CalendarBlock;
+  salonName: string;
   onClose: () => void;
 }) {
   const t = useTranslations("Calendar");
@@ -93,6 +96,22 @@ export function AppointmentPopup({
   const waHref =
     `https://wa.me/${block.customerPhone.replace(/[^\d]/g, "")}?text=` +
     encodeURIComponent(t("popup.waMessage", { name: block.subtitle, url: manageUrl }));
+
+  // A contextual quick message (distinct from the manage-link share above): a
+  // reminder while the booking is still upcoming, otherwise a thank-you/review
+  // request. Opens the staff member's own WhatsApp with a prefilled AZ message.
+  const upcoming = block.status === "CONFIRMED" && !block.overdue;
+  const waQuickHref = buildWhatsAppLink(
+    block.customerPhone,
+    upcoming ? "reminder" : "reviewRequest",
+    {
+      salon: salonName,
+      service: block.title,
+      client: block.subtitle,
+      when: `${block.dateLabel}, ${minutesToHHMM(block.startMin)}`,
+    },
+  );
+  const waQuickLabel = upcoming ? t("popup.waReminder") : t("popup.waReview");
 
   function copyManageUrl() {
     navigator.clipboard?.writeText(manageUrl).then(() => {
@@ -174,6 +193,21 @@ export function AppointmentPopup({
         )}
 
         {error && <p className="mt-4 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+
+        {/* Contextual WhatsApp quick message (reminder / thank-you+review). */}
+        {mode === "view" && (
+          <a
+            href={waQuickHref}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-sm font-medium text-[#128C4B] transition hover:bg-[#25D366]/20 dark:text-[#4ade80]"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.2c-.24.68-1.42 1.32-1.95 1.36-.5.05-.97.23-3.27-.68-2.76-1.09-4.5-3.9-4.64-4.08-.14-.18-1.1-1.46-1.1-2.79 0-1.32.7-1.97.94-2.24.24-.27.53-.34.71-.34.18 0 .36 0 .51.01.16.01.39-.06.6.46.24.57.82 1.97.89 2.11.07.14.12.31.02.5-.09.18-.14.29-.27.45-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.27.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.27.14.43.12.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.24.09 1.55.73 1.82.86.27.14.45.2.51.32.07.11.07.66-.17 1.34Z" />
+            </svg>
+            {waQuickLabel}
+          </a>
+        )}
 
         {block.status === "COMPLETED" && block.autoCompleted && (
           <div className="mt-4 rounded-xl border border-violet-500/40 bg-violet-500/10 p-3">

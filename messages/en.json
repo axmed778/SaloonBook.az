@@ -148,6 +148,8 @@
       "copyLink": "Copy link",
       "copied": "Copied",
       "sendViaWhatsapp": "Send via WhatsApp",
+      "waReminder": "Send a reminder",
+      "waReview": "Send thank-you / review",
       "complete": "Complete",
       "markNoShow": "No-show",
       "autoCompleted": "Auto-completed (unconfirmed). If the client didn't show, mark it.",

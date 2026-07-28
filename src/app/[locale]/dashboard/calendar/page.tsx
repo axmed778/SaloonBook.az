@@ -162,6 +162,13 @@ export default async function CalendarPage({
   const today = bakuToday();
   const day = dayParam && YMD_RE.test(dayParam) ? dayParam : today;
 
+  // Salon name for the appointment popup's WhatsApp message templates.
+  const salon = await prisma.salon.findUnique({
+    where: { id: salonId },
+    select: { name: true },
+  });
+  const salonName = salon?.name ?? "";
+
   // Catalog for the manual-booking form: active employees + the active services
   // each can perform. Doubles as the day-view column list.
   const employees = await prisma.employee.findMany({
@@ -232,6 +239,7 @@ export default async function CalendarPage({
         weekDays={weekDays}
         blocks={blocks}
         catalog={catalog}
+        salonName={salonName}
         windowStartMin={win.startMin}
         windowEndMin={win.endMin}
       />
@@ -285,6 +293,7 @@ export default async function CalendarPage({
       weekDays={[]}
       blocks={blocks}
       catalog={catalog}
+      salonName={salonName}
       windowStartMin={win.startMin}
       windowEndMin={win.endMin}
     />

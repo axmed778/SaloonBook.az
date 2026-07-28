@@ -35,6 +35,7 @@ export function Calendar({
   catalog,
   windowStartMin,
   windowEndMin,
+  salonName,
 }: {
   view: "day" | "week";
   day: string;
@@ -46,6 +47,7 @@ export function Calendar({
   catalog: CatalogEmployee[];
   windowStartMin: number;
   windowEndMin: number;
+  salonName: string;
 }) {
   const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
@@ -158,7 +160,11 @@ export function Calendar({
       )}
 
       {selected && (
-        <AppointmentPopup block={selected} onClose={() => setSelected(null)} />
+        <AppointmentPopup
+          block={selected}
+          salonName={salonName}
+          onClose={() => setSelected(null)}
+        />
       )}
 
       {booking && (
