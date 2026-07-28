@@ -452,6 +452,25 @@ model PushSubscription {
 }
 
 // ---------------------------------------------------------------------------
+// Client — public, phone-authed consumer identity (booking clients)
+// ---------------------------------------------------------------------------
+// Distinct from Customer (a per-salon contact record). A Client is ONE global
+// identity keyed by phone, created on first successful OTP verification. It backs
+// the public client area (visit history across salons, reviews). Auth is phone +
+// OTP only — no password, no email. NOT a tenant table (no salonId): a client's
+// data is scoped by their own verified phone, never by salon.
+model Client {
+  id             String    @id @default(uuid())
+  phone          String    @unique // E.164, +994...
+  name           String? // optional display name, filled at first booking
+  // Data-processing consent captured at OTP sign-up (see src/lib/legal.ts).
+  consentAt      DateTime? @db.Timestamptz(6)
+  consentVersion String?
+  createdAt      DateTime  @default(now())
+  lastLoginAt    DateTime? @db.Timestamptz(6)
+}
+
+// ---------------------------------------------------------------------------
 // Billing (manual activation in MVP; tables ready for a future PSP)
 // ---------------------------------------------------------------------------
 

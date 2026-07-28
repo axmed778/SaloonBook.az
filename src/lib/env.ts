@@ -105,6 +105,19 @@ export function assertEnv(): void {
         "would point at localhost. Set it to the public origin, e.g. https://salonbook.az",
     );
   }
+  // Client phone-OTP sign-in needs a delivery channel: WhatsApp (the platform
+  // number) OR Twilio SMS. Without either, sign-in can't send codes in prod.
+  const twilioConfigured =
+    !isPlaceholder(process.env.TWILIO_ACCOUNT_SID) &&
+    !isPlaceholder(process.env.TWILIO_AUTH_TOKEN) &&
+    !isPlaceholder(process.env.TWILIO_FROM);
+  if (isProd && !whatsAppLive && !twilioConfigured) {
+    console.warn(
+      "[env] WARNING: client phone-OTP sign-in has no delivery channel — set " +
+        "WHATSAPP_TOKEN (WhatsApp) or TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM (SMS).",
+    );
+  }
+
   for (const [value, message] of warnings) {
     if (isPlaceholder(value)) console.warn(`[env] WARNING: ${message}`);
   }

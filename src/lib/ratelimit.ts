@@ -30,6 +30,11 @@ const rl = new IORedis(redisUrl, {
 // we don't want unhandled 'error' events tearing down the process.
 rl.on("error", () => {});
 
+// The same app-tuned client, exported for OTP storage (src/lib/auth/otp.ts).
+// OTP is security-critical and must FAIL CLOSED, so — unlike rateLimit() — its
+// callers let Redis errors propagate rather than swallowing them.
+export { rl as appRedis };
+
 /**
  * Lightweight Redis connectivity check for /api/health. Ensures a connection is
  * being attempted (lazyConnect + offlineQueue:false would otherwise just fail
