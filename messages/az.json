@@ -98,6 +98,7 @@
     "title": "Daxil ol",
     "subtitle": "Nömrənizi daxil edin — WhatsApp və ya SMS ilə kod göndərəcəyik.",
     "accountTitle": "Hesabım",
+    "historyLink": "Ziyarət tarixçəm",
     "logout": "Çıxış",
     "loggingOut": "Çıxılır…",
     "phoneLabel": "Telefon nömrəsi",
@@ -163,6 +164,17 @@
       "SPA": "SPA",
       "BARBER": "Kişi bərbəri",
       "OTHER": "Digər"
+    }
+  },
+  "History": {
+    "title": "Ziyarət tarixçəm",
+    "empty": "Hələ ziyarətiniz yoxdur.",
+    "bookAgain": "Yenidən yaz",
+    "status": {
+      "CONFIRMED": "Təsdiqlənib",
+      "COMPLETED": "Tamamlanıb",
+      "NO_SHOW": "Gəlməyib",
+      "CANCELLED": "Ləğv edilib"
     }
   },
   "Reviews": {

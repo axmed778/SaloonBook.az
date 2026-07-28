@@ -98,6 +98,7 @@
     "title": "Вход",
     "subtitle": "Введите номер — отправим код в WhatsApp или SMS.",
     "accountTitle": "Мой аккаунт",
+    "historyLink": "История визитов",
     "logout": "Выйти",
     "loggingOut": "Выход…",
     "phoneLabel": "Номер телефона",
@@ -163,6 +164,17 @@
       "SPA": "СПА",
       "BARBER": "Барбер",
       "OTHER": "Другое"
+    }
+  },
+  "History": {
+    "title": "История визитов",
+    "empty": "У вас пока нет визитов.",
+    "bookAgain": "Записаться снова",
+    "status": {
+      "CONFIRMED": "Подтверждена",
+      "COMPLETED": "Завершена",
+      "NO_SHOW": "Не пришёл",
+      "CANCELLED": "Отменена"
     }
   },
   "Reviews": {

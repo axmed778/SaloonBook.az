@@ -98,6 +98,7 @@
     "title": "Sign in",
     "subtitle": "Enter your number — we'll send a code via WhatsApp or SMS.",
     "accountTitle": "My account",
+    "historyLink": "My visit history",
     "logout": "Sign out",
     "loggingOut": "Signing out…",
     "phoneLabel": "Phone number",
@@ -163,6 +164,17 @@
       "SPA": "Spa",
       "BARBER": "Barber",
       "OTHER": "Other"
+    }
+  },
+  "History": {
+    "title": "My visit history",
+    "empty": "You don't have any visits yet.",
+    "bookAgain": "Book again",
+    "status": {
+      "CONFIRMED": "Confirmed",
+      "COMPLETED": "Completed",
+      "NO_SHOW": "No-show",
+      "CANCELLED": "Cancelled"
     }
   },
   "Reviews": {

@@ -70,12 +70,22 @@ export function BookingWidget({
   services,
   employees,
   days,
+  initialServiceId,
+  initialEmployeeId,
+  prefillName,
+  prefillPhone,
 }: {
   slug: string;
   salonAudience: Audience;
   services: Service[];
   employees: Employee[];
   days: Day[];
+  // "Book again": preselect the same service/master (validated by the salon page).
+  initialServiceId?: string;
+  initialEmployeeId?: string;
+  // Contact prefilled from the client session (server-side; never via the URL).
+  prefillName?: string;
+  prefillPhone?: string; // 9-digit local part (no +994)
 }) {
   const t = useTranslations("Booking");
   const tGender = useTranslations("Audience");
@@ -90,16 +100,41 @@ export function BookingWidget({
   ];
   const idx = (k: string) => stepKeys.indexOf(k);
 
-  const [current, setCurrent] = useState(0);
+  // "Book again" preselect. Only honored when the initial service exists AND the
+  // gender gate can be satisfied consistently: a gendered salon (fixed gender) or
+  // a gendered service pins the gender; an ALL service at an ALL salon can't, so
+  // we fall back to the normal flow. Employee is honored only if it performs the
+  // service. Everything defaults to the original behavior when no props are given.
+  const presetService = initialServiceId
+    ? (services.find((s) => s.id === initialServiceId) ?? null)
+    : null;
+  // A gendered service (audience !== ALL) pins the gender; otherwise none.
+  const svcGender: Gender | null =
+    presetService && presetService.audience !== "ALL" ? presetService.audience : null;
+  const presetGender: Gender | null = !needGender ? (salonAudience as Gender) : svcGender;
+  const canPreset = !!presetService && (!needGender || presetGender !== null);
+  const presetEmployee =
+    canPreset && initialEmployeeId
+      ? (employees.find(
+          (e) => e.id === initialEmployeeId && e.serviceIds.includes(presetService!.id),
+        ) ?? null)
+      : null;
+  const presetStep = canPreset ? (presetEmployee ? idx("date") : idx("employee")) : 0;
+
+  const [current, setCurrent] = useState(presetStep);
   const [gender, setGender] = useState<Gender | null>(
-    needGender ? null : (salonAudience as Gender),
+    needGender ? presetGender : (salonAudience as Gender),
   );
-  const [serviceId, setServiceId] = useState<string | null>(null);
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(
+    canPreset ? presetService!.id : null,
+  );
+  const [employeeId, setEmployeeId] = useState<string | null>(
+    presetEmployee ? presetEmployee.id : null,
+  );
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
-  const [name, setName] = useState("");
-  const [phoneDigits, setPhoneDigits] = useState("");
+  const [name, setName] = useState(prefillName ?? "");
+  const [phoneDigits, setPhoneDigits] = useState(prefillPhone ?? "");
   const [notes, setNotes] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);

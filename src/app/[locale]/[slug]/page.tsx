@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { getClientSession } from "@/lib/auth/client-session";
 import type { Audience } from "@/lib/audience";
 import { bakuToday, shiftYmd } from "@/lib/time";
 import { effectivePlan } from "@/lib/subscription";
@@ -75,10 +76,14 @@ export default async function BookingPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ branch?: string }>;
+  searchParams: Promise<{ branch?: string; service?: string; employee?: string }>;
 }) {
   const { slug } = await params;
-  const { branch: branchParam } = await searchParams;
+  const {
+    branch: branchParam,
+    service: serviceParam,
+    employee: employeeParam,
+  } = await searchParams;
   const t = await getTranslations("SalonPage");
   const locale = await getLocale();
 
@@ -172,6 +177,25 @@ export default async function BookingPage({
     serviceIds: e.services.map((se) => se.serviceId),
   }));
 
+  // "Book again" preselect (from /profile/history): validate the ids belong to
+  // THIS branch's catalog before trusting them; the widget re-validates too.
+  const initialServiceId =
+    serviceParam && bookingServices.some((s) => s.id === serviceParam) ? serviceParam : undefined;
+  const initialEmployeeId =
+    employeeParam &&
+    initialServiceId &&
+    bookingEmployees.some(
+      (e) => e.id === employeeParam && e.serviceIds.includes(initialServiceId),
+    )
+      ? employeeParam
+      : undefined;
+
+  // Prefill the contact step for a signed-in client. Read server-side from the
+  // client session — the phone is never taken from the URL/query.
+  const client = await getClientSession();
+  const prefillName = client?.name ?? undefined;
+  const prefillPhone = client?.phone ? client.phone.replace(/^\+994/, "") : undefined;
+
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const prices = bookingServices.map((s) => s.priceMinor).filter((p) => p > 0);
   // LocalBusiness structured data for the SELECTED branch — helps the salon
@@ -262,6 +286,10 @@ export default async function BookingPage({
           services={bookingServices}
           employees={bookingEmployees}
           days={days}
+          initialServiceId={initialServiceId}
+          initialEmployeeId={initialEmployeeId}
+          prefillName={prefillName}
+          prefillPhone={prefillPhone}
         />
 
         <p className="mt-10 flex items-center justify-center gap-1.5 text-center text-sm text-faint-foreground">
