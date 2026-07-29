@@ -301,6 +301,7 @@
     "price": "Qiymət (₼)",
     "duration": "Müddət (dəq)",
     "buffer": "Buffer (dəq)",
+    "category": "Kateqoriya",
     "save": "Saxla",
     "saving": "Saxlanılır…",
     "emptyTitle": "Hələ xidmət yoxdur",
@@ -348,6 +349,8 @@
       "description": "Təsvir",
       "descriptionPlaceholder": "Salon haqqında qısa məlumat",
       "address": "Ünvan",
+      "district": "Rayon / ərazi",
+      "districtPlaceholder": "məs. Nəsimi",
       "phone": "Telefon"
     },
     "link": {
@@ -1121,6 +1124,11 @@
     "open": "Açıqdır",
     "branchTitle": "Filial seçin",
     "branchQuestion": "Hansı filiala gəlmək istəyirsiniz?",
+    "reviews": {
+      "title": "Rəylər",
+      "count": "{count} rəy",
+      "stars": "{n} ulduz"
+    },
     "poweredBy": "SalonBook.az ilə gücləndirilib",
     "metaTitleSuffix": "Onlayn qeydiyyat",
     "metaNotFound": "Salon tapılmadı — SalonBook.az",

@@ -301,6 +301,7 @@
     "price": "Цена (₼)",
     "duration": "Длительность (мин)",
     "buffer": "Буфер (мин)",
+    "category": "Категория",
     "save": "Сохранить",
     "saving": "Сохранение…",
     "emptyTitle": "Услуг пока нет",
@@ -348,6 +349,8 @@
       "description": "Описание",
       "descriptionPlaceholder": "Краткое описание салона",
       "address": "Адрес",
+      "district": "Район / зона",
+      "districtPlaceholder": "напр. Насими",
       "phone": "Телефон"
     },
     "link": {
@@ -1121,6 +1124,11 @@
     "open": "Открыто",
     "branchTitle": "Выберите филиал",
     "branchQuestion": "В какой филиал вы хотите прийти?",
+    "reviews": {
+      "title": "Отзывы",
+      "count": "{count} отзывов",
+      "stars": "{n} звёзд"
+    },
     "poweredBy": "Работает на SalonBook.az",
     "metaTitleSuffix": "Онлайн-запись",
     "metaNotFound": "Салон не найден — SalonBook.az",

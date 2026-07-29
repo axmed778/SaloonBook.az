@@ -9,6 +9,7 @@ import {
   setServiceActive,
   deleteService,
 } from "./actions";
+import type { ServiceCategory } from "@prisma/client";
 import { type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
@@ -22,7 +23,18 @@ export type ServiceRow = {
   bufferMin: number;
   isActive: boolean;
   audience: Audience;
+  category: ServiceCategory;
 };
+
+const CATEGORIES: ServiceCategory[] = [
+  "HAIR",
+  "NAILS",
+  "BROWS_LASHES",
+  "MAKEUP",
+  "SPA",
+  "BARBER",
+  "OTHER",
+];
 
 const inputCls =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
@@ -39,12 +51,14 @@ const emptyForm = {
   duration: "45",
   buffer: "10",
   audience: "ALL" as Audience,
+  category: "OTHER" as ServiceCategory,
 };
 
 export function ServicesManager({ services }: { services: ServiceRow[] }) {
   const t = useTranslations("Services");
   const tc = useTranslations("Common");
   const tAudience = useTranslations("Audience");
+  const tCat = useTranslations("Discovery"); // reuse the category labels
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -69,6 +83,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       duration: String(s.durationMin),
       buffer: String(s.bufferMin),
       audience: s.audience,
+      category: s.category,
     });
     setError(null);
     setOpen(true);
@@ -87,6 +102,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       durationMin: parseInt(form.duration, 10),
       bufferMin: parseInt(form.buffer || "0", 10),
       audience: form.audience,
+      category: form.category,
     };
     if (!payload.name) return setError(t("errors.nameRequired"));
     if (!Number.isFinite(payload.priceAzn) || payload.priceAzn < 0)
@@ -196,11 +212,27 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <AudienceSelect
               value={form.audience}
               onChange={(a) => setForm({ ...form, audience: a })}
             />
+            <div>
+              <label className={labelCls}>{t("category")}</label>
+              <select
+                value={form.category}
+                onChange={(e) =>
+                  setForm({ ...form, category: e.target.value as ServiceCategory })
+                }
+                className={inputCls}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {tCat(`category.${c}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}

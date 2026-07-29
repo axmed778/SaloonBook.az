@@ -38,6 +38,7 @@ type SalonData = {
   name: string;
   description: string | null;
   address: string | null;
+  district: string | null;
   phone: string | null;
   slug: string;
   businessHours: BusinessHour[];
@@ -143,6 +144,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
     name: salon.name,
     description: salon.description ?? "",
     address: salon.address ?? "",
+    district: salon.district ?? "",
     phone: salon.phone ?? "",
   });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -154,6 +156,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
         name: form.name.trim(),
         description: form.description.trim() || null,
         address: form.address.trim() || null,
+        district: form.district.trim() || null,
         phone: form.phone.trim() || null,
       });
       if (res.ok) {
@@ -186,6 +189,15 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
           <div>
             <label className={labelCls}>{t("profile.address")}</label>
             <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </div>
+          <div>
+            <label className={labelCls}>{t("profile.district")}</label>
+            <input
+              className={inputCls}
+              value={form.district}
+              onChange={(e) => setForm({ ...form, district: e.target.value })}
+              placeholder={t("profile.districtPlaceholder")}
+            />
           </div>
           <div>
             <label className={labelCls}>{t("profile.phone")}</label>

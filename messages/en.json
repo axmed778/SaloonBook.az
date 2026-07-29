@@ -301,6 +301,7 @@
     "price": "Price (₼)",
     "duration": "Duration (min)",
     "buffer": "Buffer (min)",
+    "category": "Category",
     "save": "Save",
     "saving": "Saving…",
     "emptyTitle": "No services yet",
@@ -348,6 +349,8 @@
       "description": "Description",
       "descriptionPlaceholder": "A short description of the salon",
       "address": "Address",
+      "district": "District / area",
+      "districtPlaceholder": "e.g. Nasimi",
       "phone": "Phone"
     },
     "link": {
@@ -1121,6 +1124,11 @@
     "open": "Open",
     "branchTitle": "Choose a branch",
     "branchQuestion": "Which branch would you like to visit?",
+    "reviews": {
+      "title": "Reviews",
+      "count": "{count} reviews",
+      "stars": "{n} stars"
+    },
     "poweredBy": "Powered by SalonBook.az",
     "metaTitleSuffix": "Online booking",
     "metaNotFound": "Salon not found — SalonBook.az",

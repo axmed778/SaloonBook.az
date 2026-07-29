@@ -33,6 +33,8 @@ const profileSchema = z.object({
   name: z.string().trim().min(2, "Salon adı ən az 2 simvol olmalıdır.").max(120),
   description: z.string().trim().max(1000).nullish(),
   address: z.string().trim().max(300).nullish(),
+  // Coarse locality (rayon/district) — labels the salon on the discovery map.
+  district: z.string().trim().max(120).nullish(),
   phone: z.string().trim().max(32).nullish(),
 });
 
@@ -50,6 +52,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
       name: d.name,
       description: d.description || null,
       address: d.address || null,
+      district: d.district || null,
       phone: d.phone || null,
     },
   });

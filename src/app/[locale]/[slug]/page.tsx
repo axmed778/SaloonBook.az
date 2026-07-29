@@ -128,8 +128,9 @@ export default async function BookingPage({
     siblings.find((b) => b.id === salon.id) ??
     { id: salon.id, slug, name: salon.name, address: salon.address, audience: salon.audience };
 
-  // Catalog of the SELECTED branch (each branch has its own staff + services).
-  const [services, employees] = await Promise.all([
+  // Catalog of the SELECTED branch (each branch has its own staff + services),
+  // plus its rating aggregate and recent reviews (public; no client identity).
+  const [services, employees, reviewAgg, salonReviews] = await Promise.all([
     prisma.service.findMany({
       where: { salonId: selected.id, isActive: true },
       select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
@@ -146,7 +147,25 @@ export default async function BookingPage({
       },
       orderBy: { name: "asc" },
     }),
+    prisma.salon.findUnique({
+      where: { id: selected.id },
+      select: { ratingCount: true, ratingSum: true },
+    }),
+    prisma.review.findMany({
+      where: { salonId: selected.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: { id: true, rating: true, comment: true, createdAt: true },
+    }),
   ]);
+
+  const ratingCount = reviewAgg?.ratingCount ?? 0;
+  const ratingAvg = ratingCount > 0 ? reviewAgg!.ratingSum / ratingCount : null;
+  const reviewDateFmt = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   // Next 14 Baku days for the booking date picker (availability is validated
   // server-side, so past/closed days simply return no slots).
@@ -291,6 +310,40 @@ export default async function BookingPage({
           prefillName={prefillName}
           prefillPhone={prefillPhone}
         />
+
+        {/* Reviews (public, server-rendered for SEO). No client identity shown —
+            only the rating, optional comment and date. */}
+        {ratingCount > 0 && (
+          <section className="mt-12">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h2 className="text-lg font-semibold text-foreground">{t("reviews.title")}</h2>
+              <span className="text-sm text-muted-foreground">
+                <span className="text-amber-400">★</span> {ratingAvg!.toFixed(1)} ·{" "}
+                {t("reviews.count", { count: ratingCount })}
+              </span>
+            </div>
+            <ul className="mt-4 space-y-3">
+              {salonReviews.map((r) => (
+                <li key={r.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span aria-label={t("reviews.stars", { n: r.rating })}>
+                      <span className="text-amber-400">{"★".repeat(r.rating)}</span>
+                      <span className="text-border-strong">{"★".repeat(5 - r.rating)}</span>
+                    </span>
+                    <time className="text-xs text-faint-foreground">
+                      {reviewDateFmt.format(r.createdAt)}
+                    </time>
+                  </div>
+                  {r.comment && (
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-secondary-foreground">
+                      {r.comment}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <p className="mt-10 flex items-center justify-center gap-1.5 text-center text-sm text-faint-foreground">
           <MapPin className="h-3.5 w-3.5" strokeWidth={2} />

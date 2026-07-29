@@ -24,6 +24,10 @@ const serviceInput = z.object({
   durationMin: z.number().int().positive("Müddət 0-dan böyük olmalıdır.").max(1440),
   bufferMin: z.number().int().min(0).max(1440),
   audience: z.enum(["MALE", "FEMALE", "ALL"]),
+  // Broad category for the public discovery-map filter.
+  category: z
+    .enum(["HAIR", "NAILS", "BROWS_LASHES", "MAKEUP", "SPA", "BARBER", "OTHER"])
+    .default("OTHER"),
 });
 
 function toMinor(priceAzn: number): number {
@@ -37,9 +41,17 @@ export async function createService(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: t("invalidData") };
   }
-  const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience, category } = parsed.data;
   await prisma.service.create({
-    data: { salonId, name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience },
+    data: {
+      salonId,
+      name,
+      priceMinor: toMinor(priceAzn),
+      durationMin,
+      bufferMin,
+      audience,
+      category,
+    },
   });
   revalidatePath("/dashboard/services");
   return { ok: true };
@@ -52,10 +64,10 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
   if (!parsed.success) {
     return { ok: false, error: t("invalidData") };
   }
-  const { name, priceAzn, durationMin, bufferMin, audience } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience, category } = parsed.data;
   const res = await prisma.service.updateMany({
     where: { id, salonId }, // salonId in the filter = tenant guard
-    data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience },
+    data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience, category },
   });
   if (res.count === 0) return { ok: false, error: t("notFound") };
   revalidatePath("/dashboard/services");

@@ -23,6 +23,7 @@ export default async function ServicesPage() {
       bufferMin: true,
       isActive: true,
       audience: true,
+      category: true,
     },
   });
 
