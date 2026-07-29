@@ -52,8 +52,26 @@ export async function SiteHeader() {
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
-          <ButtonLink href="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
-            {t("login")}
+
+          {/* Müştəri (client): accent-tinted, distinct from the salon CTAs.
+              Static link — the sign-in page redirects an already-signed-in
+              client to their account, so the landing header stays cacheable. */}
+          <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" aria-hidden />
+          <Link
+            href="/profile/sign-in"
+            className="hidden h-9 items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 sm:inline-flex"
+          >
+            <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {t("clientLogin")}
+          </Link>
+
+          {/* Salon (owner) */}
+          <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" aria-hidden />
+          <ButtonLink href="/login" variant="secondary" size="sm" className="hidden sm:inline-flex">
+            {t("salonLogin")}
           </ButtonLink>
           <ButtonLink href="/register" variant="primary" size="sm">
             {t("start")}

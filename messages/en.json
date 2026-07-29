@@ -9,6 +9,8 @@
     "navPricing": "Pricing",
     "navFaq": "FAQ",
     "login": "Log in",
+    "clientLogin": "Client sign-in",
+    "salonLogin": "Salon sign-in",
     "start": "Get started"
   },
   "Footer": {

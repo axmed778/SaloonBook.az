@@ -9,6 +9,8 @@
     "navPricing": "Цены",
     "navFaq": "Вопросы",
     "login": "Войти",
+    "clientLogin": "Вход клиента",
+    "salonLogin": "Вход салона",
     "start": "Начать"
   },
   "Footer": {
