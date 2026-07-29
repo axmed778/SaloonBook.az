@@ -3,6 +3,10 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { DiscoveryMap } from "@/components/discovery-map";
+import { Logo } from "@/components/site-header";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { ClientAccountLink } from "@/components/client-account-link";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +53,25 @@ export default async function SalonsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+    <>
+      <header className="border-b border-border">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle />
+            <ClientAccountLink />
+          </div>
+        </div>
       </header>
 
-      <DiscoveryMap />
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+        </div>
+
+        <DiscoveryMap />
 
       {salons.length > 0 && (
         <section className="mt-8">
@@ -81,6 +97,7 @@ export default async function SalonsPage() {
           </ul>
         </section>
       )}
-    </main>
+      </main>
+    </>
   );
 }

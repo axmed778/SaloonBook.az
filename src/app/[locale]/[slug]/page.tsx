@@ -13,6 +13,7 @@ import { ButtonLink } from "@/components/ui";
 import { Logo } from "@/components/site-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ClientAccountLink } from "@/components/client-account-link";
 import { BookingWidget } from "./booking-widget";
 import { BranchPicker } from "./branch-picker";
 
@@ -251,6 +252,7 @@ export default async function BookingPage({
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
+            <ClientAccountLink />
             <ButtonLink href="/register" variant="ghost" size="sm" className="hidden sm:inline-flex">
               {t("createOwn")}
             </ButtonLink>

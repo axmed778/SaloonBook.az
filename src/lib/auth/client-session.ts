@@ -8,6 +8,7 @@
 //
 // Cookie = base64url(JSON{cid,iat}) + "." + HMAC-SHA256("c." + payload, SESSION_SECRET).
 
+import { cache } from "react";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -96,8 +97,11 @@ export interface ClientSession {
  * Returns null when there's no valid client session. The verified `phone` is the
  * ONLY key used to scope a client's data (history, reviews) — callers must never
  * take a phone from the request.
+ *
+ * Wrapped in React's `cache` so multiple calls within one render (e.g. the salon
+ * page prefill + the header account link) share a single DB read.
  */
-export async function getClientSession(): Promise<ClientSession | null> {
+export const getClientSession = cache(async (): Promise<ClientSession | null> => {
   const store = await cookies();
   const payload = decode(store.get(COOKIE_NAME)?.value);
   if (!payload) return null;
@@ -108,4 +112,4 @@ export async function getClientSession(): Promise<ClientSession | null> {
   });
   if (!client) return null;
   return { id: client.id, phone: client.phone, name: client.name };
-}
+});
