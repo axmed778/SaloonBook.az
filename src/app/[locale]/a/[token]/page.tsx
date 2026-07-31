@@ -19,7 +19,13 @@ export default async function ManageAppointmentPage({
 }: {
   params: Promise<{ locale: string; token: string }>;
 }) {
-  const { token } = await params;
+  const { token: rawToken } = await params;
+  // Defensive normalization for a mis-configured WhatsApp template URL button:
+  // when the {{1}} placeholder was percent-encoded (%7B%7B1%7D%7D) instead of a
+  // real variable, Meta APPENDED the manageToken instead of substituting it, so
+  // already-delivered links arrive as "/a/{{1}}<uuid>". Strip a leading {{n}}
+  // placeholder (raw or percent-encoded) so those links still resolve.
+  const token = rawToken.replace(/^(?:\{\{\d+\}\}|%7B%7B\d+%7D%7D)/i, "");
   if (!/^[0-9a-f-]{36}$/i.test(token)) notFound();
   const locale = await getLocale();
   const df = intlLocale(locale);
