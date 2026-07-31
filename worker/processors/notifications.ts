@@ -3,6 +3,9 @@ import { prisma } from "../../src/lib/prisma";
 import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
 import { resolveWhatsAppSender } from "../../src/lib/whatsapp-sender";
 import { buildComponents } from "../../src/lib/whatsapp-templates";
+import { limitsFor } from "../../src/lib/plans";
+import { effectivePlan, subscriptionForSalon } from "../../src/lib/subscription";
+import { bakuPeriodYm } from "../../src/lib/time";
 import type { NotificationJob } from "../../src/lib/queue";
 
 const DONE = new Set(["SENT", "DELIVERED", "READ"]);
@@ -38,6 +41,40 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
     return;
   }
 
+  // --- Plan reminder-quota enforcement (appointment_reminder only) ---
+  // The WhatsApp reminder quota (plan's maxRemindersPerMonth) is the one paid
+  // limit measured in messages, not bookings. Only the T-24h reminder is gated —
+  // confirmations, cancellations and owner alerts are never counted, so a salon
+  // over quota still gets its transactional messages. FAIL-OPEN: any error in the
+  // check sends the reminder rather than dropping the product's core value.
+  const periodYm = bakuPeriodYm(new Date());
+  if (n.template === "appointment_reminder") {
+    try {
+      const sub = await subscriptionForSalon(prisma, n.salonId);
+      const max = limitsFor(effectivePlan(sub)).maxRemindersPerMonth;
+      if (Number.isFinite(max)) {
+        const counter = await prisma.usageCounter.findUnique({
+          where: { salonId_periodYm: { salonId: n.salonId, periodYm } },
+          select: { reminders: true },
+        });
+        if ((counter?.reminders ?? 0) >= max) {
+          // Terminal status so the QUEUED sweep never re-enqueues it; the
+          // lastError marker distinguishes a quota skip from a real cancellation.
+          await prisma.notification.update({
+            where: { id: n.id },
+            data: { status: "CANCELLED", lastError: "reminder_quota_exceeded" },
+          });
+          console.log(
+            `[worker] reminder skipped: salon ${n.salonId} over monthly quota (${max})`,
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("[worker] reminder quota check failed, sending anyway", e);
+    }
+  }
+
   try {
     // Resolve which number this salon sends from: its own (PRO + ACTIVE own-number
     // sender) or the shared platform number. Never throws — falls back to platform.
@@ -71,6 +108,19 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
         lastError: null,
       },
     });
+
+    // Count only reminders that actually went out. Idempotent across retries: a
+    // failed send throws before reaching here, so it never double-counts. Best-
+    // effort — a counter write must not fail an already-sent message.
+    if (n.template === "appointment_reminder") {
+      await prisma.usageCounter
+        .upsert({
+          where: { salonId_periodYm: { salonId: n.salonId, periodYm } },
+          create: { salonId: n.salonId, periodYm, reminders: 1 },
+          update: { reminders: { increment: 1 } },
+        })
+        .catch((e) => console.error("[worker] reminder quota increment failed", e));
+    }
   } catch (e) {
     await prisma.notification.update({
       where: { id: n.id },

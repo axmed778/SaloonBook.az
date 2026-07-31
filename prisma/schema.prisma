@@ -575,9 +575,10 @@ model Payment {
 
 // Materialized monthly booking counts for fast Free-plan limit checks.
 model UsageCounter {
-  salonId  String
-  periodYm String // "2026-06"
-  bookings Int    @default(0)
+  salonId   String
+  periodYm  String // "2026-06"
+  bookings  Int    @default(0)
+  reminders Int    @default(0)
 
   @@id([salonId, periodYm])
 }

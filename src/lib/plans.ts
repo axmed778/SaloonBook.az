@@ -5,6 +5,8 @@ export interface PlanLimits {
   maxEmployees: number;
   maxBookingsPerMonth: number;
   maxBranches: number;
+  /** WhatsApp appointment reminders (appointment_reminder) sent per calendar month. */
+  maxRemindersPerMonth: number;
   /** Monthly price in qəpik (minor units). */
   priceMinor: number;
 }
@@ -15,16 +17,17 @@ export interface PlanLimits {
 // see (Start / Salon / Pro) live in MARKETING_PLANS below; BASIC is the standard
 // paid/trial tier (marketed as "Salon"), PRO is the top tier.
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE: { maxEmployees: 1, maxBookingsPerMonth: 30, maxBranches: 1, priceMinor: 0 },
+  FREE: { maxEmployees: 1, maxBookingsPerMonth: 30, maxBranches: 1, maxRemindersPerMonth: 30, priceMinor: 0 },
   // "Start" — see MARKETING_PLANS. 2 staff, 1 branch, 15 ₼/mo.
-  START: { maxEmployees: 2, maxBookingsPerMonth: Infinity, maxBranches: 1, priceMinor: 1500 },
-  BASIC: { maxEmployees: 8, maxBookingsPerMonth: Infinity, maxBranches: 1, priceMinor: 3500 },
+  START: { maxEmployees: 2, maxBookingsPerMonth: Infinity, maxBranches: 1, maxRemindersPerMonth: 150, priceMinor: 1500 },
+  BASIC: { maxEmployees: 8, maxBookingsPerMonth: Infinity, maxBranches: 1, maxRemindersPerMonth: 600, priceMinor: 3500 },
   PRO: {
     maxEmployees: Infinity,
     maxBookingsPerMonth: Infinity,
     // Pro includes 3 branches; more are sold as paid extra slots
     // (Subscription.extraBranches, granted by a platform admin).
     maxBranches: 3,
+    maxRemindersPerMonth: 1500,
     priceMinor: 7000,
   },
 };

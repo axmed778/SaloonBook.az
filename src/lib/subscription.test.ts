@@ -74,8 +74,10 @@ describe("effectiveLimits", () => {
     const expired = sub({ trialEndsAt: new Date(NOW.getTime() - DAY) });
     expect(effectiveLimits(expired, NOW).maxBookingsPerMonth).toBe(30);
     expect(effectiveLimits(expired, NOW).maxEmployees).toBe(1);
+    expect(effectiveLimits(expired, NOW).maxRemindersPerMonth).toBe(30);
 
     const active = sub({ status: "ACTIVE", plan: "PRO" });
     expect(effectiveLimits(active, NOW).maxEmployees).toBe(Infinity);
+    expect(effectiveLimits(active, NOW).maxRemindersPerMonth).toBe(1500);
   });
 });
