@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { ArrowLeft } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 
 export default function LoginPage() {
@@ -39,6 +40,13 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-neutral-500 transition hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+        {t("back")}
+      </Link>
       <div>
         <h1 className="text-2xl font-bold">{t("login.title")}</h1>
         <p className="mt-1 text-sm text-neutral-500">{t("login.subtitle")}</p>
