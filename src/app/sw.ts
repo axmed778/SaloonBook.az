@@ -15,7 +15,14 @@
 // lib conflict) and type-checked via tsconfig.sw.json instead.
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, RuntimeCaching, SerwistGlobalConfig } from "serwist";
-import { NetworkFirst, NetworkOnly, Serwist } from "serwist";
+import {
+  CacheableResponsePlugin,
+  CacheFirst,
+  ExpirationPlugin,
+  NetworkFirst,
+  NetworkOnly,
+  Serwist,
+} from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -26,9 +33,36 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-// Order matters: these /api rules are placed BEFORE defaultCache so they win over
-// its generic API handler, which would otherwise cache authenticated GETs.
-const apiCaching: RuntimeCaching[] = [
+// Order matters: these rules are placed BEFORE defaultCache so they win over
+// its generic handlers.
+const runtimeRules: RuntimeCaching[] = [
+  {
+    // OpenStreetMap raster tiles (the Leaflet basemap on the discovery map and
+    // the Settings location picker). These are cross-origin <img> requests, so
+    // WITHOUT this rule they fall through to defaultCache's catch-all
+    // "cross-origin" NetworkFirst handler. That handler mishandles the opaque
+    // (no-cors) tile responses and serves a 503, so every tile fails and the map
+    // renders as a blank grey grid — but only in production, where the service
+    // worker is active (it's disabled in `next dev`, which is why the map works
+    // locally and broke on the live site). CacheFirst with an explicit
+    // cacheable-status list that includes 0 (opaque) both fixes loading and
+    // caches tiles, so we stop re-hitting OSM on every view — their tile usage
+    // policy expects caching, not per-request fetching.
+    matcher: ({ url }) =>
+      url.hostname === "tile.openstreetmap.org" ||
+      url.hostname.endsWith(".tile.openstreetmap.org"),
+    handler: new CacheFirst({
+      cacheName: "osm-tiles",
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [0, 200] }),
+        new ExpirationPlugin({
+          maxEntries: 256,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // a week — basemaps change rarely
+          purgeOnQuotaError: true,
+        }),
+      ],
+    }),
+  },
   {
     // Public, unauthenticated read feeds (e.g. the salon discovery map). Safe to
     // cache network-first so the map still paints when briefly offline.
@@ -52,7 +86,7 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: [...apiCaching, ...defaultCache],
+  runtimeCaching: [...runtimeRules, ...defaultCache],
 });
 
 serwist.addEventListeners();

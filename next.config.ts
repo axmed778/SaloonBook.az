@@ -26,7 +26,12 @@ const csp = [
   "font-src 'self' data:",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://challenges.cloudflare.com`,
+  // The map basemap tiles load as <img> (covered by img-src above) on a normal
+  // page load, BUT in production the Serwist service worker intercepts them and
+  // re-requests via fetch() — which is governed by connect-src, not img-src. So
+  // the tile host must be allow-listed here too, or the SW's fetch is CSP-blocked
+  // and the map renders as a blank grey grid (only in prod, where the SW runs).
+  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://challenges.cloudflare.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org`,
   "frame-src https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
 ].join("; ");
