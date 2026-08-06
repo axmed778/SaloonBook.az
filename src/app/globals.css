@@ -207,16 +207,19 @@
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
 }
 
-/* Popups */
+/* Popups. The !important flags override Leaflet's own leaflet.css, which ships a
+   `.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:white;color:#333}`
+   rule at equal specificity that loads AFTER globals.css in the bundle — without
+   the override the popup stays white in dark mode, hiding the (light) salon name. */
 .leaflet-popup-content-wrapper {
-  background: var(--card);
-  color: var(--foreground);
+  background: var(--card) !important;
+  color: var(--foreground) !important;
   border: 1px solid var(--border);
   border-radius: 0.6rem;
   box-shadow: var(--shadow-frame);
 }
 .leaflet-popup-tip {
-  background: var(--card);
+  background: var(--card) !important;
   border: 1px solid var(--border);
   box-shadow: none;
 }
@@ -228,7 +231,7 @@
 }
 .salon-popup-name {
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--foreground) !important;
 }
 .salon-popup-addr {
   margin-top: 0.15rem;
@@ -240,7 +243,10 @@
   margin-top: 0.6rem;
   border-radius: 0.5rem;
   background: var(--accent);
-  color: var(--accent-foreground);
+  /* !important beats Leaflet's `.leaflet-container a{color:#0078A8}` (higher
+     specificity than a bare class), which otherwise tints the button label a
+     low-contrast link-blue instead of the readable accent foreground. */
+  color: var(--accent-foreground) !important;
   padding: 0.4rem 0.9rem;
   font-size: 0.8125rem;
   font-weight: 500;
