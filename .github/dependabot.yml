@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+  # pnpm lockfiles are handled by the "npm" ecosystem — Dependabot understands
+  # pnpm-lock.yaml lockfileVersion 9.0 and updates it in place.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Baku"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # One PR a week for every minor/patch bump, prod and dev together.
+      # Ungrouped, 357 resolved dependencies would open a PR per package.
+      # Majors are deliberately NOT grouped: next 16, react 20, vitest 5 and
+      # tailwind majors each deserve their own reviewable PR.
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Deliberately pinned to a prerelease (18.4.0-beta.17) for the local dev
+      # database; automated bumps here break `pnpm db:up` rather than help.
+      - dependency-name: "embedded-postgres"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Baku"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -22,7 +22,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:constraints": "tsx scripts/apply-sql.ts prisma/constraints.sql",
     "db:rls": "tsx scripts/apply-sql.ts prisma/security/rls.sql",
-    "db:setup": "prisma migrate deploy && pnpm db:constraints",
+    "db:rls-grants": "tsx scripts/apply-sql.ts prisma/security/rls-grants.sql",
+    "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:rls-grants",
+    "test:rls": "vitest run src/lib/tenant.rls.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate"
   },
@@ -31,7 +33,9 @@
   },
   "pnpm": {
     "overrides": {
-      "ioredis": "5.11.1"
+      "ioredis": "5.11.1",
+      "nanoid@3": "3.3.18",
+      "brace-expansion@5": "5.0.9"
     }
   },
   "dependencies": {
@@ -43,7 +47,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^1.22.0",
-    "next": "^15.1.4",
+    "next": "^15.5.23",
     "next-intl": "^4.13.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
