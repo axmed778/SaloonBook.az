@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { withTenantScope } from "@/lib/tenant";
 import { featuresFor } from "@/lib/plans";
 import { effectivePlan } from "@/lib/subscription";
 import { localeFromCookie } from "@/i18n/request-locale";
@@ -86,23 +87,29 @@ export async function GET(req: NextRequest) {
 
   const [t, appointments] = await Promise.all([
     getTranslations({ locale: await localeFromCookie(), namespace: "Export.csv" }),
-    prisma.appointment.findMany({
-      where,
-      orderBy: { startsAt: "asc" },
-      select: {
-        startsAt: true,
-        endsAt: true,
-        status: true,
-        source: true,
-        priceMinor: true,
-        notes: true,
-        createdAt: true,
-        attendeeName: true,
-        customer: { select: { name: true, phone: true } },
-        service: { select: { name: true } },
-        employee: { select: { name: true } },
-      },
-    }),
+    // Inside the RLS scope: on the restricted role Postgres refuses to return
+    // another salon's rows, so `where.salonId` is belt-and-braces rather than
+    // the only guard. This route dumps a salon's whole appointment history —
+    // customer names and phones included — in one response.
+    withTenantScope(salonId, (tx) =>
+      tx.appointment.findMany({
+        where,
+        orderBy: { startsAt: "asc" },
+        select: {
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          source: true,
+          priceMinor: true,
+          notes: true,
+          createdAt: true,
+          attendeeName: true,
+          customer: { select: { name: true, phone: true } },
+          service: { select: { name: true } },
+          employee: { select: { name: true } },
+        },
+      }),
+    ),
   ]);
 
   const headers = [

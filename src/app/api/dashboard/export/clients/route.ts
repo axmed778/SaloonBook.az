@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { withTenantScope } from "@/lib/tenant";
 import { featuresFor } from "@/lib/plans";
 import { effectivePlan } from "@/lib/subscription";
 import { localeFromCookie } from "@/i18n/request-locale";
@@ -48,71 +49,81 @@ export async function GET() {
     return new Response("Data export requires the Pro plan.", { status: 403 });
   }
 
-  // Visits/spent/last-visit = past appointments the customer actually kept
-  // (CONFIRMED or COMPLETED, startsAt <= now); upcoming = future CONFIRMED.
-  // Same aggregation as the CRM list, minus its pagination/search.
-  const rows = await prisma.$queryRaw<ListRow[]>`
-    SELECT
-      c.id,
-      c.name,
-      c.phone,
-      COALESCE(a.visits, 0)::int        AS visits,
-      COALESCE(a."spentMinor", 0)::int  AS "spentMinor",
-      a."lastVisit"                     AS "lastVisit",
-      COALESCE(u.upcoming, 0)::int      AS upcoming,
-      c."createdAt"                     AS "createdAt"
-    FROM "Customer" c
-    LEFT JOIN (
-      SELECT "customerId",
-             COUNT(*)          AS visits,
-             SUM("priceMinor") AS "spentMinor",
-             MAX("startsAt")   AS "lastVisit"
-      FROM "Appointment"
-      WHERE "salonId" = ${salonId}
-        AND status IN ('CONFIRMED', 'COMPLETED')
-        AND "startsAt" <= now()
-      GROUP BY "customerId"
-    ) a ON a."customerId" = c.id
-    LEFT JOIN (
-      SELECT "customerId", COUNT(*) AS upcoming
-      FROM "Appointment"
-      WHERE "salonId" = ${salonId}
-        AND status = 'CONFIRMED'
-        AND "startsAt" > now()
-      GROUP BY "customerId"
-    ) u ON u."customerId" = c.id
-    WHERE c."salonId" = ${salonId}
-    ORDER BY c.name ASC
-  `;
+  // Everything touching tenant tables runs inside the RLS scope: on the
+  // restricted role Postgres itself refuses to return another salon's rows, so
+  // the salonId predicates below are belt-and-braces rather than the only
+  // guard. This route hands back a salon's entire customer base in one
+  // response — the largest bulk-PII surface in the product — which is why it is
+  // among the first paths moved onto prismaRls.
+  const { rows, best, nameById } = await withTenantScope(salonId, async (tx) => {
+    // Visits/spent/last-visit = past appointments the customer actually kept
+    // (CONFIRMED or COMPLETED, startsAt <= now); upcoming = future CONFIRMED.
+    // Same aggregation as the CRM list, minus its pagination/search.
+    const rows = await tx.$queryRaw<ListRow[]>`
+      SELECT
+        c.id,
+        c.name,
+        c.phone,
+        COALESCE(a.visits, 0)::int        AS visits,
+        COALESCE(a."spentMinor", 0)::int  AS "spentMinor",
+        a."lastVisit"                     AS "lastVisit",
+        COALESCE(u.upcoming, 0)::int      AS upcoming,
+        c."createdAt"                     AS "createdAt"
+      FROM "Customer" c
+      LEFT JOIN (
+        SELECT "customerId",
+               COUNT(*)          AS visits,
+               SUM("priceMinor") AS "spentMinor",
+               MAX("startsAt")   AS "lastVisit"
+        FROM "Appointment"
+        WHERE "salonId" = ${salonId}
+          AND status IN ('CONFIRMED', 'COMPLETED')
+          AND "startsAt" <= now()
+        GROUP BY "customerId"
+      ) a ON a."customerId" = c.id
+      LEFT JOIN (
+        SELECT "customerId", COUNT(*) AS upcoming
+        FROM "Appointment"
+        WHERE "salonId" = ${salonId}
+          AND status = 'CONFIRMED'
+          AND "startsAt" > now()
+        GROUP BY "customerId"
+      ) u ON u."customerId" = c.id
+      WHERE c."salonId" = ${salonId}
+      ORDER BY c.name ASC
+    `;
 
-  // Favorite master per customer: their most-visited (kept appointments) staff.
-  const grouped = rows.length
-    ? await prisma.appointment.groupBy({
-        by: ["customerId", "employeeId"],
-        where: {
-          salonId,
-          status: { in: ["CONFIRMED", "COMPLETED"] },
-          startsAt: { lte: new Date() },
-        },
-        _count: { _all: true },
-      })
-    : [];
-  const best = new Map<string, { employeeId: string; count: number }>();
-  for (const g of grouped) {
-    const cur = best.get(g.customerId);
-    if (!cur || g._count._all > cur.count) {
-      best.set(g.customerId, { employeeId: g.employeeId, count: g._count._all });
+    // Favorite master per customer: their most-visited (kept appointments) staff.
+    const grouped = rows.length
+      ? await tx.appointment.groupBy({
+          by: ["customerId", "employeeId"],
+          where: {
+            salonId,
+            status: { in: ["CONFIRMED", "COMPLETED"] },
+            startsAt: { lte: new Date() },
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const best = new Map<string, { employeeId: string; count: number }>();
+    for (const g of grouped) {
+      const cur = best.get(g.customerId);
+      if (!cur || g._count._all > cur.count) {
+        best.set(g.customerId, { employeeId: g.employeeId, count: g._count._all });
+      }
     }
-  }
-  const employeeIds = [...new Set([...best.values()].map((b) => b.employeeId))];
-  const employees = employeeIds.length
-    ? await prisma.employee.findMany({
-        where: { id: { in: employeeIds } },
-        select: { id: true, name: true },
-      })
-    : [];
-  const nameById = new Map(employees.map((e) => [e.id, e.name]));
+    const employeeIds = [...new Set([...best.values()].map((b) => b.employeeId))];
+    const employees = employeeIds.length
+      ? await tx.employee.findMany({
+          where: { id: { in: employeeIds }, salonId },
+          select: { id: true, name: true },
+        })
+      : [];
+    return { rows, best, nameById: new Map(employees.map((e) => [e.id, e.name])) };
+  });
 
+  // CSV building stays OUTSIDE the scope — never hold a pooled connection
+  // across getTranslations.
   const t = await getTranslations({
     locale: await localeFromCookie(),
     namespace: "Export.clientsCsv",

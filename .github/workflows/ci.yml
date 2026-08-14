@@ -35,3 +35,103 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # ── Dependency vulnerability scan ─────────────────────────────────────────
+  # A separate job on purpose: a red audit must not mask — or be masked by — a
+  # real typecheck/test/build failure, and it fails for a completely different
+  # reason (an upstream advisory landed) than the `ci` job does.
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NO_COLOR: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+
+      # `pnpm audit` resolves advisories from pnpm-lock.yaml alone — it never
+      # reads node_modules — so this job needs no `pnpm install`, and therefore
+      # no postinstall `prisma generate` and no DATABASE_URL/REDIS_URL stubs.
+      #
+      # Gate on `critical` only. Some current prod "high" advisories are pinned
+      # inside Next.js itself (it pins postcss to exactly "8.4.31" and sharp to
+      # "^0.34.3"), so `--audit-level=high` would leave CI permanently red for
+      # reasons nobody here can act on — which just trains everyone to ignore
+      # it. Raise this to `high` once those clear upstream; the allowlist
+      # mechanism is `pnpm.auditConfig.ignoreGhsas` in package.json.
+      #
+      # `--audit-level` gates the exit code only — the full count still prints.
+      # NEVER add `--json` here: in JSON mode pnpm ignores `--audit-level` and
+      # exits 1 on any vulnerability at all.
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=critical --ignore-registry-errors
+
+      # The full moderate-and-above picture, non-blocking, for the run log.
+      - name: Audit report (non-blocking)
+        if: always()
+        run: pnpm audit --prod --audit-level=moderate --ignore-registry-errors || true
+
+  # ── Tenant isolation (RLS) ────────────────────────────────────────────────
+  # The `ci` job never connects to a database (it uses a placeholder
+  # DATABASE_URL), so nothing there can detect an RLS regression. This job
+  # stands up a real Postgres, applies the security SQL, and proves isolation
+  # against a role that genuinely lacks BYPASSRLS.
+  rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rlstest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/rlstest"
+      REDIS_URL: "redis://localhost:6379"
+      APP_URL: "http://localhost:3000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Named salonbook_app so the file under test is byte-identical to the one
+      # applied in production — rls-grants.sql keys the strict switch on that
+      # exact role name.
+      - name: Create the restricted app role
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+            "CREATE ROLE salonbook_app LOGIN PASSWORD 'rlstest' NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;"
+
+      - name: Migrate, constrain, grant
+        run: pnpm db:setup
+
+      - name: Apply RLS policies
+        run: pnpm db:rls
+
+      - name: Prove tenant isolation
+        env:
+          RLS_TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/rlstest"
+          RLS_TEST_APP_DATABASE_URL: "postgresql://salonbook_app:rlstest@localhost:5432/rlstest"
+        run: pnpm test:rls

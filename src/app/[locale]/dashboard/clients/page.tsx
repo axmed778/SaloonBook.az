@@ -153,7 +153,7 @@ export default async function ClientsPage({
     const employeeIds = [...new Set([...best.values()].map((b) => b.employeeId))];
     const employees = employeeIds.length
       ? await prisma.employee.findMany({
-          where: { id: { in: employeeIds } },
+          where: { id: { in: employeeIds }, salonId },
           select: { id: true, name: true },
         })
       : [];

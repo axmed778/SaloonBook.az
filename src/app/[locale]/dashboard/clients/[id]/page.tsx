@@ -136,11 +136,20 @@ export default async function ClientProfilePage({
   const favEmployeeId = favEmployeeGroups[0]?.employeeId ?? null;
   const favServiceId = favServiceGroups[0]?.serviceId ?? null;
   const [favEmployee, favService] = await Promise.all([
+    // findFirst, not findUnique: the salonId predicate is what keeps a favorite
+    // resolved from this salon's own appointments from ever naming another
+    // tenant's employee/service if an id were ever wrong.
     favEmployeeId
-      ? prisma.employee.findUnique({ where: { id: favEmployeeId }, select: { name: true } })
+      ? prisma.employee.findFirst({
+          where: { id: favEmployeeId, salonId },
+          select: { name: true },
+        })
       : null,
     favServiceId
-      ? prisma.service.findUnique({ where: { id: favServiceId }, select: { name: true } })
+      ? prisma.service.findFirst({
+          where: { id: favServiceId, salonId },
+          select: { name: true },
+        })
       : null,
   ]);
 

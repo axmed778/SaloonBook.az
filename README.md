@@ -35,6 +35,7 @@ cp .env.example .env         # fill in DATABASE_URL and REDIS_URL at minimum
 pnpm db:migrate              # create/apply Prisma migrations
 pnpm db:constraints          # btree_gist + the no-overlap booking constraint (REQUIRED)
 pnpm db:rls                  # (optional) row-level-security tenant policies
+pnpm db:rls-grants           # (optional) grants + strict switch for salonbook_app
 pnpm db:seed                 # demo account/salon for local testing
 ```
 
@@ -58,33 +59,77 @@ overlap, even under a race or a logic bug. **Apply it on every environment** via
 
 Tenant isolation has two layers:
 
-1. **Application** — every operational query is scoped by `salonId`.
-2. **Database (RLS)** — a defense-in-depth safety net so a missing
-   `where: { salonId }` becomes "zero rows" instead of a cross-tenant leak.
+1. **Application** — every operational query is scoped by `salonId`. This is what
+   actually protects almost all of the product today.
+2. **Database (RLS)** — a defense-in-depth net so a missing `where: { salonId }`
+   becomes "zero rows" instead of a cross-tenant leak. It covers a small,
+   explicitly listed set of paths.
 
-RLS only engages when **both** conditions hold, so production must be set up for
-it:
+### What is actually enforced (read this before trusting `pg_policies`)
 
-- **Connect as a non-owner role.** RLS is bypassed by the table owner and
-  superusers. Create an app role and point the prod `DATABASE_URL` at it; run
-  migrations as the owner. Example:
+Policies exist on 10 tables and `FORCE ROW LEVEL SECURITY` is on. They are
+**enforced only for queries routed through `withTenantScope` on the `prismaRls`
+client** — today that is three call sites:
 
-  ```sql
-  CREATE ROLE salonbook_app LOGIN PASSWORD '...';
-  GRANT USAGE ON SCHEMA public TO salonbook_app;
-  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salonbook_app;
-  ```
+- `src/lib/booking.ts` (public + dashboard booking)
+- `src/app/api/dashboard/export/clients/route.ts`
+- `src/app/api/dashboard/export/appointments/route.ts`
 
-- **Apply the policies:** `pnpm db:rls`.
+Everything else — roughly 136 dashboard queries, every other route under
+`src/app/api/**`, the whole `worker/` tree and the admin panel — uses the owner
+connection on `DATABASE_URL` and has **no database-level tenant enforcement**.
+"RLS is enabled" and "the database enforces tenancy" are three call sites apart.
+Anyone reading the `pg_policies` output and concluding otherwise is wrong.
 
-- **Set the per-transaction context.** Operational writes run through
-  `withTenantScope(salonId, fn)` (`src/lib/tenant.ts`), which sets
-  `app.current_salon` so the policies scope every query in the transaction. The
-  public salon-by-slug lookup that *resolves* the salonId necessarily runs before
-  the scope is entered.
+### Why this is safe to apply to a live database
 
-RLS is **off in local dev** (policies not applied), where `withTenantScope` is a
-harmless no-op wrapper around a normal transaction.
+Deny-when-unset is keyed to the **role**, not to the policy. Only a role carrying
+`app.rls_strict = 'on'` (set at the role level by `prisma/security/rls-grants.sql`
+— i.e. `salonbook_app` and nothing else) is denied rows when `app.current_salon`
+is unset. For the owner role both policy branches are permissive, so `pnpm db:rls`
+is a **no-op** for it, with or without `BYPASSRLS`. `DATABASE_URL` never moves,
+so `prisma migrate deploy`, `scripts/apply-sql.ts`, the worker and the admin panel
+are structurally untouched.
+
+### Activating it
+
+```sql
+-- In SQL, NEVER via the Neon console/API/CLI: console-created Neon roles get
+-- neon_superuser, which carries BYPASSRLS — you would enforce nothing while
+-- every check below still looks correct.
+CREATE ROLE salonbook_app LOGIN PASSWORD '<generated>'
+  NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;
+
+-- Both must be false, and the second must be false too:
+SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'salonbook_app';
+SELECT pg_has_role('salonbook_app', 'neon_superuser', 'member');
+```
+
+Then `pnpm db:rls && pnpm db:rls-grants`, and set `RLS_DATABASE_URL` on the **web
+service only** (never the worker), with `?connection_limit=5&pool_timeout=10`
+appended — it is a second pool against the same database. Smoke a real public
+booking first, then both CSV exports.
+
+**Rollback is deleting `RLS_DATABASE_URL` and restarting**: `withTenantScope` then
+falls back to the owner client, which is exactly today's behaviour. Removing the
+policies themselves is `prisma/security/rls-disable.sql`.
+
+With `RLS_DATABASE_URL` unset — local dev, CI, and production before activation —
+`withTenantScope` is a harmless wrapper around a normal transaction.
+
+### Proving it
+
+`src/lib/tenant.rls.test.ts` seeds two tenants and asserts that an **unfiltered**
+`findMany` inside a scope returns only one of them, against a role that genuinely
+lacks `BYPASSRLS`. It is opt-in (`pnpm test:rls`, gated on two env vars) and runs
+in CI against a real Postgres — see the `rls` job in `.github/workflows/ci.yml`.
+It also fails if a new `salonId`-carrying table is added without a policy.
+
+The path from here to strict, table-by-table, is documented in
+`prisma/security/rls-strict.sql`. Read its header before making any table strict —
+`Appointment` in particular fails **open** (an empty overlap result reads as "slot
+free"), so making it strict before threading `salonId` through
+`getAvailableSlots`/`isSlotBookable` would cause double bookings.
 
 Other production must-haves (the app refuses to boot otherwise — see
 `src/lib/env.ts`): a strong unique `WHATSAPP_VERIFY_TOKEN` (never the

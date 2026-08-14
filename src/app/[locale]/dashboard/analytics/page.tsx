@@ -240,19 +240,19 @@ export default async function AnalyticsPage() {
       : Promise.resolve([] as { customerId: string }[]),
     topRows.length
       ? prisma.service.findMany({
-          where: { id: { in: topRows.map((r) => r.serviceId) } },
+          where: { id: { in: topRows.map((r) => r.serviceId) }, salonId },
           select: { id: true, name: true },
         })
       : Promise.resolve([] as { id: string; name: string }[]),
     topCustomerGroup.length
       ? prisma.customer.findMany({
-          where: { id: { in: topCustomerGroup.map((r) => r.customerId) } },
+          where: { id: { in: topCustomerGroup.map((r) => r.customerId) }, salonId },
           select: { id: true, name: true },
         })
       : Promise.resolve([] as { id: string; name: string }[]),
     topMasterGroup.length
       ? prisma.employee.findMany({
-          where: { id: { in: topMasterGroup.map((r) => r.employeeId) } },
+          where: { id: { in: topMasterGroup.map((r) => r.employeeId) }, salonId },
           select: { id: true, name: true },
         })
       : Promise.resolve([] as { id: string; name: string }[]),
