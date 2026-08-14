@@ -85,6 +85,10 @@ export const viewport: Viewport = {
 
 // Runs before paint: applies the saved theme (or the OS preference) so there's
 // no flash of the wrong theme. Kept tiny and dependency-free.
+// SAFE ONLY BECAUSE IT IS A LITERAL: this string is injected verbatim via
+// dangerouslySetInnerHTML below. If it ever grows an interpolated value (a
+// server-chosen default theme, a locale, a nonce), serialize that value with
+// serializeJsonLd from @/lib/json-ld — a raw value could close this <script>.
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}var d=document.documentElement;d.classList.remove('light','dark');d.classList.add(t);}catch(e){}})();`;
 
 export default async function LocaleLayout({

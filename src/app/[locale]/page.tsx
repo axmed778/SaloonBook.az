@@ -19,6 +19,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { MARKETING_PLANS, type MarketingPlan } from "@/lib/plans";
 import { cn } from "@/lib/cn";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { ButtonLink, Eyebrow, SectionHeader } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -257,7 +258,7 @@ export default async function Home() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <SiteHeader />
 

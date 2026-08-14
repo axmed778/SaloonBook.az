@@ -8,6 +8,7 @@ import type { Audience } from "@/lib/audience";
 import { bakuToday, shiftYmd } from "@/lib/time";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor } from "@/lib/plans";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { intlLocale, ogLocale } from "@/i18n/format";
 import { ButtonLink } from "@/components/ui";
 import { Logo } from "@/components/site-header";
@@ -242,7 +243,7 @@ export default async function BookingPage({
     <div className="relative min-h-screen">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(salonJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(salonJsonLd) }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] glow-accent opacity-70" />
 
