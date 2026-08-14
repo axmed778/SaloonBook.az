@@ -10,13 +10,12 @@
 --   data.
 --
 -- WHY THIS FILE IS SAFE TO APPLY (changed 2026-08-13)
---   Deny-when-unset is keyed to the ROLE, not to the policy. Only a role that
---   carries `app.rls_strict = 'on'` — set at the role level by
---   rls-grants.sql, i.e. `salonbook_app` and nothing else — is denied rows when
---   `app.current_salon` is unset. For the owner role (migrations, the worker,
---   the admin panel, and every query NOT routed through withTenantScope) both
---   policy branches are permissive, so applying this file is a NO-OP for it,
---   with or without BYPASSRLS.
+--   Deny-when-unset is keyed to the ROLE, not to the policy. Only connections
+--   authenticated as `salonbook_app` are denied rows when `app.current_salon`
+--   is unset (see app_rls_strict() below). For the owner role (migrations, the
+--   worker, the admin panel, and every query NOT routed through
+--   withTenantScope) both policy branches are permissive, so applying this file
+--   is a NO-OP for it, with or without BYPASSRLS.
 --
 --   The previous version of this file keyed denial to "is the GUC set", which
 --   made it a latent tripwire: the moment DATABASE_URL pointed at any role
@@ -43,9 +42,28 @@ CREATE OR REPLACE FUNCTION app_current_salon() RETURNS text
   LANGUAGE sql STABLE PARALLEL SAFE AS
 $fn$ SELECT NULLIF(current_setting('app.current_salon', true), '') $fn$;
 
+-- Strict mode is bound to the role IDENTITY, not to a settable parameter.
+--
+-- The obvious alternative — `ALTER ROLE salonbook_app SET app.rls_strict='on'`
+-- — does not work on managed Postgres: setting a CUSTOM (placeholder) GUC that
+-- way requires a real superuser, and Neon's `neondb_owner` is only a member of
+-- `neon_superuser`, so it fails with "permission denied to set parameter"
+-- (SQLSTATE 42501).
+--
+-- Binding to current_user is also strictly stronger. A role-level GUC could be
+-- turned off for a session by anyone holding the credentials
+-- (`SET app.rls_strict='off'`), which made it a guard against our own missing
+-- `where: { salonId }` but not against a leaked password. This cannot be turned
+-- off from the app connection at all: salonbook_app is created NOCREATEROLE
+-- with no role memberships, so it has nothing to SET ROLE to.
+--
+-- Emergency SQL-level disable (the normal rollback is unsetting
+-- RLS_DATABASE_URL, which needs no database change at all):
+--   CREATE OR REPLACE FUNCTION app_rls_strict() RETURNS boolean
+--     LANGUAGE sql STABLE PARALLEL SAFE AS $x$ SELECT false $x$;
 CREATE OR REPLACE FUNCTION app_rls_strict() RETURNS boolean
   LANGUAGE sql STABLE PARALLEL SAFE AS
-$fn$ SELECT coalesce(NULLIF(current_setting('app.rls_strict', true), ''), 'off') = 'on' $fn$;
+$fn$ SELECT current_user = 'salonbook_app' $fn$;
 
 DO $$
 DECLARE

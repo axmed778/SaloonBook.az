@@ -10,8 +10,8 @@
 --   themselves, e.g. to rule RLS out while debugging, or before dropping the
 --   salonbook_app role.
 --
---   Must match the table list in rls.sql. Also clears the role-level strict
---   switch and the helper functions, so the revert leaves no half state.
+--   Must match the table list in rls.sql. Also drops the helper functions, so
+--   the revert leaves no half state.
 
 DO $$
 DECLARE
@@ -26,10 +26,6 @@ BEGIN
     EXECUTE format('ALTER TABLE %I NO FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I DISABLE ROW LEVEL SECURITY', t);
   END LOOP;
-
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'salonbook_app') THEN
-    EXECUTE 'ALTER ROLE salonbook_app RESET app.rls_strict';
-  END IF;
 END
 $$;
 

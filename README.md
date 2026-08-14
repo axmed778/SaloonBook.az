@@ -83,13 +83,19 @@ Anyone reading the `pg_policies` output and concluding otherwise is wrong.
 
 ### Why this is safe to apply to a live database
 
-Deny-when-unset is keyed to the **role**, not to the policy. Only a role carrying
-`app.rls_strict = 'on'` (set at the role level by `prisma/security/rls-grants.sql`
-— i.e. `salonbook_app` and nothing else) is denied rows when `app.current_salon`
-is unset. For the owner role both policy branches are permissive, so `pnpm db:rls`
-is a **no-op** for it, with or without `BYPASSRLS`. `DATABASE_URL` never moves,
-so `prisma migrate deploy`, `scripts/apply-sql.ts`, the worker and the admin panel
+Deny-when-unset is keyed to the **role identity**, not to the policy: only
+connections authenticated as `salonbook_app` are denied rows when
+`app.current_salon` is unset (`app_rls_strict()` in `prisma/security/rls.sql`).
+For the owner role both policy branches are permissive, so `pnpm db:rls` is a
+**no-op** for it, with or without `BYPASSRLS`. `DATABASE_URL` never moves, so
+`prisma migrate deploy`, `scripts/apply-sql.ts`, the worker and the admin panel
 are structurally untouched.
+
+Binding to `current_user` rather than a role-level `ALTER ROLE ... SET` is both
+necessary and better: setting a custom parameter that way requires a real
+superuser (managed Postgres such as Neon returns `permission denied to set
+parameter`, SQLSTATE 42501), and a parameter could be switched off by anyone
+holding the credentials — the role identity cannot.
 
 ### Activating it
 

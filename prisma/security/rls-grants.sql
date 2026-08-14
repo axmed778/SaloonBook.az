@@ -1,4 +1,4 @@
--- SalonBook.az — privileges + strict-mode switch for the restricted RLS role.
+-- SalonBook.az — privileges for the restricted RLS role.
 --
 -- Runs on EVERY deploy via `pnpm db:setup` (railway.json preDeployCommand), as
 -- the owner, so a table added by a new migration can never end up
@@ -40,17 +40,13 @@ BEGIN
     EXECUTE 'REVOKE ALL ON TABLE "_prisma_migrations" FROM salonbook_app';
   END IF;
 
-  -- THE SWITCH. Strict deny-when-unset is bound to the ROLE, not to the policy
-  -- text, so it applies to exactly the connections that go through
-  -- withTenantScope and to nothing else. Instant revert, no deploy needed:
-  --   ALTER ROLE salonbook_app RESET app.rls_strict;
-  --
-  -- Scope of the guarantee, stated honestly: anyone holding these credentials
-  -- can SET app.rls_strict = 'off' for their own session. This is a boundary
-  -- against a missing `where: { salonId }` in our own code — the actual threat
-  -- model — not against a compromised app process or leaked credentials. Baking
-  -- strictness into the policy text (rls-strict.sql) is what turns it into a
-  -- credential-compromise control.
-  EXECUTE 'ALTER ROLE salonbook_app SET app.rls_strict = ''on''';
+  -- NOTE: there is deliberately no `ALTER ROLE salonbook_app SET
+  -- app.rls_strict = 'on'` here. Setting a CUSTOM parameter that way requires a
+  -- real superuser, which managed Postgres does not give you — on Neon it fails
+  -- with "permission denied to set parameter" (SQLSTATE 42501), and because
+  -- this is one atomic DO block, that failure would roll back the grants above
+  -- too. Strict mode is instead bound to the role identity inside
+  -- app_rls_strict() (prisma/security/rls.sql), which needs no special
+  -- privilege and cannot be switched off from the app connection.
 END
 $$;

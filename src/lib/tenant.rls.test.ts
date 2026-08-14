@@ -12,15 +12,15 @@ import { PrismaClient } from "@prisma/client";
 //   export TEST_DB=postgresql://postgres:postgres@localhost:5432/rlstest
 //   DATABASE_URL=$TEST_DB pnpm db:setup        # migrate + constraints + grants
 //   DATABASE_URL=$TEST_DB pnpm db:rls
-//   psql $TEST_DB -c "CREATE ROLE rls_test_app LOGIN PASSWORD 'x' NOBYPASSRLS NOSUPERUSER"
-//   DATABASE_URL=$TEST_DB pnpm db:rls-grants   # grants + app.rls_strict='on'
+//   psql $TEST_DB -c "CREATE ROLE salonbook_app LOGIN PASSWORD 'x' NOBYPASSRLS NOSUPERUSER"
+//   DATABASE_URL=$TEST_DB pnpm db:rls-grants   # grants for that role
 //   RLS_TEST_DATABASE_URL=$TEST_DB \
-//   RLS_TEST_APP_DATABASE_URL=postgresql://rls_test_app:x@localhost:5432/rlstest \
+//   RLS_TEST_APP_DATABASE_URL=postgresql://salonbook_app:x@localhost:5432/rlstest \
 //     pnpm test:rls
 //
-// NOTE: rls-grants.sql binds strict mode to the role name `salonbook_app`. To
-// exercise strict mode locally, either name the test role salonbook_app or run
-// `ALTER ROLE rls_test_app SET app.rls_strict = 'on'` by hand.
+// NOTE: app_rls_strict() keys strict mode on `current_user = 'salonbook_app'`,
+// so the test role must carry exactly that name for the strict assertions to
+// exercise anything.
 
 const OWNER_URL = process.env.RLS_TEST_DATABASE_URL;
 const APP_URL = process.env.RLS_TEST_APP_DATABASE_URL;
