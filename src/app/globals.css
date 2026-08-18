@@ -191,6 +191,14 @@
   background: var(--muted);
   font: inherit;
   /* Rounded corners come from the wrapping element's overflow-hidden. */
+
+  /* Leaflet paints its panes at z-index 400-700 and its controls at 800-1000.
+     Those are positioned elements, so without a stacking context of their own
+     they compete in the root context and win against the sticky site header
+     (z-50) — the map slides *over* the header while scrolling. `z-index: 0` on
+     the (position: relative) container traps them inside it. Map wrappers also
+     carry Tailwind's `isolate` so their own z-[500] overlays are contained. */
+  z-index: 0;
 }
 
 /* OSM raster tiles are light-only. In dark mode, invert + re-hue them so the
