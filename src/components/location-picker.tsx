@@ -157,7 +157,7 @@ export function LocationPicker({
 
   return (
     <div>
-      <div className="relative overflow-hidden rounded-lg border border-border">
+      <div className="relative isolate overflow-hidden rounded-lg border border-border">
         <div ref={containerRef} className="h-[360px] w-full" role="application" aria-label={t("mapAria")} />
         <button
           type="button"

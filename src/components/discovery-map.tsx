@@ -157,7 +157,7 @@ export function DiscoveryMap() {
     "rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-rose-500 focus:outline-none";
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-muted shadow-soft">
+    <div className="relative isolate overflow-hidden rounded-xl border border-border bg-muted shadow-soft">
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card/95 p-3 backdrop-blur">
         <select

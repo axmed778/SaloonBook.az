@@ -127,7 +127,7 @@ export function SalonMap() {
   const isEmpty = status === "ready" && salons?.length === 0;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-muted shadow-soft">
+    <div className="relative isolate overflow-hidden rounded-xl border border-border bg-muted shadow-soft">
       <div
         ref={containerRef}
         className="h-[70vh] max-h-[560px] min-h-[420px] w-full"
