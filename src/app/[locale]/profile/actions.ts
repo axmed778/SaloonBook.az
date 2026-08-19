@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getClientSession } from "@/lib/auth/client-session";
+import { acceptClientConsents } from "@/lib/legal-consent";
 
 // Server actions for the client area. Every action re-derives the caller from the
 // client session and scopes work to the session's VERIFIED phone — a phone is
@@ -68,4 +69,16 @@ export async function submitReview(input: unknown): Promise<ReviewResult> {
 
   revalidatePath("/profile/history");
   return { ok: true };
+}
+
+/**
+ * Records this client's acceptance of the re-consent gate. Takes no input: the
+ * subject comes from the session and the stale document set is re-derived from
+ * the database, so nothing about the acceptance is caller-controlled.
+ */
+export async function acceptLegalConsents(): Promise<void> {
+  const session = await getClientSession();
+  if (!session) return;
+  await acceptClientConsents(session.id);
+  revalidatePath("/profile");
 }

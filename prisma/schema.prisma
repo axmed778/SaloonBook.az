@@ -64,6 +64,8 @@ model Account {
   offerVersion    String?
   privacyVersion  String?
   marketingOptIn  Boolean   @default(false)
+  /// Append-only history of every acceptance, including superseded versions.
+  legalConsents   LegalConsent[]
   createdAt    DateTime      @default(now())
 }
 
@@ -494,6 +496,32 @@ model Client {
   createdAt      DateTime  @default(now())
   lastLoginAt    DateTime? @db.Timestamptz(6)
   reviews        Review[]
+  /// Append-only history of every acceptance, including superseded versions.
+  legalConsents  LegalConsent[]
+}
+
+// One recorded acceptance of one legal document at one version. Append-only:
+// rows are never updated or deleted, so a superseded consent (v1.0) stays
+// provable after the party re-accepts a newer revision (v1.1). The version in
+// force is mirrored on Account.offerVersion/privacyVersion and
+// Client.consentVersion so the re-consent gate checks a field, not a join.
+//
+// Exactly one of accountId / clientId is set (CHECK constraint in the migration):
+// a partner salon accepts via the dashboard, a booking client via /profile.
+model LegalConsent {
+  id         String   @id @default(uuid())
+  accountId  String?
+  clientId   String?
+  /// LegalDoc key from src/lib/legal.ts: clientConsents | salonOffer | salonConsents.
+  doc        String
+  /// Version accepted, e.g. "1.1" — matches a folder under /public/legal.
+  version    String
+  acceptedAt DateTime @default(now()) @db.Timestamptz(6)
+  account    Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, doc, acceptedAt])
+  @@index([clientId, doc, acceptedAt])
 }
 
 // A client's review of a completed appointment. One per appointment. Feeds the

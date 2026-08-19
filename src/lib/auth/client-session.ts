@@ -90,6 +90,12 @@ export interface ClientSession {
   id: string;
   phone: string;
   name: string | null;
+  /**
+   * Data-processing consent version this client last accepted. Compared against
+   * LEGAL_DOC_VERSION by the /profile re-consent gate; null for clients created
+   * before consent capture (also treated as stale).
+   */
+  consentVersion: string | null;
 }
 
 /**
@@ -108,8 +114,13 @@ export const getClientSession = cache(async (): Promise<ClientSession | null> =>
 
   const client = await prisma.client.findUnique({
     where: { id: payload.cid },
-    select: { id: true, phone: true, name: true },
+    select: { id: true, phone: true, name: true, consentVersion: true },
   });
   if (!client) return null;
-  return { id: client.id, phone: client.phone, name: client.name };
+  return {
+    id: client.id,
+    phone: client.phone,
+    name: client.name,
+    consentVersion: client.consentVersion,
+  };
 });

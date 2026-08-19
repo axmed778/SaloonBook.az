@@ -959,6 +959,19 @@
       }
     }
   },
+  "LegalReconsent": {
+    "title": "Updated terms",
+    "body": "{count, plural, one {The document you accepted has been updated. Review the new revision and confirm to continue.} other {The documents you accepted have been updated. Review the new revisions and confirm to continue.}}",
+    "docs": {
+      "clientConsents": "Personal data processing consents",
+      "salonOffer": "User agreement (public offer)",
+      "salonConsents": "Salon data processing consents"
+    },
+    "confirm": "I have read the documents and accept them",
+    "accept": "Accept",
+    "accepting": "Saving…",
+    "logout": "Sign out"
+  },
   "Legal": {
     "lastUpdated": "Last updated",
     "privacy": {

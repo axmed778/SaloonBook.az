@@ -148,6 +148,12 @@ export interface Session {
   maxBranches: number;
   /** ACTIVE salons (branches) of the account, oldest (primary) first. */
   branches: SessionBranch[];
+  /**
+   * Legal-document versions the account last accepted. Compared against
+   * LEGAL_DOC_VERSION by the dashboard's re-consent gate; null when the account
+   * predates consent capture (also treated as stale).
+   */
+  legal: { offerVersion: string | null; privacyVersion: string | null };
   isAdmin: boolean;
 }
 
@@ -177,6 +183,8 @@ export async function getSession(): Promise<Session | null> {
           accountId: true,
           account: {
             select: {
+              offerVersion: true,
+              privacyVersion: true,
               subscription: {
                 select: {
                   plan: true,
@@ -246,6 +254,10 @@ export async function getSession(): Promise<Session | null> {
     multiBranch,
     maxBranches,
     branches,
+    legal: {
+      offerVersion: membership?.account.offerVersion ?? null,
+      privacyVersion: membership?.account.privacyVersion ?? null,
+    },
     isAdmin: user.isPlatformAdmin,
   };
 }

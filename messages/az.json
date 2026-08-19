@@ -959,6 +959,19 @@
       }
     }
   },
+  "LegalReconsent": {
+    "title": "Şərtlər yeniləndi",
+    "body": "{count, plural, one {Razılaşdığınız sənəd yeniləndi. Davam etmək üçün yeni redaksiya ilə tanış olun və razılığınızı təsdiqləyin.} other {Razılaşdığınız sənədlər yeniləndi. Davam etmək üçün yeni redaksiyalarla tanış olun və razılığınızı təsdiqləyin.}}",
+    "docs": {
+      "clientConsents": "Şəxsi məlumatların emalına razılıqlar",
+      "salonOffer": "İstifadəçi razılaşması (oferta)",
+      "salonConsents": "Salonun məlumatların emalına razılıqları"
+    },
+    "confirm": "Sənədlərlə tanış oldum və qəbul edirəm",
+    "accept": "Qəbul edirəm",
+    "accepting": "Yadda saxlanılır…",
+    "logout": "Çıxış"
+  },
   "Legal": {
     "lastUpdated": "Son yenilənmə",
     "privacy": {

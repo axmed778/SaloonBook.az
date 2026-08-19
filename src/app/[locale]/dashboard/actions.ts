@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { acceptSalonConsents } from "@/lib/legal-consent";
 import { enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, isSlotBookable, type Slot } from "@/lib/availability";
 import {
@@ -412,4 +413,15 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
 
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+/**
+ * Records this account's acceptance of the re-consent gate. Scoped to the
+ * session's account; which documents are stale is re-derived server-side.
+ */
+export async function acceptLegalConsents(): Promise<void> {
+  const session = await getSession();
+  if (!session?.accountId) return;
+  await acceptSalonConsents(session.accountId);
+  revalidatePath("/dashboard");
 }

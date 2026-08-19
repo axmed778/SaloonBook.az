@@ -3,6 +3,9 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
 import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
+import { ConsentGate } from "@/components/legal/consent-gate";
+import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
+import { acceptLegalConsents } from "./actions";
 import { DashboardShell } from "./_components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +45,11 @@ export default async function DashboardLayout({
   // prompt — read server-side so it never flashes for someone who dismissed it.
   const installDismissed = (await cookies()).get(A2HS_DISMISS_COOKIE)?.value === "1";
 
+  // Re-consent gate: blocks the dashboard when a legal document the account
+  // accepted has since been revised. Platform admins are exempt — they have no
+  // membership, so there is no account to record an acceptance against.
+  const stale = session.accountId ? staleSalonDocs(session.legal) : [];
+
   return (
     <DashboardShell
       user={{ name: displayName, role: roleLabel, initial }}
@@ -50,6 +58,14 @@ export default async function DashboardLayout({
       installDismissed={installDismissed}
     >
       {children}
+      {stale.length > 0 && (
+        <ConsentGate
+          docs={gateDocs(stale)}
+          logoutPath="/api/auth/logout"
+          logoutHref="/login"
+          accept={acceptLegalConsents}
+        />
+      )}
     </DashboardShell>
   );
 }
