@@ -30,6 +30,14 @@ updates:
       # database; automated bumps here break `pnpm db:up` rather than help.
       - dependency-name: "embedded-postgres"
 
+      # @types/node must track the Node we actually run (see .nvmrc), not the
+      # newest release line — types ahead of the runtime promise APIs that are
+      # not there. Bump this deliberately together with .nvmrc; PR #13
+      # (22 -> 26) was closed for exactly this reason.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
