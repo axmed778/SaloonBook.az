@@ -41,7 +41,7 @@
   "dependencies": {
     "@prisma/client": "^6.2.0",
     "@serwist/next": "^9.5.12",
-    "bullmq": "^5.34.0",
+    "bullmq": "^6.1.2",
     "geist": "^1.7.2",
     "ioredis": "^5.4.2",
     "leaflet": "^1.9.4",
