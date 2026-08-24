@@ -12,6 +12,11 @@ jobs:
       # Build/typecheck never open real connections (Prisma connects lazily,
       # Redis/queue are lazy by design) — placeholders keep module init happy.
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      # schema.prisma declares `directUrl = env("DIRECT_URL")`. Nothing in CI
+      # migrates, but `prisma generate` (postinstall) reads the datasource block,
+      # so the variable has to exist. Same placeholder — no pooled/direct split
+      # on a non-Neon URL.
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
       REDIS_URL: "redis://localhost:6379"
       APP_URL: "http://localhost:3000"
     steps:
