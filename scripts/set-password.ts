@@ -5,10 +5,9 @@
 //
 // The new password must satisfy the same policy as signup (8+ chars, upper,
 // lower, digit, special). Quote the password so the shell doesn't eat symbols.
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import { hashPassword, passwordIssues } from "../src/lib/auth/password";
 
-const prisma = new PrismaClient();
 
 async function main() {
   const [, , emailArg, password] = process.argv;
