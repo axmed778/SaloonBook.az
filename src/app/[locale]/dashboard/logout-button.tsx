@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { purgeCachedPrivatePages } from "@/lib/offline-cache";
 
 export function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
   const t = useTranslations("Nav");
@@ -13,6 +14,9 @@ export function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
     setBusy(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      // Clearing the cookie does not touch Cache Storage; on a shared device the
+      // previous session's dashboard pages would still be servable from disk.
+      await purgeCachedPrivatePages();
       router.push("/login");
       router.refresh();
     } finally {

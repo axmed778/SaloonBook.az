@@ -7,9 +7,9 @@
 //   * StaleWhileRevalidate for static assets (js/css/img/fonts) — from defaultCache.
 //   * NetworkFirst for pages (the shell) and the PUBLIC read API — from the rules
 //     below + defaultCache.
-//   * NEVER cache authenticated API responses: everything under /api/ that isn't
-//     an explicitly-public feed is NetworkOnly, so a session-scoped or foreign
-//     response can never be served from cache.
+//   * NEVER cache authenticated responses — API *or* page. Everything under
+//     /api/ that isn't an explicitly-public feed is NetworkOnly, and so is every
+//     navigation/RSC request under /dashboard, /profile and /a/<token>.
 //
 // This file is intentionally excluded from the main tsconfig (DOM vs WebWorker
 // lib conflict) and type-checked via tsconfig.sw.json instead.
@@ -77,6 +77,26 @@ const runtimeRules: RuntimeCaching[] = [
     // Everything else under /api/* — dashboard exports, push subscribe, auth,
     // webhooks — is authenticated and/or a mutation. Never cache it.
     matcher: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/api/"),
+    handler: new NetworkOnly(),
+  },
+  {
+    // Authenticated PAGES. The /api/ rule above is not enough on its own: this
+    // app is server-rendered, so dashboard data — client names and phone
+    // numbers, revenue, payroll — never travels through /api/ at all. It is
+    // embedded in the HTML document and in the RSC flight payload, both of which
+    // are same-pathname requests that used to fall through to defaultCache's
+    // NetworkFirst page handler and get written to disk.
+    //
+    // The leak that produced: a shared reception tablet. Logout clears the
+    // cookie but not Cache Storage, so the next person to open the dashboard on
+    // a slow connection gets the previous session's pages served from cache once
+    // NetworkFirst times out — a path where no session check runs at all.
+    //
+    // Covers /dashboard and /profile (session-scoped) plus /a/<token> (the
+    // customer's manage link: unauthenticated by design, but it renders their
+    // name and phone). Locale prefixes: az is unprefixed, en/ru are prefixed.
+    matcher: ({ url, sameOrigin }) =>
+      sameOrigin && /^\/(?:az|en|ru)?\/?(?:dashboard|profile|a)(?:\/|$)/.test(url.pathname),
     handler: new NetworkOnly(),
   },
 ];
