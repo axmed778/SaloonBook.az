@@ -191,6 +191,7 @@
       "unauthorized": "Əvvəlcə daxil olun.",
       "invalid": "Məlumat düzgün deyil.",
       "not_allowed": "Bu görüşü dəyərləndirə bilməzsiniz.",
+      "not_confirmed": "Salon hələ bu ziyarəti təsdiqləməyib.",
       "already_reviewed": "Bu görüş artıq dəyərləndirilib.",
       "failed": "Alınmadı. Yenidən cəhd edin."
     }
@@ -536,7 +537,8 @@
       "saveFailed": "Yadda saxlanmadı.",
       "noteEmpty": "Qeyd boş ola bilməz.",
       "noteNotFound": "Qeyd tapılmadı.",
-      "deleteSettled": "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur)."
+      "deleteSettled": "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur).",
+      "deleteFailed": "Silinmədi. Yenidən cəhd edin."
     }
   },
   "ClientProfile": {

@@ -191,6 +191,7 @@
       "unauthorized": "Please sign in first.",
       "invalid": "Invalid data.",
       "not_allowed": "You can't review this visit.",
+      "not_confirmed": "The salon hasn't confirmed this visit yet.",
       "already_reviewed": "This visit is already reviewed.",
       "failed": "Something went wrong. Please try again."
     }
@@ -536,7 +537,8 @@
       "saveFailed": "Could not save.",
       "noteEmpty": "A note can't be empty.",
       "noteNotFound": "Note not found.",
-      "deleteSettled": "This customer can't be deleted because they have completed appointments in already-paid months (payroll history is protected)."
+      "deleteSettled": "This customer can't be deleted because they have completed appointments in already-paid months (payroll history is protected).",
+      "deleteFailed": "Could not delete. Please try again."
     }
   },
   "ClientProfile": {
