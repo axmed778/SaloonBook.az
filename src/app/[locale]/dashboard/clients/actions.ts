@@ -216,14 +216,45 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
     }
   }
 
-  await prisma.$transaction([
-    prisma.notification.deleteMany({
-      where: { salonId, appointment: { customerId: id } },
-    }),
-    prisma.appointment.deleteMany({ where: { salonId, customerId: id } }),
-    prisma.customerNote.deleteMany({ where: { salonId, customerId: id } }),
-    prisma.customer.deleteMany({ where: { salonId, id } }),
-  ]);
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Reviews FIRST. Review.appointmentId is a required relation, which Prisma
+      // maps to ON DELETE RESTRICT, so deleting the appointments underneath a
+      // review raises 23503 and rolls the whole transaction back. Nothing caught
+      // it, so deleting a customer who had ever left a review crashed the page
+      // and the customer could never be removed — on the very path the data-
+      // deletion page promises.
+      await tx.review.deleteMany({ where: { salonId, appointment: { customerId: id } } });
+
+      // Recompute the salon's denormalised rating from what is left rather than
+      // decrementing by what we removed. Same cost at this scale, and it cannot
+      // drift below zero or inherit drift from anywhere else: ratingSum has no
+      // decrement path anywhere in the app, so this is currently the only thing
+      // that can bring an inflated aggregate back down.
+      const agg = await tx.review.aggregate({
+        where: { salonId },
+        _count: { _all: true },
+        _sum: { rating: true },
+      });
+      await tx.salon.update({
+        where: { id: salonId },
+        data: { ratingCount: agg._count._all, ratingSum: agg._sum.rating ?? 0 },
+      });
+
+      await tx.notification.deleteMany({
+        where: { salonId, appointment: { customerId: id } },
+      });
+      await tx.appointment.deleteMany({ where: { salonId, customerId: id } });
+      await tx.customerNote.deleteMany({ where: { salonId, customerId: id } });
+      await tx.customer.deleteMany({ where: { salonId, id } });
+    });
+  } catch (e) {
+    // Anything still referencing the customer (a booking racing in after the
+    // settled-months check, a relation added later without a delete here) trips
+    // the FK and rolls back. Report it instead of throwing at the owner.
+    console.error("[clients] deleteCustomer failed", e);
+    return { ok: false, error: t("deleteFailed") };
+  }
 
   revalidateClients();
   revalidatePath("/dashboard"); // calendar may have shown their appointments
