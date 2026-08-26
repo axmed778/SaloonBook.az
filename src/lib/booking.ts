@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { enqueueNotification, enqueuePush } from "./queue";
 import { limitsFor } from "./plans";
 import { effectivePlan } from "./subscription";
+import { prisma } from "./prisma";
 import { bakuPeriodYm } from "./time";
 import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
@@ -55,6 +56,28 @@ export interface CreateBookingInput {
    *  document version accepted; absent for staff-entered bookings. */
   consent?: { version: string };
   source?: "PUBLIC" | "DASHBOARD";
+}
+
+/**
+ * Give a booking's monthly-quota slot back. Only called when STAFF cancel an
+ * appointment (src/app/[locale]/dashboard/actions.ts) — see the reasoning at
+ * the increment site.
+ *
+ * Keyed on when the booking was CREATED, not on today: a January booking
+ * cancelled in February was counted against January, and decrementing February
+ * would both leave January stuck and hand the salon a free slot in a month it
+ * never spent one. The `bookings: { gt: 0 }` guard makes a double release (or a
+ * release against a counter that was never incremented) a no-op rather than an
+ * underflow.
+ */
+export async function releaseBookingQuota(
+  salonId: string,
+  bookedAt: Date,
+): Promise<void> {
+  await prisma.usageCounter.updateMany({
+    where: { salonId, periodYm: bakuPeriodYm(bookedAt), bookings: { gt: 0 } },
+    data: { bookings: { decrement: 1 } },
+  });
 }
 
 export interface CreateBookingResult {
@@ -122,17 +145,24 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     }
     const endUtc = check.endUtc;
 
-    // --- Plan booking-limit enforcement (Free = 50/month) ---
+    // --- Plan booking-limit enforcement (FREE = 30/month, see PLAN_LIMITS) ---
     // Atomic guard: increment first, then validate. The row lock on
     // UsageCounter serializes concurrent bookings, so the post-increment value
     // is unique per transaction and an over-limit attempt rolls back its own
     // increment when it throws — closing the check-then-increment race.
     //
-    // INTENTIONAL: the counter is NOT decremented when a booking is later
-    // cancelled or rescheduled. The monthly quota measures booking *activity*,
-    // not live appointments — otherwise a "book, cancel, repeat" loop would let
-    // a FREE salon exceed 50/month indefinitely. A FREE salon with heavy
-    // cancellations can therefore hit the wall before 50 live bookings.
+    // The counter is NOT decremented when a customer cancels or reschedules. The
+    // monthly quota measures booking *activity*, not live appointments —
+    // otherwise a "book, cancel, repeat" loop would let a FREE salon exceed its
+    // quota indefinitely.
+    //
+    // Staff cancellation is the one exception (releaseBookingQuota below), and it
+    // exists because the asymmetry was exploitable from outside: thirty spam
+    // bookings with thirty different numbers exhaust a FREE salon's month, and
+    // cancelling them did nothing for the counter, so every real customer was
+    // refused until the 1st with no way to reset it from the UI. Requiring a
+    // staff action to release keeps the loop closed — a customer cannot trigger
+    // one — while giving the salon a way out of someone else's abuse.
     const plan = effectivePlan(salon.account.subscription);
     const maxBookings = limitsFor(plan).maxBookingsPerMonth;
     const usage = await tx.usageCounter.upsert({

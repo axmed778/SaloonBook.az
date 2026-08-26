@@ -14,6 +14,7 @@ import {
   SlotTakenError,
   SlotUnavailableError,
   PlanLimitError,
+  releaseBookingQuota,
 } from "@/lib/booking";
 
 // Server actions backing the dashboard calendar: staff-entered ("manual")
@@ -193,6 +194,9 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
     select: {
       status: true,
       startsAt: true,
+      // The quota was counted against the month the booking was CREATED in,
+      // which is not necessarily the month it is cancelled in.
+      createdAt: true,
       customer: { select: { phone: true, waOptIn: true } },
       service: { select: { name: true } },
       salon: { select: { name: true } },
@@ -215,6 +219,15 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
     data: { status },
   });
   if (res.count === 0) return { ok: false, error: t("apptNotFound") };
+
+  // Staff cancelling releases the booking's monthly-quota slot. This is the only
+  // path that does; a customer cancelling their own booking does not, because
+  // that would reopen the "book, cancel, repeat" loop the quota exists to close.
+  // Guarded on the PREVIOUS status so cancelling something already cancelled
+  // can't hand back a second slot.
+  if (status === "CANCELLED" && appt.status !== "CANCELLED") {
+    await releaseBookingQuota(salonId, appt.createdAt);
+  }
 
   // A cancelled/no-showed appointment must not message the customer: cancel any
   // still-queued notifications (e.g. the T-24h reminder). The worker re-checks
