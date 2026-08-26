@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { enqueueNotification, enqueuePush } from "./queue";
 import { limitsFor } from "./plans";
 import { effectivePlan } from "./subscription";
+import { prisma } from "./prisma";
 import { bakuPeriodYm } from "./time";
 import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
@@ -43,6 +44,10 @@ export interface CreateBookingInput {
   serviceId: string;
   employeeId: string;
   startUtc: Date;
+  /** `waOptIn` is MARKETING consent only (news/offers), never the gate for this
+   *  booking's own confirmation and reminder — see the notification block below.
+   *  Callers must only pass true when the phone's owner actually said so; the
+   *  public route requires an OTP-verified session for the same number. */
   customer: { name: string; phone: string; waOptIn?: boolean };
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
@@ -51,6 +56,28 @@ export interface CreateBookingInput {
    *  document version accepted; absent for staff-entered bookings. */
   consent?: { version: string };
   source?: "PUBLIC" | "DASHBOARD";
+}
+
+/**
+ * Give a booking's monthly-quota slot back. Only called when STAFF cancel an
+ * appointment (src/app/[locale]/dashboard/actions.ts) — see the reasoning at
+ * the increment site.
+ *
+ * Keyed on when the booking was CREATED, not on today: a January booking
+ * cancelled in February was counted against January, and decrementing February
+ * would both leave January stuck and hand the salon a free slot in a month it
+ * never spent one. The `bookings: { gt: 0 }` guard makes a double release (or a
+ * release against a counter that was never incremented) a no-op rather than an
+ * underflow.
+ */
+export async function releaseBookingQuota(
+  salonId: string,
+  bookedAt: Date,
+): Promise<void> {
+  await prisma.usageCounter.updateMany({
+    where: { salonId, periodYm: bakuPeriodYm(bookedAt), bookings: { gt: 0 } },
+    data: { bookings: { decrement: 1 } },
+  });
 }
 
 export interface CreateBookingResult {
@@ -118,17 +145,24 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     }
     const endUtc = check.endUtc;
 
-    // --- Plan booking-limit enforcement (Free = 50/month) ---
+    // --- Plan booking-limit enforcement (FREE = 30/month, see PLAN_LIMITS) ---
     // Atomic guard: increment first, then validate. The row lock on
     // UsageCounter serializes concurrent bookings, so the post-increment value
     // is unique per transaction and an over-limit attempt rolls back its own
     // increment when it throws — closing the check-then-increment race.
     //
-    // INTENTIONAL: the counter is NOT decremented when a booking is later
-    // cancelled or rescheduled. The monthly quota measures booking *activity*,
-    // not live appointments — otherwise a "book, cancel, repeat" loop would let
-    // a FREE salon exceed 50/month indefinitely. A FREE salon with heavy
-    // cancellations can therefore hit the wall before 50 live bookings.
+    // The counter is NOT decremented when a customer cancels or reschedules. The
+    // monthly quota measures booking *activity*, not live appointments —
+    // otherwise a "book, cancel, repeat" loop would let a FREE salon exceed its
+    // quota indefinitely.
+    //
+    // Staff cancellation is the one exception (releaseBookingQuota below), and it
+    // exists because the asymmetry was exploitable from outside: thirty spam
+    // bookings with thirty different numbers exhaust a FREE salon's month, and
+    // cancelling them did nothing for the counter, so every real customer was
+    // refused until the 1st with no way to reset it from the UI. Requiring a
+    // staff action to release keeps the loop closed — a customer cannot trigger
+    // one — while giving the salon a way out of someone else's abuse.
     const plan = effectivePlan(salon.account.subscription);
     const maxBookings = limitsFor(plan).maxBookingsPerMonth;
     const usage = await tx.usageCounter.upsert({
@@ -192,17 +226,28 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       throw e;
     }
 
-    // Customer-facing WhatsApp (confirmation + reminder) require the customer's
-    // opt-in: Meta policy forbids business-initiated template messages without
-    // consent, and sending anyway erodes the number's quality rating. Without
-    // opt-in we still record the booking and alert the owner — we just never
-    // message the customer. waOptIn is the stored consent (public form checkbox
-    // / prior customer record). The reminder is additionally gated on being far
-    // enough out (a <24h booking's reminder is moot and would linger QUEUED).
+    // Two different consents, previously conflated into one flag.
+    //
+    // A booking's own confirmation and T-24h reminder are TRANSACTIONAL: the
+    // person just asked for this appointment from this number, and the reminder
+    // is the whole reason a salon buys the product. They used to be gated on
+    // waOptIn, whose public-form checkbox reads "receive news, offers and
+    // promotions (optional)" and defaults to OFF — so a customer who booked and
+    // left the box alone got nothing at all. The reschedule path in
+    // api/public/manage/[token] never had that gate, which is the behaviour
+    // being made consistent here.
+    //
+    // waOptIn stays what its label says: marketing. It still gates anything the
+    // salon initiates later, and staff-entered (DASHBOARD) bookings still need
+    // it, because there the customer never asked us for anything.
+    //
+    // The reminder is additionally gated on being far enough out (a <24h
+    // booking's reminder is moot and would linger QUEUED).
+    const notifyCustomer = isPublic || customer.waOptIn;
     const reminderAt = new Date(appointment.startsAt.getTime() - 24 * 60 * 60_000);
     let confirmationId: string | null = null;
     let reminderId: string | null = null;
-    if (customer.waOptIn) {
+    if (notifyCustomer) {
       const confirmation = await tx.notification.create({
         data: {
           salonId: input.salonId,

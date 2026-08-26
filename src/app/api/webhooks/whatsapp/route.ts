@@ -30,14 +30,23 @@ function isOptOut(body: string): boolean {
  * Verifies Meta's X-Hub-Signature-256 HMAC over the RAW request body using
  * WHATSAPP_APP_SECRET. Returns true to proceed, false to reject.
  *
- * If WHATSAPP_APP_SECRET is unset (local dev / sandbox), verification is skipped
- * so the flow stays usable; production startup warns about the missing secret
- * (see src/lib/env.ts).
+ * FAIL-CLOSED in production: with the secret unset every request is rejected,
+ * because an unverified webhook is a write primitive on customer data — the
+ * inbound "stop" handler flips waOptIn across every salon matching a phone
+ * number, so accepting unsigned bodies lets anyone opt out arbitrary customers.
+ * Boot should never get this far (assertEnv makes the secret critical), but the
+ * env check lives in the web service only, so this is the second lock.
+ *
+ * Outside production the check is skipped so local dev / sandbox stays usable.
  */
 function verifySignature(rawBody: string, header: string | null): boolean {
   const secret = process.env.WHATSAPP_APP_SECRET;
   if (!secret) {
-    console.warn("[whatsapp:webhook] WHATSAPP_APP_SECRET unset — skipping signature check");
+    if (process.env.NODE_ENV === "production") {
+      console.error("[whatsapp:webhook] WHATSAPP_APP_SECRET unset — rejecting webhook");
+      return false;
+    }
+    console.warn("[whatsapp:webhook] WHATSAPP_APP_SECRET unset — skipping signature check (dev only)");
     return true;
   }
   if (!header || !header.startsWith("sha256=")) return false;

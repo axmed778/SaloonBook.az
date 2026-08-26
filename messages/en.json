@@ -191,6 +191,7 @@
       "unauthorized": "Please sign in first.",
       "invalid": "Invalid data.",
       "not_allowed": "You can't review this visit.",
+      "not_confirmed": "The salon hasn't confirmed this visit yet.",
       "already_reviewed": "This visit is already reviewed.",
       "failed": "Something went wrong. Please try again."
     }
@@ -536,7 +537,8 @@
       "saveFailed": "Could not save.",
       "noteEmpty": "A note can't be empty.",
       "noteNotFound": "Note not found.",
-      "deleteSettled": "This customer can't be deleted because they have completed appointments in already-paid months (payroll history is protected)."
+      "deleteSettled": "This customer can't be deleted because they have completed appointments in already-paid months (payroll history is protected).",
+      "deleteFailed": "Could not delete. Please try again."
     }
   },
   "ClientProfile": {
@@ -695,6 +697,19 @@
     }
   },
   "Admin": {
+    "notifications": {
+      "worker": "Worker",
+      "workerOk": "Running ({age}s ago)",
+      "workerStale": "Not responding — notifications are not being sent",
+      "workerUnknown": "Unknown (Redis did not answer)",
+      "title": "Notifications (last 7 days)",
+      "sent": "Sent",
+      "queued": "Queued",
+      "failed": "Failed",
+      "dead": "Needs attention",
+      "deadHint": "{count} notification(s) still undelivered after {max} attempts — automatic retries have stopped.",
+      "healthy": "Nothing undelivered."
+    },
     "title": "Salons",
     "subtitle": "{count} accounts · plan activation and payment history",
     "noAccounts": "No accounts yet.",
@@ -1187,7 +1202,13 @@
       "confirmHuman": "Please confirm you're not a robot.",
       "bookingFailed": "Booking failed. Please try again.",
       "network": "Network error. Please try again.",
-      "slotTaken": "Sorry, that time was just taken. Please pick another."
+      "slotTaken": "Sorry, that time was just taken. Please pick another.",
+      "rateLimited": "Too many requests. Please wait a moment and try again.",
+      "ratePhone": "Too many bookings from this number. Please try again later.",
+      "rateSalon": "This salon is receiving a lot of requests. Please try again shortly.",
+      "tooFar": "That date is too far ahead. Please pick a nearer day.",
+      "serviceMismatch": "That specialist doesn't offer this service. Please choose again.",
+      "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly."
     },
     "success": {
       "title": "Booking confirmed!",

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { isDemoSalon } from "@/lib/demo";
 import { getClientSession } from "@/lib/auth/client-session";
 import type { Audience } from "@/lib/audience";
 import { bakuToday, shiftYmd } from "@/lib/time";
@@ -39,12 +40,15 @@ export async function generateMetadata({
   }
 
   const title = `${salon.name} — ${t("metaTitleSuffix")}`;
+  // Reachable, but never indexed — see src/lib/demo.ts.
+  const robots = isDemoSalon(slug) ? { robots: { index: false, follow: true } } : {};
   const addr = salon.address ? ` · ${salon.address}` : "";
   const description =
     salon.description?.trim() || t("metaDescription", { name: salon.name, addr });
   const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
   return {
+    ...robots,
     title: `${title} | SalonBook.az`,
     description,
     metadataBase: new URL(appUrl),
@@ -312,6 +316,7 @@ export default async function BookingPage({
           initialEmployeeId={initialEmployeeId}
           prefillName={prefillName}
           prefillPhone={prefillPhone}
+          verifiedPhone={client?.phone}
         />
 
         {/* Reviews (public, server-rendered for SEO). No client identity shown —

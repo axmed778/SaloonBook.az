@@ -1,6 +1,14 @@
-// Startup environment validation. Called from src/instrumentation.ts so it runs
-// once per server process. In production we refuse to boot with placeholder or
-// missing secrets; in development we only warn so local setup stays frictionless.
+// Startup environment validation. Called once per server process: the web
+// service from src/instrumentation.ts, the worker from worker/index.ts. In
+// production we refuse to boot with placeholder or missing secrets; in
+// development we only warn so local setup stays frictionless.
+//
+// The two services are SEPARATE Railway deployments with separate variable
+// sets, and they need different secrets: only the web service serves the
+// WhatsApp webhook and sends password-reset email, only the worker sends
+// WhatsApp templates. Validating one service's list against the other would
+// either demand secrets it has no use for or wave through the ones it does, so
+// the required set is keyed by role.
 
 const PLACEHOLDERS = new Set([
   "change-me-dev-verify-token",
@@ -13,8 +21,13 @@ function isPlaceholder(v: string | undefined): boolean {
   return v === undefined || PLACEHOLDERS.has(v.trim());
 }
 
-export function assertEnv(): void {
+/** Which deployment is booting — they have different required variables. */
+export type ServiceRole = "web" | "worker";
+
+export function assertEnv(service: ServiceRole = "web"): void {
   const isProd = process.env.NODE_ENV === "production";
+  const isWeb = service === "web";
+  const isWorker = service === "worker";
 
   // CRITICAL secrets: a missing/placeholder value is a security hole, so in
   // production we refuse to boot rather than silently fall back. In dev we only
@@ -27,17 +40,87 @@ export function assertEnv(): void {
     ],
   ];
 
-  // WHATSAPP_APP_SECRET only guards a real attack surface once the WhatsApp
-  // integration is live (WHATSAPP_TOKEN set): the webhook skips signature
-  // verification when it's absent, so an attacker could spoof delivery/status
-  // callbacks. Until WhatsApp goes live there is no webhook traffic, so keep it
-  // a warning; the moment WHATSAPP_TOKEN is set it becomes boot-critical.
   const whatsAppLive = !isPlaceholder(process.env.WHATSAPP_TOKEN);
-  if (whatsAppLive) {
+
+  // --- Web service ---------------------------------------------------------
+  if (isWeb) {
+    // WHATSAPP_APP_SECRET is unconditionally critical, NOT conditional on
+    // WHATSAPP_TOKEN. The token is a *worker* variable; the webhook route and
+    // this check both live in the web service, so keying off it meant the web
+    // service booted clean with an unauthenticated webhook — and that webhook
+    // writes: an inbound "stop" clears waOptIn for every customer matching the
+    // phone, across all salons.
     critical.push([
       process.env.WHATSAPP_APP_SECRET,
-      "WHATSAPP_APP_SECRET is unset while WhatsApp is live — incoming webhooks " +
-        "cannot be signature-verified and could be spoofed.",
+      "WHATSAPP_APP_SECRET is unset — the WhatsApp webhook cannot verify Meta's " +
+        "signature, so anyone could post a forged 'stop' and mass-unsubscribe customers.",
+    ]);
+
+    // Transactional email (password reset). With the key unset src/lib/email.ts
+    // runs in sandbox: the endpoint still answers 200, no mail is sent, and the
+    // user waits for a reset link that will never arrive.
+    critical.push([
+      process.env.RESEND_API_KEY,
+      "RESEND_API_KEY is unset — password-reset email would be silently dropped " +
+        "while the endpoint still reports success.",
+    ]);
+    // The onboarding@resend.dev fallback only delivers to the Resend account
+    // owner, so leaving it in place bounces every real customer's mail. Require
+    // a verified sender explicitly rather than letting the default through.
+    const from = process.env.EMAIL_FROM?.trim() ?? "";
+    if (from === "" || /onboarding@resend\.dev/i.test(from)) {
+      critical.push([
+        undefined,
+        `EMAIL_FROM is ${from === "" ? "unset" : `"${from}"`} — Resend only delivers ` +
+          "from onboarding@resend.dev to the account owner, so mail to real users " +
+          "bounces. Set a verified sender, e.g. SalonBook <no-reply@salonbook.az>.",
+      ]);
+    }
+
+    // Turnstile is configured in two places that can drift: the secret is read
+    // at runtime (src/lib/turnstile.ts), the site key is inlined at BUILD time
+    // (NEXT_PUBLIC_*). Either half alone is a silent failure — secret only:
+    // the widget never renders, no token is sent, every public booking 403s;
+    // site key only: verifyTurnstile returns true unchecked, so there is no
+    // CAPTCHA while the form still shows one. Demand both or neither.
+    const tsSecret = !isPlaceholder(process.env.TURNSTILE_SECRET_KEY);
+    const tsSite = !isPlaceholder(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+    if (tsSecret !== tsSite) {
+      const half = tsSecret
+        ? "TURNSTILE_SECRET_KEY is set but NEXT_PUBLIC_TURNSTILE_SITE_KEY is not, " +
+          "so the widget never renders and every public booking is rejected with 403"
+        : "NEXT_PUBLIC_TURNSTILE_SITE_KEY is set but TURNSTILE_SECRET_KEY is not, " +
+          "so tokens are never verified and the CAPTCHA is decorative";
+      critical.push([
+        undefined,
+        `Turnstile is half-configured: ${half}. Set both or neither — and note that ` +
+          "NEXT_PUBLIC_TURNSTILE_SITE_KEY is inlined at build time, so changing it " +
+          "needs a rebuild, not just a restart.",
+      ]);
+    }
+  }
+
+  // --- Worker service ------------------------------------------------------
+  if (isWorker) {
+    // Without these src/lib/whatsapp.ts returns {sandbox: true} and the
+    // notification processor records SENT — nothing is delivered and every
+    // dashboard reads clean. Refuse to boot instead.
+    critical.push([
+      process.env.WHATSAPP_TOKEN,
+      "WHATSAPP_TOKEN is unset on the worker — notifications would be logged as " +
+        "sandbox and still marked SENT, so nothing reaches customers and nothing looks wrong.",
+    ]);
+    critical.push([
+      process.env.WHATSAPP_PHONE_NUMBER_ID,
+      "WHATSAPP_PHONE_NUMBER_ID is unset on the worker — same silent-sandbox failure " +
+        "as a missing WHATSAPP_TOKEN.",
+    ]);
+    // src/lib/redis.ts falls back to localhost, where the worker retries a
+    // connection that will never come up while jobs pile in Redis it can't reach.
+    critical.push([
+      process.env.REDIS_URL,
+      "REDIS_URL is unset on the worker — it would fall back to localhost and " +
+        "process no jobs at all.",
     ]);
   }
 
@@ -47,10 +130,15 @@ export function assertEnv(): void {
       process.env.WHATSAPP_VERIFY_TOKEN,
       "WHATSAPP_VERIFY_TOKEN is unset or still the placeholder.",
     ],
-    [
-      process.env.WHATSAPP_TOKEN,
-      "WHATSAPP_TOKEN is unset — notification sender will run in sandbox (log-only) mode.",
-    ],
+    ...(isWeb
+      ? ([
+          [
+            process.env.WHATSAPP_TOKEN,
+            "WHATSAPP_TOKEN is unset — the worker's notification sender will run in " +
+              "sandbox (log-only) mode. Set it on the worker service, where it is required.",
+          ],
+        ] as Array<[string | undefined, string]>)
+      : []),
     // Web Push (installable PWA notifications). Without VAPID keys the push
     // sender runs in sandbox (log-only) mode and the Settings toggle hides
     // itself — harmless until you want push, so warn-only.
@@ -74,13 +162,6 @@ export function assertEnv(): void {
       process.env.WHATSAPP_ENCRYPTION_KEY,
       "WHATSAPP_ENCRYPTION_KEY is unset — per-salon 'own number' WhatsApp senders " +
         "cannot be activated (token encryption unavailable). Harmless until you use the feature.",
-    ]);
-  }
-  if (!whatsAppLive) {
-    warnings.push([
-      process.env.WHATSAPP_APP_SECRET,
-      "WHATSAPP_APP_SECRET is unset — WhatsApp webhooks can't be signature-verified " +
-        "(harmless until WhatsApp goes live, then it becomes required).",
     ]);
   }
 

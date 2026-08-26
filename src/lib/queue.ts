@@ -11,6 +11,14 @@ export interface NotificationJob {
   notificationId: string;
 }
 
+/**
+ * Total processor invocations after which the sweep stops reviving a failed
+ * notification (see worker/processors/notification-sweep.ts). Rows at or above
+ * this are dead letters: something is wrong with the message itself, not the
+ * connection, and a human needs to look. The admin panel counts them.
+ */
+export const MAX_NOTIFICATION_ATTEMPTS = 24;
+
 // Web Push (PWA) events. The job carries only the appointment id + event type;
 // the worker resolves the salon's subscriptions and builds the message at send
 // time (so a reschedule/cancel between enqueue and send is reflected).
@@ -32,7 +40,11 @@ function notificationsQueue(): Queue<NotificationJob, void, "send"> {
     queue = new Queue<NotificationJob, void, "send">(QUEUE_NAMES.notifications, {
       connection,
       defaultJobOptions: {
-        attempts: 5,
+        // 8 attempts with exponential backoff from 10s spans ~21 minutes
+        // (10+20+40+80+160+320+640s). At 5 it was ~2.5 minutes, which is
+        // shorter than most provider incidents — a brief Graph API wobble
+        // exhausted the retries and burned the notification.
+        attempts: 8,
         backoff: { type: "exponential", delay: 10_000 },
         removeOnComplete: 1000,
         removeOnFail: 5000,
@@ -57,6 +69,31 @@ export async function enqueueNotification(notificationId: string, delayMs?: numb
     // Safe because a notification is only ever sent once: after it completes,
     // its row is SENT and no path re-enqueues it.
     { jobId: notificationId, ...(delayMs ? { delay: delayMs } : {}) },
+  );
+}
+
+/**
+ * Re-enqueue a notification whose job already ran out of attempts and left the
+ * row FAILED (see worker/processors/notification-sweep.ts).
+ *
+ * Needs its own entry point because of how BullMQ treats jobId. enqueueNotification
+ * deliberately uses jobId = notificationId to dedupe, but removeOnFail keeps the
+ * exhausted job in the failed set under exactly that id — so re-adding it is
+ * silently ignored and the row can never be retried, by the sweep or by hand.
+ *
+ * The revival id embeds the row's attempt count, which gives dedup where it is
+ * wanted and none where it isn't: two sweep passes before the worker touches the
+ * row produce the same id and collapse into one job, while a genuine new round
+ * of attempts changes the count and so mints a fresh id.
+ */
+export async function reviveNotification(
+  notificationId: string,
+  attempts: number,
+): Promise<void> {
+  await notificationsQueue().add(
+    "send",
+    { notificationId },
+    { jobId: `${notificationId}:r${attempts}` },
   );
 }
 

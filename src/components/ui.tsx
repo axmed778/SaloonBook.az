@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 /* -------------------------------------------------------------------------- */
@@ -49,23 +50,30 @@ const buttonSizes: Record<ButtonSize, string> = {
   lg: "h-12 px-6 text-[15px]",
 };
 
+/**
+ * Button-shaped link. Uses the locale-aware Link from @/i18n/navigation, NOT a
+ * bare <a>: a plain anchor to "/register" drops the active locale prefix, so a
+ * visitor reading the site in Russian landed on the Azerbaijani signup page.
+ * Every marketing CTA, the header's login/register pair and the footer went
+ * through this component, which made it the single place the language was lost.
+ */
 export function ButtonLink({
   variant = "primary",
   size = "md",
   className,
   children,
   ...props
-}: ComponentProps<"a"> & {
+}: ComponentProps<typeof Link> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
 }) {
   return (
-    <a
+    <Link
       className={cn(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
       {...props}
     >
       {children}
-    </a>
+    </Link>
   );
 }
 

@@ -9,6 +9,8 @@
 // against Cloudflare. If it is NOT set (local dev / sandbox), verification is
 // skipped so the flow stays usable without configuring Cloudflare.
 
+import { HTTP_TIMEOUT_MS } from "./http";
+
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export function turnstileEnabled(): boolean {
@@ -38,6 +40,7 @@ export async function verifyTurnstile(
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: form,
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
     });
     if (!res.ok) return false;
     const data = (await res.json()) as { success?: boolean };

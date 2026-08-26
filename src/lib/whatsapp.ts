@@ -5,6 +5,8 @@
 // Business-initiated WhatsApp messages MUST use pre-approved templates. The
 // `template` name + `components` are submitted to / approved by Meta separately.
 
+import { GRAPH_TIMEOUT_MS } from "./http";
+
 const GRAPH_VERSION = "v21.0";
 
 /**
@@ -73,6 +75,7 @@ export async function sendWhatsAppTemplate(input: SendTemplateInput): Promise<Se
           ...(input.components ? { components: input.components } : {}),
         },
       }),
+      signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS),
     },
   );
 
@@ -103,7 +106,10 @@ export async function fetchWhatsAppNumberInfo(
   const res = await fetch(
     `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}` +
       `?fields=verified_name,display_phone_number`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS),
+    },
   );
   if (!res.ok) {
     const body = await res.text();

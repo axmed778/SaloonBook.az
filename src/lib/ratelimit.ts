@@ -144,15 +144,43 @@ export async function peekOutboundQuota(phone: string, max: number): Promise<boo
   }
 }
 
+// Rough IPv4/IPv6 shape check. The point is not validation for its own sake: an
+// unvalidated header value becomes a Redis key, so accepting arbitrary strings
+// lets one client mint unbounded distinct rate-limit buckets (and unbounded
+// Redis keys) just by varying the header.
+const IPV4_RE = /^\d{1,3}(?:\.\d{1,3}){3}$/;
+const IPV6_RE = /^[0-9a-f:]{2,45}$/i;
+
+function isIpish(v: string): boolean {
+  if (v.length > 45) return false;
+  if (IPV4_RE.test(v)) return v.split(".").every((o) => Number(o) <= 255);
+  return IPV6_RE.test(v) && v.includes(":");
+}
+
 /**
- * Best-effort client IP from proxy headers. Railway/Cloudflare sit in front, so
- * trust the left-most x-forwarded-for entry, then x-real-ip. Never throws.
+ * Best-effort client IP for rate-limit keying. Never throws.
+ *
+ * Takes the LEFT-most x-forwarded-for entry. That is the entry a client can
+ * normally forge, so it is only safe when the edge overwrites the header rather
+ * than appending to it — which is what Railway does. Verified empirically on
+ * 2026-08-26 against production: 8 requests to /api/auth/forgot, each carrying a
+ * different X-Forwarded-For, still tripped the 5-per-IP limit on the 6th, so the
+ * supplied header never reached this function. A spoofable left-most entry would
+ * have produced eight distinct buckets and no 429 at all.
+ *
+ * THIS IS A PLATFORM GUARANTEE, NOT A CODE ONE. Re-run that test before trusting
+ * it again if anything changes in front of the app — putting Cloudflare ahead of
+ * Railway, moving off Railway, or adding an ingress proxy. If the edge ever
+ * appends instead of overwriting, every IP limit here (login, register, forgot,
+ * reset, otp, book) becomes bypassable with one header.
  */
 export function clientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0]?.trim();
-    if (first) return first;
+    if (first && isIpish(first)) return first;
   }
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
+  const real = req.headers.get("x-real-ip")?.trim();
+  if (real && isIpish(real)) return real;
+  return "unknown";
 }

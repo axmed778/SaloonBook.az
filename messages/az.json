@@ -191,6 +191,7 @@
       "unauthorized": "Əvvəlcə daxil olun.",
       "invalid": "Məlumat düzgün deyil.",
       "not_allowed": "Bu görüşü dəyərləndirə bilməzsiniz.",
+      "not_confirmed": "Salon hələ bu ziyarəti təsdiqləməyib.",
       "already_reviewed": "Bu görüş artıq dəyərləndirilib.",
       "failed": "Alınmadı. Yenidən cəhd edin."
     }
@@ -536,7 +537,8 @@
       "saveFailed": "Yadda saxlanmadı.",
       "noteEmpty": "Qeyd boş ola bilməz.",
       "noteNotFound": "Qeyd tapılmadı.",
-      "deleteSettled": "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur)."
+      "deleteSettled": "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur).",
+      "deleteFailed": "Silinmədi. Yenidən cəhd edin."
     }
   },
   "ClientProfile": {
@@ -695,6 +697,19 @@
     }
   },
   "Admin": {
+    "notifications": {
+      "worker": "Worker",
+      "workerOk": "İşləyir ({age} san əvvəl)",
+      "workerStale": "Cavab vermir — bildirişlər göndərilmir",
+      "workerUnknown": "Bilinmir (Redis cavab vermir)",
+      "title": "Bildirişlər (son 7 gün)",
+      "sent": "Göndərildi",
+      "queued": "Növbədə",
+      "failed": "Alnmadı",
+      "dead": "Əl dəstəyi lazımdır",
+      "deadHint": "{count} bildiriş {max} cəhddən sonra da göndərilə bilmədi — avtomatik təkrar dayandırılıb.",
+      "healthy": "Göndərilməyən bildiriş yoxdur."
+    },
     "title": "Salonlar",
     "subtitle": "{count} hesab · plan aktivləşdirmə və ödəniş tarixçəsi",
     "noAccounts": "Hələ hesab yoxdur.",
@@ -1187,7 +1202,13 @@
       "confirmHuman": "Robot olmadığınızı təsdiqləyin.",
       "bookingFailed": "Qeydiyyat alınmadı. Yenidən cəhd edin.",
       "network": "Şəbəkə xətası. Yenidən cəhd edin.",
-      "slotTaken": "Təəssüf, bu vaxt yenicə tutuldu. Başqa vaxt seçin."
+      "slotTaken": "Təəssüf, bu vaxt yenicə tutuldu. Başqa vaxt seçin.",
+      "rateLimited": "Çox sayıda sorğu. Bir az gözləyin və yenidən cəhd edin.",
+      "ratePhone": "Bu nömrə ilə çox qeydiyyat edilib. Bir az sonra cəhd edin.",
+      "rateSalon": "Salon hal-hazırda çox sorğu alır. Bir az sonra cəhd edin.",
+      "tooFar": "Bu tarix çox uzaqdır. Daha yaxın bir gün seçin.",
+      "serviceMismatch": "Seçilmiş usta bu xidməti göstərmir. Yenidən seçin.",
+      "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",

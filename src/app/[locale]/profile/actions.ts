@@ -36,9 +36,22 @@ export async function submitReview(input: unknown): Promise<ReviewResult> {
       status: "COMPLETED",
       customer: { phone: session.phone },
     },
-    select: { id: true, salonId: true },
+    select: { id: true, salonId: true, autoCompleted: true },
   });
   if (!appt) return { ok: false, error: "not_allowed" };
+
+  // COMPLETED alone is not proof the visit happened. worker/processors/
+  // reconcile.ts flips any CONFIRMED appointment older than 48h to COMPLETED so
+  // revenue and payroll don't read zero, stamping autoCompleted — a no-show the
+  // salon never got round to marking looks exactly like a finished visit.
+  //
+  // Reviews are public, render on the salon page, and feed ratingSum, which
+  // drives the minimum-rating filter on the discovery map. Accepting them on
+  // auto-completed rows meant anyone could verify a phone by OTP, book at a
+  // competitor, not turn up, wait two days and leave a one-star review —
+  // repeatably. The salon's only defence was marking the no-show by hand inside
+  // the window. Require a human to have closed the visit.
+  if (appt.autoCompleted) return { ok: false, error: "not_confirmed" };
 
   try {
     await prisma.$transaction(async (tx) => {

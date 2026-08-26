@@ -64,6 +64,28 @@ const optionCls = (selected: boolean) =>
     ? "border-accent bg-accent/10"
     : "border-border bg-muted hover:border-border-strong");
 
+// The booking API answers every failure with a stable `code` (see
+// src/app/api/public/[slug]/book/route.ts). Mapping them here keeps the API
+// locale-neutral — it also serves the manage widget — while the customer sees
+// their own language.
+//
+// PLAN_LIMIT and SALON_NOT_FOUND deliberately share one neutral message: both
+// mean "you cannot book here right now", and the reason is the salon's business,
+// not the visitor's.
+const BOOKING_ERROR_KEYS: Record<string, string> = {
+  RATE_IP: "errors.rateLimited",
+  RATE_PHONE: "errors.ratePhone",
+  RATE_OUTBOUND: "errors.ratePhone",
+  RATE_SALON: "errors.rateSalon",
+  INVALID_BODY: "errors.incomplete",
+  TOO_FAR: "errors.tooFar",
+  CAPTCHA: "errors.confirmHuman",
+  SERVICE_MISMATCH: "errors.serviceMismatch",
+  SALON_NOT_FOUND: "errors.salonUnavailable",
+  PLAN_LIMIT: "errors.salonUnavailable",
+  SERVER: "errors.bookingFailed",
+};
+
 export function BookingWidget({
   slug,
   salonAudience,
@@ -74,6 +96,7 @@ export function BookingWidget({
   initialEmployeeId,
   prefillName,
   prefillPhone,
+  verifiedPhone,
 }: {
   slug: string;
   salonAudience: Audience;
@@ -86,6 +109,8 @@ export function BookingWidget({
   // Contact prefilled from the client session (server-side; never via the URL).
   prefillName?: string;
   prefillPhone?: string; // 9-digit local part (no +994)
+  /** E.164 phone of the OTP-verified client session, when there is one. */
+  verifiedPhone?: string;
 }) {
   const t = useTranslations("Booking");
   const tGender = useTranslations("Audience");
@@ -138,6 +163,12 @@ export function BookingWidget({
   const [notes, setNotes] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
+
+  // True only while the number typed into the form is the one this client
+  // verified by OTP. Editing the phone away from it withdraws the offer of
+  // marketing consent immediately, which matches what the server will accept.
+  const phoneVerified =
+    verifiedPhone !== undefined && `+994${phoneDigits.replace(/\D/g, "")}` === verifiedPhone;
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -351,11 +382,15 @@ export function BookingWidget({
           phone: "+994" + digits,
           notes: notes.trim() || undefined,
           dataConsent: true,
-          waOptIn: marketingConsent,
+          waOptIn: phoneVerified && marketingConsent,
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        manageUrl?: string;
+      };
       if (!res.ok) {
         // The server consumed the token during verification; get a new one.
         resetTurnstile();
@@ -370,7 +405,10 @@ export function BookingWidget({
           setError(t("errors.slotTaken"));
           return;
         }
-        setError(data.error ?? t("errors.bookingFailed"));
+        // Never render data.error: it is English, and for PLAN_LIMIT it used to
+        // spell out the salon's tier and monthly quota to whoever tried to book.
+        const key = data.code ? BOOKING_ERROR_KEYS[data.code] : undefined;
+        setError(t(key ?? "errors.bookingFailed"));
         return;
       }
       setDone({
@@ -689,15 +727,23 @@ export function BookingWidget({
                         })}
                       </span>
                     </label>
-                    <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={marketingConsent}
-                        onChange={(e) => setMarketingConsent(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
-                      />
-                      <span>{t("consentMarketing")}</span>
-                    </label>
+                    {/* Marketing consent is only offered when this number is
+                        the one the client verified by OTP. The server refuses to
+                        record it otherwise, and asking for a consent we would
+                        then discard is worse than not asking. Booking
+                        confirmations and reminders are unaffected — they are
+                        transactional and everyone gets them. */}
+                    {phoneVerified && (
+                      <label className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={marketingConsent}
+                          onChange={(e) => setMarketingConsent(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+                        />
+                        <span>{t("consentMarketing")}</span>
+                      </label>
+                    )}
                   </div>
 
                   {TURNSTILE_SITE_KEY && <div ref={turnstileRef} className="min-h-[65px]" />}

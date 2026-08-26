@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { purgeCachedPrivatePages } from "@/lib/offline-cache";
 
 export function LogoutButton() {
   const t = useTranslations("ClientAuth");
@@ -12,6 +13,7 @@ export function LogoutButton() {
   function logout() {
     start(async () => {
       await fetch("/api/client/logout", { method: "POST" });
+      await purgeCachedPrivatePages();
       router.push("/");
       router.refresh();
     });

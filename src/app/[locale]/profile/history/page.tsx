@@ -38,6 +38,7 @@ export default async function HistoryPage() {
       salon: { select: { name: true, slug: true } },
       employee: { select: { name: true } },
       service: { select: { name: true } },
+      autoCompleted: true,
       review: { select: { id: true } },
     },
   });
@@ -53,7 +54,9 @@ export default async function HistoryPage() {
     when: formatBakuDateTime(a.startsAt, locale),
     price: `${azn(a.priceMinor)} ₼`,
     status: a.status as Visit["status"],
-    canReview: a.status === "COMPLETED" && !a.review,
+    // Auto-completed visits are excluded here too, so the button never appears
+    // for something submitReview would refuse (see the reasoning there).
+    canReview: a.status === "COMPLETED" && !a.autoCompleted && !a.review,
   }));
 
   return (

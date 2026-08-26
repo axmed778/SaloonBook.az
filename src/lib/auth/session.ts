@@ -71,6 +71,14 @@ function decode(token: string | undefined): SessionPayload | null {
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString()) as SessionPayload;
     if (typeof parsed?.uid !== "string") return null;
+    // Enforce MAX_AGE_SEC HERE, not just as the cookie's maxAge. That attribute
+    // is a request to the browser and nothing more: a token kept outside a
+    // browser — copied from a device backup, a stolen profile directory, an
+    // export — stayed valid forever, because `iat` was written into every token
+    // and then never read. The only server-side check was sessionsValidFrom,
+    // which only moved on password reset.
+    if (typeof parsed.iat !== "number" || !Number.isFinite(parsed.iat)) return null;
+    if (parsed.iat + MAX_AGE_SEC < Math.floor(Date.now() / 1000)) return null;
     return parsed;
   } catch {
     return null;
@@ -90,9 +98,38 @@ export async function setSession(userId: string): Promise<void> {
   });
 }
 
-/** Clears the session cookie (logout). */
+/**
+ * Logs the user out: revokes their sessions server-side, then drops the cookie.
+ *
+ * Dropping the cookie alone left the token itself valid — whoever still held a
+ * copy could keep using it, and "log out" is precisely the action a user takes
+ * when they want that to stop.
+ *
+ * This revokes EVERY session for the user, not just this device. The session is
+ * a stateless signed cookie with no server-side record of individual sessions,
+ * so there is nothing finer to revoke without adding a session store or a
+ * denylist; and for a tool where the realistic case is a shared reception device,
+ * "log me out everywhere" is the safer default anyway. The cost is that logging
+ * out on the tablet also signs the owner out on their phone.
+ */
 export async function clearSession(): Promise<void> {
   const store = await cookies();
+
+  // Read the cookie BEFORE clearing it, and revoke first: if the update throws,
+  // we still clear, but we never report a logout that revoked nothing.
+  const payload = decode(store.get(COOKIE_NAME)?.value);
+  if (payload) {
+    try {
+      // updateMany, not update: a token for a since-deleted user must not throw.
+      await prisma.user.updateMany({
+        where: { id: payload.uid },
+        data: { sessionsValidFrom: new Date() },
+      });
+    } catch (e) {
+      console.error("[auth] logout revoke failed", e);
+    }
+  }
+
   store.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -209,8 +246,8 @@ export async function getSession(): Promise<Session | null> {
   if (!user) return null;
 
   // Reject cookies minted before the account's session cutoff (bumped on
-  // password reset). Compared at second granularity to match the cookie's `iat`,
-  // so a freshly issued post-reset cookie is never falsely invalidated.
+  // password reset AND on logout). Compared at second granularity to match the
+  // cookie's `iat`, so a freshly issued cookie is never falsely invalidated.
   if (
     user.sessionsValidFrom &&
     payload.iat < Math.floor(user.sessionsValidFrom.getTime() / 1000)

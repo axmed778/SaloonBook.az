@@ -14,7 +14,7 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
     where: { id: notificationId },
     include: {
       appointment: {
-        select: { status: true, manageToken: true, salon: { select: { slug: true } } },
+        select: { status: true, endsAt: true, manageToken: true, salon: { select: { slug: true } } },
       },
     },
   });
@@ -38,6 +38,20 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
     return;
   }
 
+  // Nor may it fire for an appointment that is already over. This matters now
+  // that the sweep revives FAILED rows: a provider outage long enough to exhaust
+  // the retries can be followed, hours later, by a batch of "your appointment is
+  // tomorrow at 15:00" reminders for visits that already happened. Cancellation
+  // notices are exempt for the same reason as above — they exist precisely
+  // because the appointment isn't happening.
+  if (!isCancellationNotice && n.appointment && n.appointment.endsAt <= new Date()) {
+    await prisma.notification.update({
+      where: { id: n.id },
+      data: { status: "CANCELLED", lastError: "appointment already ended" },
+    });
+    return;
+  }
+
   try {
     // Resolve which number this salon sends from: its own (PRO + ACTIVE own-number
     // sender) or the shared platform number. Never throws — falls back to platform.
@@ -57,6 +71,19 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
           : null,
       ),
     });
+
+    // Sandbox means nothing left the process (no token / phone number id).
+    // Recording SENT would make an undelivered message indistinguishable from a
+    // delivered one everywhere we look. Treat it as a retryable failure so the
+    // row lands in FAILED with a readable reason. assertEnv("worker") should
+    // stop production from reaching this, so this is the second lock — and it
+    // still allows sandbox in dev, where SENT is the useful outcome.
+    if (res.sandbox && process.env.NODE_ENV === "production") {
+      throw new Error(
+        "WhatsApp sender is in sandbox mode (WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID " +
+          "missing for this salon's sender) — refusing to record an unsent message as SENT",
+      );
+    }
 
     await prisma.notification.update({
       where: { id: n.id },
