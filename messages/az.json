@@ -698,6 +698,10 @@
   },
   "Admin": {
     "notifications": {
+      "worker": "Worker",
+      "workerOk": "İşləyir ({age} san əvvəl)",
+      "workerStale": "Cavab vermir — bildirişlər göndərilmir",
+      "workerUnknown": "Bilinmir (Redis cavab vermir)",
       "title": "Bildirişlər (son 7 gün)",
       "sent": "Göndərildi",
       "queued": "Növbədə",
@@ -1198,7 +1202,13 @@
       "confirmHuman": "Robot olmadığınızı təsdiqləyin.",
       "bookingFailed": "Qeydiyyat alınmadı. Yenidən cəhd edin.",
       "network": "Şəbəkə xətası. Yenidən cəhd edin.",
-      "slotTaken": "Təəssüf, bu vaxt yenicə tutuldu. Başqa vaxt seçin."
+      "slotTaken": "Təəssüf, bu vaxt yenicə tutuldu. Başqa vaxt seçin.",
+      "rateLimited": "Çox sayıda sorğu. Bir az gözləyin və yenidən cəhd edin.",
+      "ratePhone": "Bu nömrə ilə çox qeydiyyat edilib. Bir az sonra cəhd edin.",
+      "rateSalon": "Salon hal-hazırda çox sorğu alır. Bir az sonra cəhd edin.",
+      "tooFar": "Bu tarix çox uzaqdır. Daha yaxın bir gün seçin.",
+      "serviceMismatch": "Seçilmiş usta bu xidməti göstərmir. Yenidən seçin.",
+      "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",

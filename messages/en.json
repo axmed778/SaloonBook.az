@@ -698,6 +698,10 @@
   },
   "Admin": {
     "notifications": {
+      "worker": "Worker",
+      "workerOk": "Running ({age}s ago)",
+      "workerStale": "Not responding — notifications are not being sent",
+      "workerUnknown": "Unknown (Redis did not answer)",
       "title": "Notifications (last 7 days)",
       "sent": "Sent",
       "queued": "Queued",
@@ -1198,7 +1202,13 @@
       "confirmHuman": "Please confirm you're not a robot.",
       "bookingFailed": "Booking failed. Please try again.",
       "network": "Network error. Please try again.",
-      "slotTaken": "Sorry, that time was just taken. Please pick another."
+      "slotTaken": "Sorry, that time was just taken. Please pick another.",
+      "rateLimited": "Too many requests. Please wait a moment and try again.",
+      "ratePhone": "Too many bookings from this number. Please try again later.",
+      "rateSalon": "This salon is receiving a lot of requests. Please try again shortly.",
+      "tooFar": "That date is too far ahead. Please pick a nearer day.",
+      "serviceMismatch": "That specialist doesn't offer this service. Please choose again.",
+      "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly."
     },
     "success": {
       "title": "Booking confirmed!",

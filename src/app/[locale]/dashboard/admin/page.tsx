@@ -8,6 +8,7 @@ import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
 import { maskPhone } from "@/lib/whatsapp-sender";
 import { MAX_NOTIFICATION_ATTEMPTS } from "@/lib/queue";
+import { readWorkerHeartbeat } from "@/lib/worker-heartbeat";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function AdminPage() {
   // sweep now revives FAILED rows, so what still matters is what it has GIVEN UP
   // on (attempts past the cap): those are dead letters that need a human.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60_000);
-  const [accounts, usage, notifByStatus, deadLetters] = await Promise.all([
+  const [accounts, usage, notifByStatus, deadLetters, worker] = await Promise.all([
     prisma.account.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -87,6 +88,7 @@ export default async function AdminPage() {
     prisma.notification.count({
       where: { status: "FAILED", attempts: { gte: MAX_NOTIFICATION_ATTEMPTS } },
     }),
+    readWorkerHeartbeat(),
   ]);
 
   const notifCount = (status: string) =>
@@ -144,6 +146,28 @@ export default async function AdminPage() {
     <>
       <section className="mb-6 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">{t("notifications.title")}</h2>
+        {/* Worker liveness first: if it isn't beating, nothing below is being
+            acted on and the counts underneath explain themselves. */}
+        <p className="mt-2 text-sm">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("notifications.worker")}
+          </span>{" "}
+          <span
+            className={
+              worker.state === "ok"
+                ? "font-medium text-emerald-600 dark:text-emerald-400"
+                : worker.state === "stale"
+                  ? "font-medium text-rose-600 dark:text-rose-400"
+                  : "font-medium text-muted-foreground"
+            }
+          >
+            {worker.state === "ok"
+              ? t("notifications.workerOk", { age: worker.ageSec ?? 0 })
+              : worker.state === "stale"
+                ? t("notifications.workerStale")
+                : t("notifications.workerUnknown")}
+          </span>
+        </p>
         <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
           <div>
             <dt className="text-xs uppercase tracking-wide text-muted-foreground">

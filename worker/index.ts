@@ -7,6 +7,7 @@ import { processPush } from "./processors/push";
 import { sweepSubscriptions } from "./processors/subscriptions";
 import { sweepNotifications } from "./processors/notification-sweep";
 import { reconcileOverdue } from "./processors/reconcile";
+import { writeWorkerHeartbeat, HEARTBEAT_INTERVAL_MS } from "../src/lib/worker-heartbeat";
 
 // The worker is a separate long-lived process (Railway "worker" service). It
 // handles WhatsApp sending, scheduled reminders, and the nightly subscription
@@ -92,10 +93,44 @@ const reconcileTimer = setInterval(() => {
 }, RECONCILE_INTERVAL_MS);
 console.log("[worker] reconcile sweep scheduled (hourly)");
 
+// Liveness beat. Railway healthchecks the web service only, so without this a
+// dead worker is invisible: after restartPolicyMaxRetries Railway stops trying,
+// nothing sends again, and every other surface still looks healthy. The web
+// service reads this key for /api/health and the admin panel.
+void writeWorkerHeartbeat();
+const heartbeatTimer = setInterval(() => void writeWorkerHeartbeat(), HEARTBEAT_INTERVAL_MS);
+console.log("[worker] heartbeat started");
+
+// A crash must not look like a clean exit. Log it in the same structured shape
+// as the web service's onRequestError so both are searchable the same way, then
+// let the process die so Railway restarts it — swallowing these would leave a
+// worker alive but broken, which is worse than a restart.
+function logFatal(kind: string, err: unknown): void {
+  const e = err instanceof Error ? err : new Error(String(err));
+  console.error(
+    JSON.stringify({
+      src: "worker",
+      kind,
+      ts: new Date().toISOString(),
+      message: e.message,
+      stack: e.stack?.split("\n").slice(0, 8).join(" | ") ?? null,
+    }),
+  );
+}
+process.on("uncaughtException", (e) => {
+  logFatal("uncaughtException", e);
+  process.exit(1);
+});
+process.on("unhandledRejection", (e) => {
+  logFatal("unhandledRejection", e);
+  process.exit(1);
+});
+
 async function shutdown(signal: string) {
   console.log(`[worker] ${signal} received, shutting down...`);
   clearInterval(sweepTimer);
   clearInterval(reconcileTimer);
+  clearInterval(heartbeatTimer);
   await Promise.all([
     worker.close(),
     pushWorker.close(),
