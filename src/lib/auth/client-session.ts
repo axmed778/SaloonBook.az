@@ -55,6 +55,11 @@ function decode(token: string | undefined): ClientSessionPayload | null {
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString()) as ClientSessionPayload;
     if (typeof parsed?.cid !== "string") return null;
+    // Same as the owner session: MAX_AGE_SEC has to be enforced server-side, not
+    // only as the cookie's maxAge, or a token that outlives its browser never
+    // expires at all. 90 days is long; unbounded is not a length.
+    if (typeof parsed.iat !== "number" || !Number.isFinite(parsed.iat)) return null;
+    if (parsed.iat + MAX_AGE_SEC < Math.floor(Date.now() / 1000)) return null;
     return parsed;
   } catch {
     return null;
@@ -74,9 +79,28 @@ export async function setClientSession(clientId: string): Promise<void> {
   });
 }
 
-/** Clears the client session cookie (logout). */
+/**
+ * Signs the client out: revokes their sessions server-side, then drops the
+ * cookie. The Client model had no revocation mechanism at all — no equivalent
+ * of User.sessionsValidFrom — so a client token was unrevokable by any means,
+ * including a password reset, which clients don't have. Revokes every session
+ * for this client, for the same reason as the owner side.
+ */
 export async function clearClientSession(): Promise<void> {
   const store = await cookies();
+
+  const payload = decode(store.get(COOKIE_NAME)?.value);
+  if (payload) {
+    try {
+      await prisma.client.updateMany({
+        where: { id: payload.cid },
+        data: { sessionsValidFrom: new Date() },
+      });
+    } catch (e) {
+      console.error("[client-auth] logout revoke failed", e);
+    }
+  }
+
   store.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -114,9 +138,25 @@ export const getClientSession = cache(async (): Promise<ClientSession | null> =>
 
   const client = await prisma.client.findUnique({
     where: { id: payload.cid },
-    select: { id: true, phone: true, name: true, consentVersion: true },
+    select: {
+      id: true,
+      phone: true,
+      name: true,
+      consentVersion: true,
+      sessionsValidFrom: true,
+    },
   });
   if (!client) return null;
+
+  // Reject cookies minted before this client's session cutoff (bumped on
+  // logout). Second granularity to match the cookie's `iat`, so a cookie issued
+  // in the same second as the cutoff stays valid.
+  if (
+    client.sessionsValidFrom &&
+    payload.iat < Math.floor(client.sessionsValidFrom.getTime() / 1000)
+  ) {
+    return null;
+  }
   return {
     id: client.id,
     phone: client.phone,

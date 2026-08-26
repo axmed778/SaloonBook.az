@@ -300,6 +300,9 @@ model Customer {
 
   @@unique([salonId, phone])
   @@index([salonId])
+  // Looked up by phone ALONE on the public client-history page, which the
+  // composite unique above cannot serve — salonId is its leading column.
+  @@index([phone])
 }
 
 // Private, timestamped CRM notes about a customer ("VIP", "usually late", …).
@@ -359,6 +362,10 @@ model Appointment {
   // (Prisma can't express EXCLUDE USING gist).
   @@index([employeeId, startsAt, endsAt])
   @@index([salonId, startsAt])
+  // The client's visit history on the public profile page, newest first.
+  @@index([customerId, startsAt(sort: Desc)])
+  // Service deletion checks and the per-service analytics breakdown.
+  @@index([serviceId])
 }
 
 enum AppointmentStatus {
@@ -495,6 +502,10 @@ model Client {
   consentVersion String?
   createdAt      DateTime  @default(now())
   lastLoginAt    DateTime? @db.Timestamptz(6)
+  /// Session cutoff: cookies issued before this instant are rejected. Bumped on
+  /// logout so signing out actually revokes the token, not just the cookie.
+  /// Mirrors User.sessionsValidFrom.
+  sessionsValidFrom DateTime? @db.Timestamptz(6)
   reviews        Review[]
   /// Append-only history of every acceptance, including superseded versions.
   legalConsents  LegalConsent[]
