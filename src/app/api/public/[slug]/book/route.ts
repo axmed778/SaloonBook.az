@@ -9,6 +9,7 @@ import {
   MAX_BOOKING_AHEAD_DAYS,
 } from "@/lib/booking";
 import { rateLimit, peekOutboundQuota, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
+import { getClientSession } from "@/lib/auth/client-session";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { LEGAL_VERSIONS } from "@/lib/legal";
 
@@ -41,6 +42,8 @@ const bodySchema = z.object({
   phone: z
     .string()
     .regex(/^\+994\d{9}$/, "Phone must be in +994XXXXXXXXX format"),
+  // Marketing opt-in. Accepted from the body but NOT believed on its own — see
+  // where it is resolved below.
   waOptIn: z.boolean().optional(),
   // Required data-processing consent (the booking form's mandatory checkbox).
   // Enforced server-side: a booking cannot be created without it.
@@ -145,13 +148,24 @@ export async function POST(
     );
   }
 
+  // Marketing consent is a claim about who owns a phone number, and this route
+  // is unauthenticated: anyone could post someone else's number with
+  // waOptIn: true and mint a consent record for them. Believe it only from an
+  // OTP-verified client session for THAT SAME number. Everyone else books
+  // normally and still gets this booking's confirmation and reminder (those are
+  // transactional — see src/lib/booking.ts); they just don't get signed up for
+  // the salon's marketing.
+  const clientSession = await getClientSession();
+  const marketingOptIn =
+    parsed.data.waOptIn === true && clientSession?.phone === parsed.data.phone;
+
   try {
     const result = await createBooking({
       salonId: salon.id,
       serviceId: parsed.data.serviceId,
       employeeId: parsed.data.employeeId,
       startUtc,
-      customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: parsed.data.waOptIn },
+      customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: marketingOptIn },
       notes: parsed.data.notes,
       consent: { version: LEGAL_VERSIONS.clientConsent },
       source: "PUBLIC",

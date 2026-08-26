@@ -43,6 +43,10 @@ export interface CreateBookingInput {
   serviceId: string;
   employeeId: string;
   startUtc: Date;
+  /** `waOptIn` is MARKETING consent only (news/offers), never the gate for this
+   *  booking's own confirmation and reminder — see the notification block below.
+   *  Callers must only pass true when the phone's owner actually said so; the
+   *  public route requires an OTP-verified session for the same number. */
   customer: { name: string; phone: string; waOptIn?: boolean };
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
@@ -192,17 +196,28 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       throw e;
     }
 
-    // Customer-facing WhatsApp (confirmation + reminder) require the customer's
-    // opt-in: Meta policy forbids business-initiated template messages without
-    // consent, and sending anyway erodes the number's quality rating. Without
-    // opt-in we still record the booking and alert the owner — we just never
-    // message the customer. waOptIn is the stored consent (public form checkbox
-    // / prior customer record). The reminder is additionally gated on being far
-    // enough out (a <24h booking's reminder is moot and would linger QUEUED).
+    // Two different consents, previously conflated into one flag.
+    //
+    // A booking's own confirmation and T-24h reminder are TRANSACTIONAL: the
+    // person just asked for this appointment from this number, and the reminder
+    // is the whole reason a salon buys the product. They used to be gated on
+    // waOptIn, whose public-form checkbox reads "receive news, offers and
+    // promotions (optional)" and defaults to OFF — so a customer who booked and
+    // left the box alone got nothing at all. The reschedule path in
+    // api/public/manage/[token] never had that gate, which is the behaviour
+    // being made consistent here.
+    //
+    // waOptIn stays what its label says: marketing. It still gates anything the
+    // salon initiates later, and staff-entered (DASHBOARD) bookings still need
+    // it, because there the customer never asked us for anything.
+    //
+    // The reminder is additionally gated on being far enough out (a <24h
+    // booking's reminder is moot and would linger QUEUED).
+    const notifyCustomer = isPublic || customer.waOptIn;
     const reminderAt = new Date(appointment.startsAt.getTime() - 24 * 60 * 60_000);
     let confirmationId: string | null = null;
     let reminderId: string | null = null;
-    if (customer.waOptIn) {
+    if (notifyCustomer) {
       const confirmation = await tx.notification.create({
         data: {
           salonId: input.salonId,

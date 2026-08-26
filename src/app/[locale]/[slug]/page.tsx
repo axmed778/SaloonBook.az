@@ -316,6 +316,7 @@ export default async function BookingPage({
           initialEmployeeId={initialEmployeeId}
           prefillName={prefillName}
           prefillPhone={prefillPhone}
+          verifiedPhone={client?.phone}
         />
 
         {/* Reviews (public, server-rendered for SEO). No client identity shown —
