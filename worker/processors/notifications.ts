@@ -58,6 +58,19 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
       ),
     });
 
+    // Sandbox means nothing left the process (no token / phone number id).
+    // Recording SENT would make an undelivered message indistinguishable from a
+    // delivered one everywhere we look. Treat it as a retryable failure so the
+    // row lands in FAILED with a readable reason. assertEnv("worker") should
+    // stop production from reaching this, so this is the second lock — and it
+    // still allows sandbox in dev, where SENT is the useful outcome.
+    if (res.sandbox && process.env.NODE_ENV === "production") {
+      throw new Error(
+        "WhatsApp sender is in sandbox mode (WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID " +
+          "missing for this salon's sender) — refusing to record an unsent message as SENT",
+      );
+    }
+
     await prisma.notification.update({
       where: { id: n.id },
       data: {

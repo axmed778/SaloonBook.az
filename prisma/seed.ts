@@ -79,6 +79,22 @@ async function seedAuthAccounts() {
     return;
   }
 
+  // Same rule as the admin above, and for the same reason: this seed HAS been
+  // run against production before (the 'mysalon' salon it creates turned up in
+  // the live sitemap), and it used to hardcode the password "123456" — a
+  // working owner login, on a public form, for anyone who guessed the obvious.
+  // A committed password is a production credential the moment someone runs the
+  // seed against a real database, so there is no "it's only a demo" exception.
+  const ownerPassword = process.env.SEED_OWNER_PASSWORD;
+  const ownerIssues = ownerPassword ? passwordIssues(ownerPassword) : ["not set"];
+  if (!ownerPassword || ownerIssues.length > 0) {
+    throw new Error(
+      `seed: SEED_OWNER_PASSWORD is required to create salon owner '${salonOwnerEmail}' ` +
+        `and must satisfy the password policy (${ownerIssues.join(", ")}). ` +
+        `Set it to a strong value in the environment (do not commit it).`,
+    );
+  }
+
   const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
 
   const account = await prisma.account.create({
@@ -95,8 +111,7 @@ async function seedAuthAccounts() {
     data: {
       email: salonOwnerEmail,
       fullName: "Salon Owner",
-      // Deliberately weak test password (Clerk would reject this).
-      passwordHash: hashPassword("123456"),
+      passwordHash: hashPassword(ownerPassword),
     },
   });
 

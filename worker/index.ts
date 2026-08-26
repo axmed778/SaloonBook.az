@@ -1,4 +1,5 @@
 import { Queue, Worker } from "bullmq";
+import { assertEnv } from "../src/lib/env";
 import { connection } from "../src/lib/redis";
 import { QUEUE_NAMES, type NotificationJob, type PushJob } from "../src/lib/queue";
 import { processNotification } from "./processors/notifications";
@@ -10,6 +11,15 @@ import { reconcileOverdue } from "./processors/reconcile";
 // The worker is a separate long-lived process (Railway "worker" service). It
 // handles WhatsApp sending, scheduled reminders, and the nightly subscription
 // sweep. Booking creation only enqueues jobs here and returns immediately.
+
+// Validate THIS service's environment before opening any queue. Next's
+// instrumentation hook only covers the web service, so until now the worker
+// booted with any configuration at all — and a worker missing WHATSAPP_TOKEN
+// logs every notification as sandbox and still records it SENT, which looks
+// identical to a healthy send from the dashboard, the admin panel and the DB.
+// Fail at boot, where it is visible, instead of days later via a salon asking
+// why customers get nothing.
+assertEnv("worker");
 
 const worker = new Worker<NotificationJob>(QUEUE_NAMES.notifications, processNotification, {
   connection,

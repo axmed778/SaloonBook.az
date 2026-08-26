@@ -18,8 +18,12 @@ export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<
   const from = process.env.EMAIL_FROM || "SalonBook <onboarding@resend.dev>";
 
   if (!apiKey) {
+    // Recipient and subject only — NEVER the body. Reset mail carries a live
+    // single-use token in its href, and Railway's log stream is readable by
+    // anyone with project access, so logging the body handed out account
+    // takeover for the token's whole 60-minute lifetime. assertEnv("web") now
+    // refuses to boot production without the key, so this path is dev-only.
     console.warn(`[email] sandbox (RESEND_API_KEY unset) — would send to ${to}: ${subject}`);
-    console.warn(`[email] body: ${html}`);
     return true;
   }
 
