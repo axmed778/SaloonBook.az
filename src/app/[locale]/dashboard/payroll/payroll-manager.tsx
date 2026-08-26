@@ -8,6 +8,7 @@ import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { ConfirmDialog } from "@/app/[locale]/dashboard/_components/confirm-dialog";
 import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { saveEmployeePay, recordPayout, deletePayout } from "./actions";
+import { parseAznToMinor } from "@/lib/money";
 
 // Loose translator type (avoids depending on next-intl's exact generic shape).
 type Tr = (key: string, values?: Record<string, string | number>) => string;
@@ -54,13 +55,6 @@ function payModelLabel(r: PayrollRow, t: Tr): string {
   if (r.commissionPct > 0) return t("payModel.commissionOnly", { pct: r.commissionPct });
   if (r.baseSalaryMinor > 0) return t("payModel.salaryOnly", { salary: azn(r.baseSalaryMinor) });
   return t("payModel.none");
-}
-
-/** Parse an AZN amount ("450" / "450.50" / "450,50") into qəpik, or null. */
-function parseAzn(input: string): number | null {
-  const v = Number(input.trim().replace(",", "."));
-  if (!Number.isFinite(v) || v < 0) return null;
-  return Math.round(v * 100);
 }
 
 export function PayrollManager({
@@ -319,7 +313,7 @@ function PayModelModal({ row, onClose }: { row: PayrollRow; onClose: () => void 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const baseSalaryMinor = salary.trim() === "" ? 0 : parseAzn(salary);
+    const baseSalaryMinor = salary.trim() === "" ? 0 : parseAznToMinor(salary);
     const commissionPct = pct.trim() === "" ? 0 : Number(pct.trim());
     if (baseSalaryMinor === null) {
       setError(t("errors.salaryInvalid"));
@@ -396,7 +390,7 @@ function PayoutModal({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const amountMinor = parseAzn(amount);
+    const amountMinor = parseAznToMinor(amount);
     if (amountMinor === null || amountMinor <= 0) {
       setError(t("errors.amountInvalid"));
       return;

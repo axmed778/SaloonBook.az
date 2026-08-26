@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { routing } from "@/i18n/routing";
+import { DEMO_SALON_SLUG } from "@/lib/demo";
 
 // Dynamic sitemap: the static marketing/legal pages plus every ACTIVE salon's
 // public booking page. Each entry carries hreflang alternates for the three
@@ -36,7 +37,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Never let a DB hiccup 500 the sitemap — fall back to the static pages.
   const salons = await prisma.salon
     .findMany({
-      where: { status: "ACTIVE" },
+      // The demo salon is deliberately excluded: it is ACTIVE because the
+      // landing page links to it, but it is a marketing prop, not a business,
+      // and indexing it competes with real salons for the same queries.
+      where: { status: "ACTIVE", slug: { not: DEMO_SALON_SLUG } },
       select: { slug: true, createdAt: true },
       orderBy: { createdAt: "desc" },
       take: 5000,

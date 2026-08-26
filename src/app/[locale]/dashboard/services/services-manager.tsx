@@ -14,6 +14,7 @@ import { type Audience } from "@/lib/audience";
 import { AudienceSelect } from "../_components/audience-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { ErrorToast } from "../_components/toast";
+import { parseAznAmount } from "@/lib/money";
 
 export type ServiceRow = {
   id: string;
@@ -98,15 +99,14 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
   function submit() {
     const payload = {
       name: form.name.trim(),
-      priceAzn: parseFloat(form.price),
+      priceAzn: parseAznAmount(form.price),
       durationMin: parseInt(form.duration, 10),
       bufferMin: parseInt(form.buffer || "0", 10),
       audience: form.audience,
       category: form.category,
     };
     if (!payload.name) return setError(t("errors.nameRequired"));
-    if (!Number.isFinite(payload.priceAzn) || payload.priceAzn < 0)
-      return setError(t("errors.priceInvalid"));
+    if (payload.priceAzn === null) return setError(t("errors.priceInvalid"));
     if (!Number.isFinite(payload.durationMin) || payload.durationMin <= 0)
       return setError(t("errors.durationInvalid"));
     if (!Number.isFinite(payload.bufferMin) || payload.bufferMin < 0) payload.bufferMin = 0;

@@ -88,12 +88,17 @@ export function InstallPrompt({ dismissed }: { dismissed: boolean }) {
   if (!show) return null;
 
   return (
+    // pointer-events-none on the positioning layer, auto on the card itself.
+    // This wrapper spans the full width and the full height of its bottom
+    // padding, which is sized to clear the mobile tab bar — so it sat directly
+    // on top of BottomTabBar (also fixed, also z-40) and swallowed every tap on
+    // it. The padding still positions the card; it just no longer intercepts.
     <div
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
       role="dialog"
       aria-label={ios ? t("iosTitle") : t("installTitle")}
     >
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-frame">
+      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-frame">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
             <svg
