@@ -14,7 +14,7 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
     where: { id: notificationId },
     include: {
       appointment: {
-        select: { status: true, manageToken: true, salon: { select: { slug: true } } },
+        select: { status: true, endsAt: true, manageToken: true, salon: { select: { slug: true } } },
       },
     },
   });
@@ -34,6 +34,20 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
     await prisma.notification.update({
       where: { id: n.id },
       data: { status: "CANCELLED" },
+    });
+    return;
+  }
+
+  // Nor may it fire for an appointment that is already over. This matters now
+  // that the sweep revives FAILED rows: a provider outage long enough to exhaust
+  // the retries can be followed, hours later, by a batch of "your appointment is
+  // tomorrow at 15:00" reminders for visits that already happened. Cancellation
+  // notices are exempt for the same reason as above — they exist precisely
+  // because the appointment isn't happening.
+  if (!isCancellationNotice && n.appointment && n.appointment.endsAt <= new Date()) {
+    await prisma.notification.update({
+      where: { id: n.id },
+      data: { status: "CANCELLED", lastError: "appointment already ended" },
     });
     return;
   }

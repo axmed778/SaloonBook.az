@@ -697,6 +697,15 @@
     }
   },
   "Admin": {
+    "notifications": {
+      "title": "Bildirişlər (son 7 gün)",
+      "sent": "Göndərildi",
+      "queued": "Növbədə",
+      "failed": "Alnmadı",
+      "dead": "Əl dəstəyi lazımdır",
+      "deadHint": "{count} bildiriş {max} cəhddən sonra da göndərilə bilmədi — avtomatik təkrar dayandırılıb.",
+      "healthy": "Göndərilməyən bildiriş yoxdur."
+    },
     "title": "Salonlar",
     "subtitle": "{count} hesab · plan aktivləşdirmə və ödəniş tarixçəsi",
     "noAccounts": "Hələ hesab yoxdur.",

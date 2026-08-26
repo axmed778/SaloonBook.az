@@ -697,6 +697,15 @@
     }
   },
   "Admin": {
+    "notifications": {
+      "title": "Notifications (last 7 days)",
+      "sent": "Sent",
+      "queued": "Queued",
+      "failed": "Failed",
+      "dead": "Needs attention",
+      "deadHint": "{count} notification(s) still undelivered after {max} attempts — automatic retries have stopped.",
+      "healthy": "Nothing undelivered."
+    },
     "title": "Salons",
     "subtitle": "{count} accounts · plan activation and payment history",
     "noAccounts": "No accounts yet.",

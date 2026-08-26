@@ -7,6 +7,7 @@ import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
 import { maskPhone } from "@/lib/whatsapp-sender";
+import { MAX_NOTIFICATION_ATTEMPTS } from "@/lib/queue";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,13 @@ export default async function AdminPage() {
   const df = intlLocale(await getLocale());
 
   const periodYm = bakuToday().slice(0, 7);
-  const [accounts, usage] = await Promise.all([
+  // Notification health. Until now an undelivered message was invisible
+  // everywhere: the row went FAILED, nothing retried it, and no screen counted
+  // it — the first signal was a salon asking why customers get nothing. The
+  // sweep now revives FAILED rows, so what still matters is what it has GIVEN UP
+  // on (attempts past the cap): those are dead letters that need a human.
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60_000);
+  const [accounts, usage, notifByStatus, deadLetters] = await Promise.all([
     prisma.account.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -70,7 +77,23 @@ export default async function AdminPage() {
       where: { periodYm },
       select: { salonId: true, bookings: true },
     }),
+    prisma.notification.groupBy({
+      by: ["status"],
+      where: { createdAt: { gte: since } },
+      _count: { _all: true },
+    }),
+    // Not time-boxed on purpose: a message nobody will ever retry stays a
+    // problem after seven days, so it must not age out of this view.
+    prisma.notification.count({
+      where: { status: "FAILED", attempts: { gte: MAX_NOTIFICATION_ATTEMPTS } },
+    }),
   ]);
+
+  const notifCount = (status: string) =>
+    notifByStatus.find((r) => r.status === status)?._count._all ?? 0;
+  const notifSent = notifCount("SENT") + notifCount("DELIVERED") + notifCount("READ");
+  const notifQueued = notifCount("QUEUED");
+  const notifFailed = notifCount("FAILED");
 
   const bookingsBySalon = new Map(usage.map((u) => [u.salonId, u.bookings]));
 
@@ -117,5 +140,60 @@ export default async function AdminPage() {
     };
   });
 
-  return <AdminAccounts rows={rows} />;
+  return (
+    <>
+      <section className="mb-6 rounded-xl border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold text-foreground">{t("notifications.title")}</h2>
+        <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("notifications.sent")}
+            </dt>
+            <dd className="font-semibold tabular-nums text-foreground">{notifSent}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("notifications.queued")}
+            </dt>
+            <dd className="font-semibold tabular-nums text-foreground">{notifQueued}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("notifications.failed")}
+            </dt>
+            <dd
+              className={
+                "font-semibold tabular-nums " +
+                (notifFailed > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground")
+              }
+            >
+              {notifFailed}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("notifications.dead")}
+            </dt>
+            <dd
+              className={
+                "font-semibold tabular-nums " +
+                (deadLetters > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground")
+              }
+            >
+              {deadLetters}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {deadLetters > 0
+            ? t("notifications.deadHint", {
+                count: deadLetters,
+                max: MAX_NOTIFICATION_ATTEMPTS,
+              })
+            : t("notifications.healthy")}
+        </p>
+      </section>
+      <AdminAccounts rows={rows} />
+    </>
+  );
 }
