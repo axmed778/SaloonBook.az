@@ -22,8 +22,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:constraints": "tsx scripts/apply-sql.ts prisma/constraints.sql",
     "db:rls": "tsx scripts/apply-sql.ts prisma/security/rls.sql",
+    "db:indexes": "tsx scripts/apply-sql.ts prisma/indexes.sql",
     "db:rls-grants": "tsx scripts/apply-sql.ts prisma/security/rls-grants.sql",
-    "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:rls-grants",
+    "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:indexes && pnpm db:rls-grants",
     "test:rls": "vitest run src/lib/tenant.rls.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate"
