@@ -38,7 +38,7 @@ function isPlaceholder(v: string | undefined): boolean {
  *     Migrations only. `prisma migrate` takes advisory locks and runs DDL that
  *     must stay on one real backend connection for the whole session.
  */
-function checkDatabaseUrls(): void {
+function checkDatabaseUrls(isWeb: boolean): void {
   const warn = (m: string) => console.warn(`[env] WARNING: ${m}`);
 
   const parse = (raw: string | undefined): URL | null => {
@@ -86,7 +86,9 @@ function checkDatabaseUrls(): void {
     );
   }
 
-  if (isNeon(runtime) && !direct) {
+  // Migrations run from the web service's preDeployCommand, never from the
+  // worker, so a worker without DIRECT_URL is correct rather than misconfigured.
+  if (isWeb && isNeon(runtime) && !direct) {
     warn(
       "DIRECT_URL is unset while DATABASE_URL is a Neon URL. `prisma migrate` " +
         "(schema.prisma's directUrl) has no unpooled connection to use.",
@@ -105,18 +107,26 @@ export function assertEnv(service: ServiceRole = "web"): void {
   // CRITICAL secrets: a missing/placeholder value is a security hole, so in
   // production we refuse to boot rather than silently fall back. In dev we only
   // warn, so local setup stays frictionless.
-  const critical: Array<[string | undefined, string]> = [
-    [
-      process.env.SESSION_SECRET,
-      "SESSION_SECRET is unset or a placeholder — session cookies would be signed " +
-        "with the public dev fallback, letting anyone forge another user's session.",
-    ],
-  ];
+  //
+  // Keep this list to what the service ACTUALLY needs. Demanding a secret a
+  // process never reads is not caution — it is a boot failure with a misleading
+  // explanation, and it trains people to paste secrets into services that have
+  // no business holding them.
+  const critical: Array<[string | undefined, string]> = [];
 
   const whatsAppLive = !isPlaceholder(process.env.WHATSAPP_TOKEN);
 
   // --- Web service ---------------------------------------------------------
   if (isWeb) {
+    // Signs and verifies the session cookies. Web-only: nothing in the worker's
+    // import graph touches src/lib/auth/* — it moves queue jobs, not requests —
+    // so requiring it there only produced a confusing crash.
+    critical.push([
+      process.env.SESSION_SECRET,
+      "SESSION_SECRET is unset or a placeholder — session cookies would be signed " +
+        "with the public dev fallback, letting anyone forge another user's session.",
+    ]);
+
     // WHATSAPP_APP_SECRET is unconditionally critical, NOT conditional on
     // WHATSAPP_TOKEN. The token is a *worker* variable; the webhook route and
     // this check both live in the web service, so keying off it meant the web
@@ -246,16 +256,18 @@ export function assertEnv(service: ServiceRole = "web"): void {
     }
   }
 
-  // APP_URL is baked into every link that leaves the server: the salon's
-  // public link in Settings, the manage link on the booking success screen,
-  // and password-reset emails. Unset it falls back to http://localhost:3000,
-  // which shipped localhost links to real users once — so in production it is
-  // boot-critical. (localhost is fine in dev, hence no warning there.)
+  // APP_URL is baked into every link that leaves the server, and BOTH services
+  // emit links — which is why the explanation names the ones that apply here
+  // rather than a generic list. Unset, it falls back to http://localhost:3000,
+  // which shipped localhost links to real users once, so in production it is
+  // boot-critical. (localhost is fine in dev, hence no check there.)
   const appUrl = process.env.APP_URL?.trim() ?? "";
   if (isProd && (appUrl === "" || /localhost|127\.0\.0\.1/i.test(appUrl))) {
+    const uses = isWeb
+      ? "booking manage links, password-reset emails and the salon link in Settings"
+      : "the dashboard link inside every Web Push notification (worker/processors/push.ts)";
     failures.push(
-      `APP_URL is ${appUrl === "" ? "unset" : `"${appUrl}"`} — customer-facing links ` +
-        "(booking manage links, password-reset emails, the salon link in Settings) " +
+      `APP_URL is ${appUrl === "" ? "unset" : `"${appUrl}"`} — ${uses} ` +
         "would point at localhost. Set it to the public origin, e.g. https://salonbook.az",
     );
   }
@@ -276,7 +288,7 @@ export function assertEnv(service: ServiceRole = "web"): void {
     if (isPlaceholder(value)) console.warn(`[env] WARNING: ${message}`);
   }
 
-  checkDatabaseUrls();
+  checkDatabaseUrls(isWeb);
 
   if (failures.length > 0) {
     throw new Error(
