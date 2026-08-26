@@ -64,6 +64,28 @@ const optionCls = (selected: boolean) =>
     ? "border-accent bg-accent/10"
     : "border-border bg-muted hover:border-border-strong");
 
+// The booking API answers every failure with a stable `code` (see
+// src/app/api/public/[slug]/book/route.ts). Mapping them here keeps the API
+// locale-neutral — it also serves the manage widget — while the customer sees
+// their own language.
+//
+// PLAN_LIMIT and SALON_NOT_FOUND deliberately share one neutral message: both
+// mean "you cannot book here right now", and the reason is the salon's business,
+// not the visitor's.
+const BOOKING_ERROR_KEYS: Record<string, string> = {
+  RATE_IP: "errors.rateLimited",
+  RATE_PHONE: "errors.ratePhone",
+  RATE_OUTBOUND: "errors.ratePhone",
+  RATE_SALON: "errors.rateSalon",
+  INVALID_BODY: "errors.incomplete",
+  TOO_FAR: "errors.tooFar",
+  CAPTCHA: "errors.confirmHuman",
+  SERVICE_MISMATCH: "errors.serviceMismatch",
+  SALON_NOT_FOUND: "errors.salonUnavailable",
+  PLAN_LIMIT: "errors.salonUnavailable",
+  SERVER: "errors.bookingFailed",
+};
+
 export function BookingWidget({
   slug,
   salonAudience,
@@ -364,7 +386,11 @@ export function BookingWidget({
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        manageUrl?: string;
+      };
       if (!res.ok) {
         // The server consumed the token during verification; get a new one.
         resetTurnstile();
@@ -379,7 +405,10 @@ export function BookingWidget({
           setError(t("errors.slotTaken"));
           return;
         }
-        setError(data.error ?? t("errors.bookingFailed"));
+        // Never render data.error: it is English, and for PLAN_LIMIT it used to
+        // spell out the salon's tier and monthly quota to whoever tried to book.
+        const key = data.code ? BOOKING_ERROR_KEYS[data.code] : undefined;
+        setError(t(key ?? "errors.bookingFailed"));
         return;
       }
       setDone({

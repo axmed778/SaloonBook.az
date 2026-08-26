@@ -55,9 +55,15 @@ const bodySchema = z.object({
   turnstileToken: z.string().max(2048).optional(),
 });
 
-function tooMany(resetSec: number, message: string) {
+// Every failure carries a stable `code`. The public booking form is the one
+// surface a customer sees, and it renders the response verbatim — so English
+// strings from here reached Azerbaijani and Russian visitors mid-booking, and the
+// plan-limit one told them which tier the salon is on and how many bookings it
+// gets. `error` stays as a short English string for logs and any non-browser
+// caller; the widget localises off `code` and never displays `error`.
+function tooMany(resetSec: number, code: string, message: string) {
   return NextResponse.json(
-    { error: message },
+    { error: message, code },
     { status: 429, headers: { "Retry-After": String(resetSec) } },
   );
 }
@@ -71,12 +77,15 @@ export async function POST(
 
   // 1) IP rate limit first — shed obvious abuse before doing any DB work.
   const ipRl = await rateLimit(`book:ip:${ip}`, LIMITS.ip.limit, LIMITS.ip.windowSec);
-  if (!ipRl.allowed) return tooMany(ipRl.resetSec, "Too many requests. Please slow down.");
+  if (!ipRl.allowed) return tooMany(ipRl.resetSec, "RATE_IP", "Too many requests.");
 
   const json = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid body", issues: parsed.error.issues }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid body", code: "INVALID_BODY", issues: parsed.error.issues },
+      { status: 400 },
+    );
   }
 
   // Booking horizon: reject dates beyond the public window (mirrors the
@@ -92,7 +101,10 @@ export async function POST(
   // 2) CAPTCHA / Turnstile (no-op unless TURNSTILE_SECRET_KEY is set).
   const captchaOk = await verifyTurnstile(parsed.data.turnstileToken, ip);
   if (!captchaOk) {
-    return NextResponse.json({ error: "Captcha verification failed" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Captcha verification failed", code: "CAPTCHA" },
+      { status: 403 },
+    );
   }
 
   const salon = await prisma.salon.findUnique({
@@ -100,7 +112,10 @@ export async function POST(
     select: { id: true, status: true },
   });
   if (!salon || salon.status !== "ACTIVE") {
-    return NextResponse.json({ error: "Salon not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Salon not found", code: "SALON_NOT_FOUND" },
+      { status: 404 },
+    );
   }
 
   // 3) Per-phone and per-salon limits.
@@ -110,7 +125,7 @@ export async function POST(
     LIMITS.phone.windowSec,
   );
   if (!phoneRl.allowed) {
-    return tooMany(phoneRl.resetSec, "Too many bookings for this phone. Try again later.");
+    return tooMany(phoneRl.resetSec, "RATE_PHONE", "Too many bookings for this phone.");
   }
   const salonRl = await rateLimit(
     `book:salon:${salon.id}`,
@@ -118,7 +133,7 @@ export async function POST(
     LIMITS.salon.windowSec,
   );
   if (!salonRl.allowed) {
-    return tooMany(salonRl.resetSec, "This salon is receiving too many requests. Try again later.");
+    return tooMany(salonRl.resetSec, "RATE_SALON", "This salon is receiving too many requests.");
   }
 
   // Confirm the employee can perform the service, in this salon.
@@ -132,7 +147,10 @@ export async function POST(
     select: { serviceId: true },
   });
   if (!link) {
-    return NextResponse.json({ error: "This employee can't perform that service" }, { status: 400 });
+    return NextResponse.json(
+      { error: "This employee can't perform that service", code: "SERVICE_MISMATCH" },
+      { status: 400 },
+    );
   }
 
   // 4) Outbound notification hard cap for this phone. PEEK (read-only) before
@@ -144,6 +162,7 @@ export async function POST(
   if (!outboundOk) {
     return tooMany(
       LIMITS.outboundPerPhone.windowSec,
+      "RATE_OUTBOUND",
       "This phone has reached its notification limit for now.",
     );
   }
@@ -189,15 +208,25 @@ export async function POST(
     });
   } catch (e) {
     if (e instanceof SlotTakenError) {
-      return NextResponse.json({ error: e.message }, { status: 409 });
+      return NextResponse.json({ error: e.message, code: "SLOT_TAKEN" }, { status: 409 });
     }
     if (e instanceof SlotUnavailableError) {
       return NextResponse.json({ error: e.message, code: "SLOT_UNAVAILABLE" }, { status: 409 });
     }
     if (e instanceof PlanLimitError) {
-      return NextResponse.json({ error: e.message, code: "PLAN_LIMIT" }, { status: 402 });
+      // e.message names the plan and its quota. That is useful in a log and
+      // nobody's business on a public booking page — it tells any visitor, and
+      // any competitor, exactly what the salon pays for. Log it, send a code.
+      console.warn(`[book] plan limit for salon ${salon.id}: ${e.message}`);
+      return NextResponse.json(
+        { error: "Plan limit reached", code: "PLAN_LIMIT" },
+        { status: 402 },
+      );
     }
     console.error("[book] error", e);
-    return NextResponse.json({ error: "Could not create booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not create booking", code: "SERVER" },
+      { status: 500 },
+    );
   }
 }
