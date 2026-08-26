@@ -8,6 +8,7 @@
 // channel. The single dev-only code log (unconfigured channels) is guarded by
 // NODE_ENV so it can never fire in production.
 import { sendWhatsAppTemplate } from "./whatsapp";
+import { HTTP_TIMEOUT_MS } from "./http";
 
 export type OtpChannel = "whatsapp" | "sms";
 
@@ -67,6 +68,7 @@ async function trySendSms(phone: string, code: string): Promise<"sent" | "unconf
       From: from,
       Body: `SalonBook.az təsdiq kodunuz: ${code}`,
     }),
+    signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`SMS send failed (${res.status}): ${await res.text()}`);

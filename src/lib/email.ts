@@ -4,6 +4,8 @@
 // needs no key. EMAIL_FROM must be a Resend-verified sender in production;
 // the default onboarding@resend.dev works out of the box for testing.
 
+import { HTTP_TIMEOUT_MS } from "./http";
+
 const RESEND_API = "https://api.resend.com/emails";
 
 export interface SendEmailInput {
@@ -35,6 +37,7 @@ export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ from, to, subject, html }),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
