@@ -153,6 +153,42 @@ Two services from this repo:
 
 Plus managed Postgres (`btree_gist` enabled) and Redis.
 
+### Postgres connection strings (Neon)
+
+Two URLs, and mixing them up is the difference between a compute that
+autosuspends and one that bills CU-hours all day:
+
+| Variable | Endpoint | Used by | Why |
+|---|---|---|---|
+| `DATABASE_URL` | **pooled** — `-pooler` in the hostname | every runtime query (web + worker) | client connections terminate at Neon's PgBouncer, so the compute sees few short-lived backends and can reach its 5-min autosuspend |
+| `DIRECT_URL` | **direct** — no `-pooler` | `prisma migrate` / `db push` only (`directUrl` in `prisma/schema.prisma`) | migrations hold advisory locks and run DDL that a transaction-mode pooler breaks |
+
+Append `?sslmode=require&pgbouncer=true&connection_limit=5&pool_timeout=10` to
+`DATABASE_URL`. `pgbouncer=true` stops Prisma using named prepared statements
+(transaction pooling can't carry them); `connection_limit` caps a pool that
+otherwise defaults to `num_cpus * 2 + 1` **per client, per process** — and web,
+worker, and every `tsx scripts/...` run are separate processes.
+
+`assertEnv()` (`src/lib/env.ts`) warns at boot if these are wired backwards. It
+only fires for `*.neon.tech` hosts — a local or Railway Postgres has no
+pooled/direct split, so set both to the same value there.
+
+**What keeps the compute awake.** On a scale-to-zero database, anything that
+touches Postgres more often than every ~5 minutes prevents autosuspend
+regardless of how cheap the query is. Two in-process timers in `worker/index.ts`
+do exactly that; both are tunable without a code change, and both may be set to
+`0` to disable:
+
+| Env var | Default | What it does |
+|---|---|---|
+| `NOTIFICATION_SWEEP_INTERVAL_MS` | `600000` (10 min) | re-enqueues stuck `QUEUED` notifications — a fallback for a Redis incident, not the delivery path |
+| `RECONCILE_INTERVAL_MS` | `3600000` (1 h) | auto-completes appointments past a **48 h** cutoff |
+
+`GET /api/health` is shallow (process only, no DB, no Redis) so an uptime
+monitor pointed at it cannot wake the compute. Use `GET /api/health?deep=1` —
+which does probe Postgres and Redis, and returns 503 when either is down — only
+by hand or from something that runs a few times an hour at most.
+
 ## Plans (marketing tiers in `MARKETING_PLANS`, limits in `PLAN_LIMITS` — `src/lib/plans.ts`)
 
 | Plan | Employees | Bookings/mo | Branches | WhatsApp reminders/mo | Price | Annual |

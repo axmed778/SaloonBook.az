@@ -10,11 +10,10 @@
 // records a Payment row, and writes an AuditLog entry. Extending an already
 // ACTIVE sub adds months on top of the current period end (not on today), so
 // paying early never loses days.
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import { PLAN_LIMITS } from "../src/lib/plans";
 import { addMonths } from "../src/lib/time";
 
-const prisma = new PrismaClient();
 
 function fmt(d: Date | null): string {
   return d ? d.toISOString().slice(0, 10) : "—";

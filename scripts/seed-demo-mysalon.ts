@@ -10,14 +10,14 @@
  * Run against whatever DATABASE_URL is set, e.g. (PowerShell):
  *   $env:DATABASE_URL="<prod-neon-url>"; npx tsx scripts/seed-demo-mysalon.ts
  */
-import { PrismaClient, Audience, AppointmentStatus } from "@prisma/client";
+import { Audience, AppointmentStatus } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import {
   bakuWallClockToUtc,
   bakuToday,
   bakuMinutesOfDay,
 } from "../src/lib/time";
 
-const prisma = new PrismaClient();
 
 const SALON_SLUG = "mysalon";
 const DAYS_BACK = 7; // completed history so the calendar/analytics look alive

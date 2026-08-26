@@ -21,6 +21,79 @@ function isPlaceholder(v: string | undefined): boolean {
   return v === undefined || PLACEHOLDERS.has(v.trim());
 }
 
+/**
+ * Warns when the Postgres connection strings are wired the wrong way round for
+ * a scale-to-zero provider (Neon). Warn-only on purpose: a mis-pointed URL is a
+ * COST and autosuspend problem, never a correctness or security one, and a
+ * self-hosted/Railway Postgres legitimately has neither a pooled endpoint nor a
+ * `-pooler` hostname — those deployments should see nothing here.
+ *
+ * What we want, and why:
+ *   DATABASE_URL -> POOLED  ("-pooler" host) + `pgbouncer=true`
+ *     Runtime queries. PgBouncer terminates the client connections, so the
+ *     compute sees few, short-lived backend connections and can reach its
+ *     5-minute autosuspend window. `pgbouncer=true` tells Prisma to stop using
+ *     named prepared statements, which transaction-mode pooling cannot carry.
+ *   DIRECT_URL   -> DIRECT  (no "-pooler")
+ *     Migrations only. `prisma migrate` takes advisory locks and runs DDL that
+ *     must stay on one real backend connection for the whole session.
+ */
+function checkDatabaseUrls(): void {
+  const warn = (m: string) => console.warn(`[env] WARNING: ${m}`);
+
+  const parse = (raw: string | undefined): URL | null => {
+    if (!raw || raw.trim() === "") return null;
+    try {
+      return new URL(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const runtime = parse(process.env.DATABASE_URL);
+  const direct = parse(process.env.DIRECT_URL);
+
+  // Only Neon has the pooled/direct split this check is about. Anything else
+  // (local Postgres, Railway Postgres, embedded-pg) is left alone.
+  const isNeon = (u: URL | null) => u !== null && u.hostname.endsWith(".neon.tech");
+  if (!isNeon(runtime) && !isNeon(direct)) return;
+
+  const pooled = (u: URL) => u.hostname.includes("-pooler");
+
+  if (runtime && isNeon(runtime)) {
+    if (!pooled(runtime)) {
+      warn(
+        "DATABASE_URL points at Neon's DIRECT endpoint (no '-pooler' in the hostname). " +
+          "Every app/worker connection then lands on the compute itself, which keeps it " +
+          "awake and burns CU-hours. Use the pooled endpoint for runtime queries and keep " +
+          "the direct one in DIRECT_URL for migrations.",
+      );
+    } else if (runtime.searchParams.get("pgbouncer") !== "true") {
+      warn(
+        "DATABASE_URL uses Neon's pooled endpoint but is missing '?pgbouncer=true'. " +
+          "Prisma will keep issuing named prepared statements, which PgBouncer's " +
+          "transaction mode cannot carry — expect intermittent " +
+          "'prepared statement \"s0\" already exists' errors under load.",
+      );
+    }
+  }
+
+  if (direct && isNeon(direct) && pooled(direct)) {
+    warn(
+      "DIRECT_URL points at Neon's POOLED endpoint ('-pooler' in the hostname). " +
+        "Migrations need a direct connection — `prisma migrate deploy` can hang or fail " +
+        "on its advisory lock through a transaction-mode pooler.",
+    );
+  }
+
+  if (isNeon(runtime) && !direct) {
+    warn(
+      "DIRECT_URL is unset while DATABASE_URL is a Neon URL. `prisma migrate` " +
+        "(schema.prisma's directUrl) has no unpooled connection to use.",
+    );
+  }
+}
+
 /** Which deployment is booting — they have different required variables. */
 export type ServiceRole = "web" | "worker";
 
@@ -202,6 +275,8 @@ export function assertEnv(service: ServiceRole = "web"): void {
   for (const [value, message] of warnings) {
     if (isPlaceholder(value)) console.warn(`[env] WARNING: ${message}`);
   }
+
+  checkDatabaseUrls();
 
   if (failures.length > 0) {
     throw new Error(

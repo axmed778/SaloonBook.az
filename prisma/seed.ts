@@ -1,9 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import { TRIAL_DAYS } from "../src/lib/plans";
 import { hashPassword, passwordIssues } from "../src/lib/auth/password";
 import { addDays, bakuToday, bakuWallClockToUtc } from "../src/lib/time";
 
-const prisma = new PrismaClient();
 
 // Create one appointment on a given Baku day/time. endsAt = start + duration + buffer
 // (the same window the booking engine blocks). Non-overlapping per employee so the
