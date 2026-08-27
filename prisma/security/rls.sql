@@ -68,8 +68,9 @@ $fn$ SELECT current_user = 'salonbook_app' $fn$;
 DO $$
 DECLARE
   t text;
-  -- Every table carrying tenant data. Salon is keyed by its own id; the rest by
-  -- salonId. Keep in sync with the schema when a new salon-scoped table is
+  -- Every table carrying tenant data. Salon is keyed by its own id, most of the
+  -- rest by salonId, and the last three through their parent employee/service.
+  -- Keep in sync with the schema when a new salon-scoped table is
   -- added — the drift assertion in src/lib/tenant.rls.test.ts fails CI if you
   -- forget.
   --
@@ -81,20 +82,21 @@ DECLARE
   --   Membership       — salonId is NULLABLE (schema.prisma:75): OWNER rows
   --                      carry NULL, so a salonId-keyed policy would hide every
   --                      owner from getSession(). Account-scoped, not salon-scoped.
-  --   WorkingHour, TimeOff, ServiceEmployee — no salonId column at all; they
-  --                      hang off employeeId/serviceId. Would need a
-  --                      denormalizing migration first.
   --   Account, Subscription, Payment, Invite, AuditLog — account-scoped; a
   --                      single-valued app.current_salon cannot express them.
   --   User, PasswordResetToken, Client — not tenant data.
   tenant_tables text[] := ARRAY[
     'Salon', 'Employee', 'Service', 'Customer', 'Appointment',
-    'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review'
+    'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review',
+    'WorkingHour', 'TimeOff', 'ServiceEmployee'
   ];
   salon_id_tables text[] := ARRAY[
     'Employee', 'Service', 'Customer', 'Appointment',
     'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review'
   ];
+  -- No salonId column of their own: they hang off an employee. Scoped one hop
+  -- away instead of via a denormalizing migration + backfill.
+  employee_ref_tables text[] := ARRAY['WorkingHour', 'TimeOff'];
 BEGIN
   FOREACH t IN ARRAY tenant_tables LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
@@ -122,5 +124,52 @@ BEGIN
       t
     );
   END LOOP;
+
+  -- Indirectly scoped tables. Same GUC, same deny-when-unset branch, same
+  -- policy name — the only difference is that the tenant is read off the parent
+  -- row instead of a local column, because these tables have no salonId. The
+  -- lookup is by primary key, and the (SELECT ...) wrappers keep the GUC an
+  -- InitPlan, so the extra hop costs an index probe per row at worst.
+  --
+  -- The parent read is itself subject to "Employee"/"Service" RLS, which is
+  -- exactly what we want: it can only ever narrow the match, never widen it.
+  -- The resulting invariant is what makes this safe to apply to a live app —
+  -- a child row is visible exactly when its parent is, so no call site that can
+  -- already read the employee inside its scope loses its hours or time off.
+  FOREACH t IN ARRAY employee_ref_tables LOOP
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON %1$I '
+      || 'USING (EXISTS (SELECT 1 FROM "Employee" e '
+      || '                WHERE e.id = %1$I."employeeId" '
+      || '                  AND e."salonId" = (SELECT app_current_salon())) '
+      || '  OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict()))) '
+      || 'WITH CHECK (EXISTS (SELECT 1 FROM "Employee" e '
+      || '                WHERE e.id = %1$I."employeeId" '
+      || '                  AND e."salonId" = (SELECT app_current_salon())) '
+      || '  OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))',
+      t
+    );
+  END LOOP;
+
+  -- ServiceEmployee is a junction with no id of its own, so BOTH parents must
+  -- land in the current tenant. Checking only one side would let a scoped
+  -- caller staple its own employee onto another salon's service.
+  EXECUTE $p$
+    CREATE POLICY tenant_isolation ON "ServiceEmployee"
+      USING ((EXISTS (SELECT 1 FROM "Employee" e
+                       WHERE e.id = "ServiceEmployee"."employeeId"
+                         AND e."salonId" = (SELECT app_current_salon()))
+              AND EXISTS (SELECT 1 FROM "Service" s
+                           WHERE s.id = "ServiceEmployee"."serviceId"
+                             AND s."salonId" = (SELECT app_current_salon())))
+             OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))
+      WITH CHECK ((EXISTS (SELECT 1 FROM "Employee" e
+                       WHERE e.id = "ServiceEmployee"."employeeId"
+                         AND e."salonId" = (SELECT app_current_salon()))
+              AND EXISTS (SELECT 1 FROM "Service" s
+                           WHERE s.id = "ServiceEmployee"."serviceId"
+                             AND s."salonId" = (SELECT app_current_salon())))
+             OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))
+  $p$;
 END
 $$;

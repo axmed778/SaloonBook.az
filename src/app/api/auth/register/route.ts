@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { localeFromCookie } from "@/i18n/request-locale";
 import { TRIAL_DAYS } from "@/lib/plans";
 import { addDays } from "@/lib/time";
 import { LEGAL_VERSIONS } from "@/lib/legal";
+import { rejectCrossOrigin } from "../_origin";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,9 @@ const bodySchema = z
     legalConsent: z.literal(true),
     // Optional marketing opt-in.
     marketing: z.boolean().optional(),
+    // CAPTCHA token from the form. Required only when TURNSTILE_SECRET_KEY is
+    // configured (see src/lib/turnstile.ts).
+    turnstileToken: z.string().max(2048).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Şifrələr uyğun gəlmir.",
@@ -67,6 +72,9 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const csrf = rejectCrossOrigin(req);
+  if (csrf) return csrf;
+
   const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
 
   const ip = clientIp(req);
@@ -92,6 +100,12 @@ export async function POST(req: NextRequest) {
   }
   const { email, password, salonName, audience, fullName, marketing } = parsed.data;
 
+  // No-op unless Turnstile is configured, so an unconfigured deploy keeps
+  // accepting signups rather than rejecting everyone.
+  if (!(await verifyTurnstile(parsed.data.turnstileToken, ip))) {
+    return NextResponse.json({ error: t("api.captchaFailed") }, { status: 403 });
+  }
+
   // Enforce password policy server-side (the client also shows the rules).
   const issueCodes = passwordIssues(password);
   if (issueCodes.length > 0) {
@@ -109,7 +123,7 @@ export async function POST(req: NextRequest) {
   }
 
   const slug = await uniqueSlug(slugify(salonName));
-  const passwordHash = hashPassword(password);
+  const passwordHash = await hashPassword(password);
 
   // Every self-serve signup gets a no-card trial with a real end date —
   // effectivePlan() downgrades to FREE limits the moment it lapses.

@@ -32,7 +32,7 @@ const inputCls =
 const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
 const cardCls = "rounded-xl border border-border bg-card p-5";
 const saveBtn =
-  "rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60";
+  "rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60";
 
 type SalonData = {
   name: string;
@@ -614,7 +614,7 @@ function BranchesCard({ section, onSaved }: { section: BranchSection; onSaved: (
           <p className="mt-1 text-sm text-muted-foreground">{t("branches.proTeaserBody")}</p>
           <Link
             href="/dashboard/billing"
-            className="mt-3 inline-block rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+            className="mt-3 inline-block rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             {t("branches.proTeaserCta")}
           </Link>

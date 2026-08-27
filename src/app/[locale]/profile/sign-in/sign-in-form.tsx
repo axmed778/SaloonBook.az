@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { TurnstileBox, useTurnstile } from "../../_lib/turnstile-widget";
 
 type Step = "phone" | "code";
 type Channel = "whatsapp" | "sms";
@@ -24,6 +25,7 @@ export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const turnstile = useTurnstile();
 
   const phone = `+994${local}`;
   const phoneValid = /^\d{9}$/.test(local);
@@ -43,12 +45,21 @@ export function SignInForm() {
   async function requestCode(forceSms: boolean) {
     setError(null);
     setInfo(null);
+    if (turnstile.blocked) {
+      setError(t("errors.captcha_required"));
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/client/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, consent: true, sms: forceSms }),
+        body: JSON.stringify({
+          phone,
+          consent: true,
+          sms: forceSms,
+          turnstileToken: turnstile.token ?? undefined,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         channel?: Channel;
@@ -73,6 +84,9 @@ export function SignInForm() {
     } catch {
       setError(t("errors.network"));
     } finally {
+      // Every request — including a resend — spends the token, so always arm a
+      // fresh challenge afterwards.
+      turnstile.reset();
       setBusy(false);
     }
   }
@@ -162,7 +176,7 @@ export function SignInForm() {
           <button
             type="submit"
             disabled={busy || !phoneValid || !consent}
-            className="rounded-lg bg-rose-500 px-4 py-2 font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            className="rounded-lg bg-rose-600 px-4 py-2 font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
           >
             {busy ? t("sending") : t("sendCode")}
           </button>
@@ -197,7 +211,7 @@ export function SignInForm() {
           <button
             type="submit"
             disabled={busy || !/^\d{6}$/.test(code)}
-            className="rounded-lg bg-rose-500 px-4 py-2 font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            className="rounded-lg bg-rose-600 px-4 py-2 font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
           >
             {busy ? t("verifying") : t("verify")}
           </button>
@@ -234,6 +248,10 @@ export function SignInForm() {
           </button>
         </form>
       )}
+
+      {/* Mounted outside the two steps: "resend" and "send via SMS" live on the
+          code step and request a code too, so the widget has to survive the switch. */}
+      <TurnstileBox turnstile={turnstile} />
 
       <p className="text-center text-xs text-faint-foreground">
         <Link href="/" className="hover:text-foreground">

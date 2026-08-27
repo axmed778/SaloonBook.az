@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { AUDIENCE_OPTIONS, type Audience } from "@/lib/audience";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { TurnstileBox, useTurnstile } from "../_lib/turnstile-widget";
 
 export default function RegisterPage() {
   const t = useTranslations("Auth");
@@ -24,6 +25,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const turnstile = useTurnstile();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +33,10 @@ export default function RegisterPage() {
     setIssues([]);
     if (!legalConsent) {
       setError(t("register.consentRequired"));
+      return;
+    }
+    if (turnstile.blocked) {
+      setError(t("confirmHuman"));
       return;
     }
     setSubmitting(true);
@@ -47,10 +53,14 @@ export default function RegisterPage() {
           confirmPassword,
           legalConsent: true,
           marketing: marketingConsent,
+          turnstileToken: turnstile.token ?? undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // The server consumed the token on its verify call, so a retry needs a
+        // fresh one.
+        turnstile.reset();
         setError(data.error ?? t("register.failed"));
         if (Array.isArray(data.issues)) {
           setIssues(
@@ -66,6 +76,7 @@ export default function RegisterPage() {
       router.push("/dashboard");
       router.refresh();
     } catch {
+      turnstile.reset();
       setError(t("networkError"));
     } finally {
       setSubmitting(false);
@@ -225,6 +236,8 @@ export default function RegisterPage() {
             <span>{t("register.marketingConsent")}</span>
           </label>
         </div>
+
+        <TurnstileBox turnstile={turnstile} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {issues.length > 0 && (

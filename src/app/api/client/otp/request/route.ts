@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { createOtp } from "@/lib/auth/otp";
 import { sendOtp } from "@/lib/otp-sender";
 
@@ -13,6 +14,7 @@ const schema = z.object({
   phone: z.string().regex(/^\+994\d{9}$/),
   consent: z.literal(true),
   sms: z.boolean().optional(), // user tapped "send via SMS instead"
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,6 +24,16 @@ export async function POST(req: NextRequest) {
   }
   const { phone, sms } = parsed.data;
   const ip = clientIp(req);
+
+  // Every OTP request costs real money (WhatsApp/SMS) and burns quota on a
+  // number Meta rates us on, so this endpoint gets the same challenge as login
+  // and booking. verifyTurnstile keeps its usual semantics: a no-op when
+  // Turnstile is unconfigured, so an unconfigured deploy can still sign people
+  // in. The rate limits below stay — the challenge raises the cost per attempt,
+  // it does not bound the total.
+  if (!(await verifyTurnstile(parsed.data.turnstileToken, ip))) {
+    return NextResponse.json({ error: "captcha_required" }, { status: 403 });
+  }
 
   // Per-phone and per-IP request limits (on top of the per-code 60s cooldown).
   const [ipRl, phoneRl] = await Promise.all([

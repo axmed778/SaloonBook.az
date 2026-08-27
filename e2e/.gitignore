@@ -1,0 +1,3 @@
+# Playwright output (traces, screenshots, HTML report) — see playwright.config.ts,
+# which redirects both outputDir and the report here so the repo root stays clean.
+.artifacts/

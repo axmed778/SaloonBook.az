@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
+import { rejectCrossOrigin } from "../_origin";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,9 @@ const LIMITS = {
 const bodySchema = z.object({ email: z.string().email().max(254) });
 
 export async function POST(req: NextRequest) {
+  const csrf = rejectCrossOrigin(req);
+  if (csrf) return csrf;
+
   const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
 
   const ip = clientIp(req);

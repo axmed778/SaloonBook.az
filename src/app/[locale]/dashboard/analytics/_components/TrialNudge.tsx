@@ -12,7 +12,7 @@ function Cta({ children }: { children: string }) {
   return (
     <Link
       href={BILLING_HREF}
-      className="inline-flex shrink-0 items-center rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400"
+      className="inline-flex shrink-0 items-center rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700"
     >
       {children}
     </Link>

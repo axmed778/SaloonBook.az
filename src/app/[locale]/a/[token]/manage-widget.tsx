@@ -49,6 +49,8 @@ export function ManageWidget({
   const [day, setDay] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
+  const [slotsReload, setSlotsReload] = useState(0);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,19 +59,28 @@ export function ManageWidget({
   useEffect(() => {
     if (mode !== "reschedule" || !day) {
       setSlots(null);
+      setSlotsError(false);
       return;
     }
     let cancelled = false;
     setSlotsLoading(true);
     setSlots(null);
     setSlot(null);
+    setSlotsError(false);
     fetch(`/api/public/manage/${token}?date=${day}`)
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        // A non-2xx (or a non-JSON body) must NOT read as "no free slots" — the
+        // customer would walk away believing the salon is fully booked. Treat it
+        // as a load error so they get a retry instead of a dead end.
+        if (!r.ok) throw new Error(`manage slots ${r.status}`);
+        const data = await r.json();
         if (!cancelled) setSlots(Array.isArray(data.slots) ? data.slots : []);
       })
       .catch(() => {
-        if (!cancelled) setSlots([]);
+        if (!cancelled) {
+          setSlots(null);
+          setSlotsError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setSlotsLoading(false);
@@ -77,7 +88,7 @@ export function ManageWidget({
     return () => {
       cancelled = true;
     };
-  }, [mode, day, token]);
+  }, [mode, day, token, slotsReload]);
 
   async function post(body: object): Promise<boolean> {
     setBusy(true);
@@ -257,6 +268,16 @@ export function ManageWidget({
                     className="h-[34px] animate-pulse rounded-lg border border-border bg-muted"
                   />
                 ))}
+              </div>
+            ) : slotsError ? (
+              <div className="rounded-lg border border-danger/30 bg-danger/5 p-4 text-center">
+                <p className="text-sm text-foreground">{t("reschedule.slotsError")}</p>
+                <button
+                  onClick={() => setSlotsReload((n) => n + 1)}
+                  className="mt-2 text-sm font-medium text-accent hover:underline"
+                >
+                  {t("reschedule.retry")}
+                </button>
               </div>
             ) : slots && slots.length > 0 ? (
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">

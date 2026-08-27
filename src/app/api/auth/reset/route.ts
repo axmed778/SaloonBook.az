@@ -7,6 +7,7 @@ import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
+import { rejectCrossOrigin } from "../_origin";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,9 @@ const bodySchema = z
   });
 
 export async function POST(req: NextRequest) {
+  const csrf = rejectCrossOrigin(req);
+  if (csrf) return csrf;
+
   const t = await getTranslations({ locale: await localeFromCookie(), namespace: "Auth" });
 
   const ipRl = await rateLimit(`reset:ip:${clientIp(req)}`, 10, 900);
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const passwordHash = hashPassword(parsed.data.password);
+  const passwordHash = await hashPassword(parsed.data.password);
   await prisma.$transaction([
     // Bump the session cutoff so any cookie stolen before the reset stops
     // working; the fresh cookie issued below (setSession) is minted after and

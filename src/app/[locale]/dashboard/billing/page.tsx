@@ -194,7 +194,7 @@ export default async function BillingPage() {
               href={waLink(t("waActivate", { salon: salonName, plan: p.name }))}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
             >
               <WhatsAppIcon className="h-4 w-4" />
               {t("choosePlan", { plan: p.name })}
@@ -249,7 +249,7 @@ export default async function BillingPage() {
               href={waLink(t("waSender.requestMessage", { salon: salonName }))}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
             >
               <WhatsAppIcon className="h-4 w-4" />
               {t("waSender.requestCta")}

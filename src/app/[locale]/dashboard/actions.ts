@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { acceptSalonConsents } from "@/lib/legal-consent";
-import { enqueueNotification } from "@/lib/queue";
+import { bestEffortEnqueue, enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, isSlotBookable, type Slot } from "@/lib/availability";
 import {
   createBooking,
@@ -264,12 +264,10 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       },
       select: { id: true },
     });
-    // Best-effort: the row is persisted QUEUED either way.
-    try {
-      await enqueueNotification(notice.id);
-    } catch (e) {
-      console.error("[status] cancel-notice enqueue failed (row persisted)", e);
-    }
+    // Best-effort AND time-bounded: an unreachable Redis must not leave the
+    // staff member staring at a spinner after the status change already
+    // committed. The row is persisted QUEUED either way.
+    await bestEffortEnqueue("status", () => enqueueNotification(notice.id));
   }
 
   revalidatePath("/dashboard");
@@ -414,15 +412,16 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
     return { ok: false, error: t("bookingFailed") };
   }
 
-  // Best-effort enqueue; rows persist QUEUED and the sweep re-enqueues on failure.
-  for (const it of toEnqueue) {
-    if (it.delayMs !== undefined && it.delayMs <= 0) continue;
-    try {
+  // Best-effort enqueue; rows persist QUEUED and the sweep re-enqueues on
+  // failure. Bounded as one race rather than per row: with Redis down each
+  // await would otherwise hang on its own, multiplying the stall by the number
+  // of notifications a reschedule produces.
+  await bestEffortEnqueue("reschedule", async () => {
+    for (const it of toEnqueue) {
+      if (it.delayMs !== undefined && it.delayMs <= 0) continue;
       await enqueueNotification(it.id, it.delayMs);
-    } catch (e) {
-      console.error("[reschedule] enqueue failed (row persisted)", e);
     }
-  }
+  });
 
   revalidatePath("/dashboard");
   return { ok: true };

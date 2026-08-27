@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuPeriodYm } from "@/lib/time";
+import { deleteCustomerReviews } from "../../_lib/salon-rating";
 
 // Server actions for the Clients CRM. Same tenancy rules as every dashboard
 // action: salonId is re-derived from the session and used as a write guard in
@@ -224,22 +225,12 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
       // it, so deleting a customer who had ever left a review crashed the page
       // and the customer could never be removed — on the very path the data-
       // deletion page promises.
-      await tx.review.deleteMany({ where: { salonId, appointment: { customerId: id } } });
-
-      // Recompute the salon's denormalised rating from what is left rather than
-      // decrementing by what we removed. Same cost at this scale, and it cannot
-      // drift below zero or inherit drift from anywhere else: ratingSum has no
-      // decrement path anywhere in the app, so this is currently the only thing
-      // that can bring an inflated aggregate back down.
-      const agg = await tx.review.aggregate({
-        where: { salonId },
-        _count: { _all: true },
-        _sum: { rating: true },
-      });
-      await tx.salon.update({
-        where: { id: salonId },
-        data: { ratingCount: agg._count._all, ratingSum: agg._sum.rating ?? 0 },
-      });
+      //
+      // The helper also subtracts the removed stars from the salon's
+      // denormalized rating in this same transaction — without that the deleted
+      // reviews kept counting towards the public rating and the discovery
+      // min-rating filter forever.
+      await deleteCustomerReviews(tx, salonId, id);
 
       await tx.notification.deleteMany({
         where: { salonId, appointment: { customerId: id } },

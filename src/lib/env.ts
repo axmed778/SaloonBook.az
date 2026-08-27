@@ -266,9 +266,17 @@ export function assertEnv(service: ServiceRole = "web"): void {
     const uses = isWeb
       ? "booking manage links, password-reset emails and the salon link in Settings"
       : "the dashboard link inside every Web Push notification (worker/processors/push.ts)";
+    // The web service has a second, security-relevant use for it: the auth
+    // routes treat APP_URL as their canonical origin when rejecting cross-site
+    // POSTs, so the two reasons stay named in one place.
+    const alsoAuth = isWeb
+      ? " It is also the origin the auth routes accept POSTs from " +
+        "(src/app/api/auth/_origin.ts) — unset, they fall back to the Host header alone."
+      : "";
     failures.push(
       `APP_URL is ${appUrl === "" ? "unset" : `"${appUrl}"`} — ${uses} ` +
-        "would point at localhost. Set it to the public origin, e.g. https://salonbook.az",
+        "would point at localhost. Set it to the public origin, e.g. https://salonbook.az." +
+        alsoAuth,
     );
   }
   // Client phone-OTP sign-in needs a delivery channel: WhatsApp (the platform

@@ -98,7 +98,7 @@ export function LocationPicker({
     };
     // Mount-only: initial view is captured in refs; prop changes are handled
     // by the sync effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Mirror controlled props onto the marker (handles a parent "clear", and any
@@ -117,7 +117,7 @@ export function LocationPicker({
     if (!cur || Math.abs(cur.lat - lat) > 1e-7 || Math.abs(cur.lng - lng) > 1e-7) {
       placePin(L, map, lat, lng);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [lat, lng]);
 
   function useMyLocation() {

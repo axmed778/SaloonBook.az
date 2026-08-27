@@ -169,7 +169,7 @@ function SidebarContent({
         }
       >
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500 text-sm font-bold text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-600 text-sm font-bold text-white">
             S
           </span>
           {!collapsed && (

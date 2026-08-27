@@ -6,6 +6,7 @@ import { rescheduleSlots, rescheduleAppointment } from "../actions";
 import type { Slot } from "@/lib/availability";
 import { bakuToday, shiftYmd, formatBakuDate } from "@/lib/time";
 import type { TodayAppointment } from "./today-view";
+import { useModalA11y } from "@/components/use-modal-a11y";
 
 // Bottom sheet (mobile) / centred dialog (desktop) for moving an appointment to
 // another free slot. Reuses the existing rescheduleSlots + rescheduleAppointment
@@ -21,6 +22,7 @@ export function RescheduleSheet({
 }) {
   const t = useTranslations("Today");
   const locale = useLocale();
+  const { titleId, dialogProps } = useModalA11y(onClose);
   const today = bakuToday();
   const [day, setDay] = useState(today);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -61,10 +63,15 @@ export function RescheduleSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-border bg-card p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-frame sm:rounded-2xl">
+      <div
+        {...dialogProps}
+        className="relative z-10 w-full max-w-md rounded-t-2xl border border-border bg-card p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-frame focus:outline-none sm:rounded-2xl"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground">{t("rescheduleTitle")}</h2>
+            <h2 id={titleId} className="text-sm font-semibold text-foreground">
+              {t("rescheduleTitle")}
+            </h2>
             <p className="mt-0.5 truncate text-sm text-faint-foreground">
               {appt.clientName} · {appt.service}
             </p>

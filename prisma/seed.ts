@@ -66,7 +66,7 @@ async function seedAuthAccounts() {
         email: adminEmail,
         fullName: "Platform Admin",
         isPlatformAdmin: true,
-        passwordHash: hashPassword(adminPassword),
+        passwordHash: await hashPassword(adminPassword),
       },
     });
     console.log(`seed: created platform admin '${adminEmail}'.`);
@@ -110,7 +110,7 @@ async function seedAuthAccounts() {
     data: {
       email: salonOwnerEmail,
       fullName: "Salon Owner",
-      passwordHash: hashPassword(ownerPassword),
+      passwordHash: await hashPassword(ownerPassword),
     },
   });
 

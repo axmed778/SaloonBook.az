@@ -8,6 +8,7 @@ import { sweepSubscriptions } from "./processors/subscriptions";
 import { sweepNotifications } from "./processors/notification-sweep";
 import { reconcileOverdue } from "./processors/reconcile";
 import { writeWorkerHeartbeat, HEARTBEAT_INTERVAL_MS } from "../src/lib/worker-heartbeat";
+import { captureError } from "../src/lib/observability";
 
 // The worker is a separate long-lived process (Railway "worker" service). It
 // handles WhatsApp sending, scheduled reminders, and the nightly subscription
@@ -164,14 +165,34 @@ function logFatal(kind: string, err: unknown): void {
     }),
   );
 }
-process.on("uncaughtException", (e) => {
-  logFatal("uncaughtException", e);
-  process.exit(1);
-});
-process.on("unhandledRejection", (e) => {
-  logFatal("unhandledRejection", e);
-  process.exit(1);
-});
+
+// How long a dying worker will wait for its crash report to leave the process.
+// captureError's own fetches are AbortSignal-bounded already; this is the outer
+// guarantee that a hung reporter cannot delay the restart indefinitely.
+const FATAL_REPORT_TIMEOUT_MS = 5_000;
+
+/**
+ * Log the crash, push it out to Sentry/the alert webhook, then exit non-zero.
+ *
+ * The report has to be AWAITED: process.exit() tears the process down
+ * immediately, so a fire-and-forget fetch would be killed mid-flight and the
+ * one class of error most worth alerting on — the worker died and stopped
+ * sending — would never reach anyone. The timer is not unref'd on purpose: it
+ * guarantees the process still exits with code 1 even if the reporter stalls,
+ * and a clean exit here would look to Railway like a normal shutdown.
+ */
+function dieAfterReporting(kind: string, err: unknown): void {
+  logFatal(kind, err);
+  setTimeout(() => process.exit(1), FATAL_REPORT_TIMEOUT_MS);
+  void captureError(err, {
+    source: "worker",
+    level: "fatal",
+    tags: { kind },
+  }).finally(() => process.exit(1));
+}
+
+process.on("uncaughtException", (e) => dieAfterReporting("uncaughtException", e));
+process.on("unhandledRejection", (e) => dieAfterReporting("unhandledRejection", e));
 
 async function shutdown(signal: string) {
   console.log(`[worker] ${signal} received, shutting down...`);

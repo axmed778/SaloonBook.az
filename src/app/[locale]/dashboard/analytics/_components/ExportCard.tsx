@@ -97,7 +97,7 @@ export function ExportCard({ canExport }: { canExport: boolean }) {
             type="button"
             onClick={download}
             disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
           >
             <svg
               className="h-4 w-4"
@@ -118,7 +118,7 @@ export function ExportCard({ canExport }: { canExport: boolean }) {
           <p className="text-sm text-muted-foreground">{t("proBody")}</p>
           <Link
             href="/dashboard/billing"
-            className="mt-3 inline-flex items-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+            className="mt-3 inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             {t("upgrade")}
           </Link>

@@ -1,0 +1,154 @@
+name: Uptime
+
+# External monitoring. Everything else in this repo can only notice a problem
+# from inside the process that has the problem — if Railway drops the deployment,
+# or Neon refuses connections, or the container never finishes booting, nothing
+# in the app is alive to report it. This workflow runs somewhere else entirely,
+# so it still fires when the site is completely down.
+#
+# Two cadences on purpose, matching the split documented in
+# src/app/api/health/route.ts:
+#   */5  -> the SHALLOW probe. Process-only, touches no dependency, so it costs
+#           Neon nothing. This is the "is the site answering HTTP" signal.
+#   :23  -> the DEEP probe, hourly. It runs `SELECT 1` and a Redis PING, and on
+#           Neon every such query WAKES THE COMPUTE. Running the deep form every
+#           5 minutes would keep the database awake around the clock and bill
+#           CU-hours for a health check, which is the exact bug the shallow/deep
+#           split was introduced to fix. Hourly is enough: the deep probe catches
+#           a dead database or a dead worker, neither of which is a
+#           minutes-matter-more-than-cost failure.
+#
+# Two caveats about GitHub's scheduler, so nobody trusts this more than it
+# deserves: `*/5` is best-effort and runs late under load, and GitHub disables
+# scheduled workflows in a repository with no commits for 60 days. This is a
+# safety net, not a pager SLA.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: "Also probe the database, Redis and the worker heartbeat"
+        type: boolean
+        default: true
+
+# Never let a slow run pile up behind the previous one — at a 5-minute cadence
+# that is how you end up with a queue of hundreds of stuck jobs.
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BASE_URL: "https://salonbook.az"
+  # Workflow-level env is the only place a secret can be read into something a
+  # step's `if:` can test — the `secrets` context itself is not available in
+  # step conditions. Unset secret resolves to an empty string, which is what the
+  # alert step checks for.
+  ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      # LIVENESS. `--retry-all-errors` absorbs a single dropped connection or a
+      # cold start so one blip does not page anyone; three consecutive failures
+      # are a real outage.
+      - name: Liveness probe
+        id: liveness
+        run: |
+          set -uo pipefail
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+            --max-time 15 --retry 3 --retry-delay 5 --retry-all-errors \
+            "$BASE_URL/api/health" || echo "000")
+          echo "HTTP $code from $BASE_URL/api/health"
+          head -c 2000 /tmp/health.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "detail=liveness probe: GET /api/health returned HTTP $code (expected 200)" >> "$GITHUB_OUTPUT"
+            echo "::error::salonbook.az/api/health returned HTTP $code"
+            exit 1
+          fi
+
+      # READINESS. Since /api/health?deep=1 answers 503 when Postgres is
+      # unreachable, a non-200 here is a genuine outage rather than a formality.
+      #
+      # The worker liveness check the deep body's `worker` field provides is the
+      # only external view of the worker service: Railway healthchecks the web
+      # service only, and the worker has no HTTP surface of its own. It reports
+      # the heartbeat key from src/lib/worker-heartbeat.ts.
+      #   "stale"   -> the worker stopped beating: nothing is sending WhatsApp
+      #                reminders, while every other surface still looks fine.
+      #                This is the failure mode with no other alarm, so it FAILS.
+      #   "unknown" -> Redis did not answer, so this says nothing about the
+      #                worker either way. Warn, never fail — see the same
+      #                reasoning in the route itself.
+      - name: Deep probe (database, Redis, worker heartbeat)
+        id: deep
+        if: ${{ github.event.schedule == '23 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.deep) }}
+        run: |
+          set -uo pipefail
+          code=$(curl -sS -o /tmp/deep.json -w '%{http_code}' \
+            --max-time 30 --retry 2 --retry-delay 10 --retry-all-errors \
+            "$BASE_URL/api/health?deep=1" || echo "000")
+          echo "HTTP $code from $BASE_URL/api/health?deep=1"
+          head -c 2000 /tmp/deep.json || true
+          echo
+          # A 5xx body is often HTML from the edge, not JSON, so every jq read
+          # has to survive a parse failure.
+          db=$(jq -r '.db // "unknown"' /tmp/deep.json 2>/dev/null || echo "unknown")
+          redis=$(jq -r '.redis // "unknown"' /tmp/deep.json 2>/dev/null || echo "unknown")
+          worker=$(jq -r '.worker // "unknown"' /tmp/deep.json 2>/dev/null || echo "unknown")
+          echo "db=$db redis=$redis worker=$worker"
+
+          if [ "$code" != "200" ]; then
+            echo "detail=deep probe: GET /api/health?deep=1 returned HTTP $code (db=$db redis=$redis worker=$worker)" >> "$GITHUB_OUTPUT"
+            echo "::error::deep health check failed with HTTP $code (db=$db)"
+            exit 1
+          fi
+          if [ "$worker" = "stale" ]; then
+            echo "detail=deep probe: worker heartbeat is STALE - notifications and reminders are not being sent" >> "$GITHUB_OUTPUT"
+            echo "::error::worker heartbeat stale - the worker service is not running"
+            exit 1
+          fi
+          if [ "$redis" != "ok" ]; then
+            echo "::warning::redis reported '$redis' - rate limiting and queueing are degraded (site still serves)"
+          fi
+          if [ "$worker" = "unknown" ]; then
+            echo "::warning::worker state unknown - Redis did not answer, so the worker cannot be assessed"
+          fi
+
+      # A failed scheduled workflow only emails the repository owner, and that
+      # mail is easy to miss and easy to filter. Push the failure somewhere the
+      # owner actually watches. Skipped silently when the secret is not set, so
+      # the workflow is still useful (just quieter) without it.
+      - name: Notify the alert webhook
+        if: ${{ failure() && env.ALERT_WEBHOOK_URL != '' }}
+        env:
+          LIVENESS_DETAIL: ${{ steps.liveness.outputs.detail }}
+          DEEP_DETAIL: ${{ steps.deep.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          detail="${LIVENESS_DETAIL:-}${DEEP_DETAIL:-}"
+          if [ -z "$detail" ]; then
+            detail="the uptime workflow failed before it could describe why"
+          fi
+          text=$(printf 'SalonBook uptime check FAILED\n%s\n%s' "$detail" "$RUN_URL")
+          # `text` is what Slack/Discord/Telegram-bridge hooks render; the sibling
+          # fields match src/lib/observability.ts so both alert sources parse the
+          # same. Built with jq so quotes/newlines in the detail cannot break the
+          # JSON, and posted with --data @- so the URL never lands in the log.
+          jq -nc \
+            --arg text "$text" \
+            --arg detail "$detail" \
+            --arg run_url "$RUN_URL" \
+            '{text: $text, source: "uptime-workflow", level: "fatal", environment: "production", message: $detail, run_url: $run_url}' \
+            | curl -sS -X POST -H 'Content-Type: application/json' --data @- \
+                --max-time 15 --retry 2 --retry-delay 3 \
+                "$ALERT_WEBHOOK_URL" > /dev/null
+          echo "alert posted"

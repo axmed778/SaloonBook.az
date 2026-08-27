@@ -61,7 +61,7 @@ export default async function PayrollPage({
           </p>
           <Link
             href="/dashboard/billing"
-            className="mt-4 inline-flex items-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+            className="mt-4 inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             {t("upgradeToPro")}
           </Link>

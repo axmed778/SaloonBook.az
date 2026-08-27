@@ -33,6 +33,68 @@ const globalForPrisma = globalThis as unknown as {
   prismaRls?: PrismaClient;
 };
 
+// ---------------------------------------------------------------------------
+// Pool SIZE. Left alone, Prisma sizes the pool as num_cpus * 2 + 1 — a number
+// picked by whichever container the process lands on, so a shared-CPU Railway
+// instance gets a pool of 3. The dashboard analytics page fires ~15 queries in
+// one Promise.all; the tail of them then sit in Prisma's queue and, if the
+// queue outlives pool_timeout, fail with P2024 ("Timed out fetching a new
+// connection") rather than being slow.
+//
+// The numbers:
+//   connection_limit=10  Lets the analytics fan-out finish in two waves instead
+//     of five, with headroom for a couple of concurrent requests on top.
+//     Raising it is cheap HERE specifically: with runtime traffic on Neon's
+//     "-pooler" host these are client connections to PgBouncer, which
+//     multiplexes them onto a handful of real backend connections — so a bigger
+//     Prisma pool does not add compute connections or CU-hours, which is the
+//     whole reason the pooled endpoint is mandatory (see the note below). Ten
+//     is still small enough that one runaway process cannot monopolise the
+//     pooler, and small enough to stay under a plain unpooled Postgres's
+//     max_connections when a deployment has no pooler at all.
+//   pool_timeout=20      Seconds a query waits for a free connection. Matched to
+//     withTenantScope's 20s interactive-transaction budget (src/lib/tenant.ts):
+//     a request queuing for a connection and a request holding one then fail on
+//     a comparable clock, instead of the queue giving up while work is still
+//     legitimately in flight on a cross-region round trip.
+//
+// A parameter already present on the URL always wins. `?connection_limit=…&
+// pool_timeout=…` on the connection string is this repo's documented knob
+// (.env.example, README) and an operator who tuned it must not be silently
+// overridden from code. These are defaults for every URL that does NOT carry
+// them: local dev, CI, Railway Postgres, and any production URL wired up before
+// the parameters were documented.
+const POOL_DEFAULTS: Record<string, string> = {
+  connection_limit: "10",
+  pool_timeout: "20",
+};
+
+// The RLS client is a SECOND pool against the same database, used only by
+// withTenantScope, so it gets a smaller share of the same budget.
+const RLS_POOL_DEFAULTS: Record<string, string> = {
+  connection_limit: "5",
+  pool_timeout: "20",
+};
+
+function withPoolDefaults(
+  raw: string | undefined,
+  defaults: Record<string, string>,
+): string | undefined {
+  if (!raw || raw.trim() === "") return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    // Not a parseable URL. Hand it back untouched — Prisma reports the actual
+    // problem far better than a guess made here would.
+    return raw;
+  }
+  for (const [key, value] of Object.entries(defaults)) {
+    if (!url.searchParams.has(key)) url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
 function clientOptions(datasourceUrl?: string) {
   return {
     ...(datasourceUrl ? { datasourceUrl } : {}),
@@ -43,7 +105,8 @@ function clientOptions(datasourceUrl?: string) {
 }
 
 export const prisma: PrismaClient =
-  globalForPrisma.prisma ?? new PrismaClient(clientOptions());
+  globalForPrisma.prisma ??
+  new PrismaClient(clientOptions(withPoolDefaults(process.env.DATABASE_URL, POOL_DEFAULTS)));
 
 globalForPrisma.prisma = prisma;
 
@@ -63,10 +126,11 @@ const rlsUrl = process.env.RLS_DATABASE_URL;
 //
 // Pin connection_limit on the URL itself (?connection_limit=5): this is a
 // SECOND pool against the same database and Prisma defaults to cpus*2+1 per
-// client. Point it at the POOLED (`-pooler`) host too, for the same reason
-// DATABASE_URL does.
+// client. RLS_POOL_DEFAULTS supplies that cap when the URL omits it. Point it
+// at the POOLED (`-pooler`) host too, for the same reason DATABASE_URL does.
 export const prismaRls: PrismaClient = rlsUrl
-  ? (globalForPrisma.prismaRls ?? new PrismaClient(clientOptions(rlsUrl)))
+  ? (globalForPrisma.prismaRls ??
+    new PrismaClient(clientOptions(withPoolDefaults(rlsUrl, RLS_POOL_DEFAULTS))))
   : prisma;
 
 if (rlsUrl) globalForPrisma.prismaRls = prismaRls;

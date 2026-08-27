@@ -11,6 +11,7 @@ import {
   deleteTimeOff,
 } from "./actions";
 import { type Audience } from "@/lib/audience";
+import { bakuToday } from "@/lib/time";
 import { AudienceSelect } from "../_components/audience-select";
 import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
@@ -278,7 +279,7 @@ export function WorkersManager({
         {!open && (
           <button
             onClick={startAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
             {t("new")}
@@ -431,7 +432,7 @@ export function WorkersManager({
             <button
               onClick={submit}
               disabled={pending}
-              className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? t("saving") : t("save")}
             </button>
@@ -567,7 +568,9 @@ function TimeOffModal({
   const tc = useTranslations("Common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const today = new Date().toISOString().slice(0, 10);
+  // Baku day, not the browser's UTC day: between midnight and 04:00 local time
+  // toISOString() still returns YESTERDAY, so the picker offered a past date.
+  const today = bakuToday();
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
   const [reason, setReason] = useState("");
@@ -664,7 +667,7 @@ function TimeOffModal({
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
           >
             {pending ? t("timeOffModal.adding") : t("timeOffModal.add")}
           </button>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
+import { TurnstileBox, useTurnstile } from "../_lib/turnstile-widget";
 
 export default function LoginPage() {
   const t = useTranslations("Auth");
@@ -13,25 +14,38 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const turnstile = useTurnstile();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (turnstile.blocked) {
+      setError(t("confirmHuman"));
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          turnstileToken: turnstile.token ?? undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // The server consumed the token on its verify call, so a retry needs a
+        // fresh one.
+        turnstile.reset();
         setError(data.error ?? t("login.failed"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
+      turnstile.reset();
       setError(t("networkError"));
     } finally {
       setSubmitting(false);
@@ -85,6 +99,8 @@ export default function LoginPage() {
             </button>
           </div>
         </label>
+
+        <TurnstileBox turnstile={turnstile} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

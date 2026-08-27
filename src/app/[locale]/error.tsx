@@ -3,10 +3,13 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { captureError } from "@/lib/observability";
 
 // Route-segment error boundary for the public pages: a rendering/data error
 // shows a recoverable message instead of a white screen. Server-side details
-// are captured separately by instrumentation.onRequestError.
+// are captured separately by instrumentation.onRequestError; captureError here
+// covers the half that hook never sees — errors thrown in the browser
+// (hydration mismatches, client-side navigation, event handlers).
 export default function ErrorPage({
   error,
   reset,
@@ -18,6 +21,10 @@ export default function ErrorPage({
 
   useEffect(() => {
     console.error("[error-boundary]", error.digest ?? "", error);
+    void captureError(error, {
+      source: "error-boundary",
+      tags: { digest: error.digest, path: window.location.pathname },
+    });
   }, [error]);
 
   return (

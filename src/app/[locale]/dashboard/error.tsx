@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { captureError } from "@/lib/observability";
 
 // Dashboard-segment error boundary: renders inside the sidebar shell, so a
-// broken screen doesn't take the whole panel down with it.
+// broken screen doesn't take the whole panel down with it. This one matters
+// most for reporting — it is a paying salon that just hit the wall.
 export default function DashboardError({
   error,
   reset,
@@ -16,6 +18,10 @@ export default function DashboardError({
 
   useEffect(() => {
     console.error("[dashboard-error-boundary]", error.digest ?? "", error);
+    void captureError(error, {
+      source: "dashboard-error-boundary",
+      tags: { digest: error.digest, path: window.location.pathname },
+    });
   }, [error]);
 
   return (
@@ -29,7 +35,7 @@ export default function DashboardError({
       )}
       <button
         onClick={reset}
-        className="mt-5 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+        className="mt-5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
       >
         {t("tryAgain")}
       </button>

@@ -24,6 +24,10 @@ BEGIN
   END IF;
 
   EXECUTE 'GRANT USAGE ON SCHEMA public TO salonbook_app';
+  -- Table-blind on purpose: every table gets the same DML grant and RLS decides
+  -- which ROWS the role may touch. That covers the indirectly scoped tables
+  -- (WorkingHour, TimeOff, ServiceEmployee) exactly like the salonId-keyed ones
+  -- — a grant list enumerated by hand would be a second place to forget.
   EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salonbook_app';
 
   -- ALL TABLES only covers the tables that exist right now; this covers the

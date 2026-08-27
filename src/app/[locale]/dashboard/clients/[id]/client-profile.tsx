@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { azn, inputCls, labelCls } from "@/app/[locale]/dashboard/_components/calendar-shared";
@@ -8,6 +8,7 @@ import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { BookingModal } from "@/app/[locale]/dashboard/_components/booking-modal";
 import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { setAppointmentStatus } from "@/app/[locale]/dashboard/actions";
+import { useModalA11y } from "@/components/use-modal-a11y";
 import {
   updateCustomer,
   addCustomerNote,
@@ -161,7 +162,7 @@ export function ClientProfile({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setBooking(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-400"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700"
             >
               + {t("newBooking")}
             </button>
@@ -398,6 +399,7 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
           value={body}
           onChange={(e) => setBody(e.target.value)}
           maxLength={1000}
+          aria-label={t("title")}
           placeholder={t("placeholder")}
           className={inputCls + " w-full"}
         />
@@ -449,14 +451,18 @@ function ModalShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const { titleId, dialogProps } = useModalA11y(onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {title}
+        </h2>
         <div className="mt-4">{children}</div>
       </div>
     </div>
@@ -481,6 +487,7 @@ function EditCustomerModal({
   const [name, setName] = useState(initialName);
   const [phoneDigits, setPhoneDigits] = useState(initialPhone.replace(/^\+994/, ""));
   const [error, setError] = useState<string | null>(null);
+  const fid = useId();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -503,16 +510,26 @@ function EditCustomerModal({
     <ModalShell title={t("title")} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className={labelCls}>{t("name")}</label>
-          <input className={inputCls + " w-full"} value={name} onChange={(e) => setName(e.target.value)} />
+          <label className={labelCls} htmlFor={`${fid}-name`}>
+            {t("name")}
+          </label>
+          <input
+            id={`${fid}-name`}
+            className={inputCls + " w-full"}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
         <div>
-          <label className={labelCls}>{t("phone")}</label>
+          <label className={labelCls} htmlFor={`${fid}-phone`}>
+            {t("phone")}
+          </label>
           <div className="flex items-center gap-2">
             <span className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
               +994
             </span>
             <input
+              id={`${fid}-phone`}
               className={inputCls + " w-full"}
               value={phoneDigits}
               inputMode="numeric"
@@ -533,7 +550,7 @@ function EditCustomerModal({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+            className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
           >
             {pending ? tc("pleaseWait") : t("save")}
           </button>
@@ -597,7 +614,7 @@ function DeleteCustomerModal({
         <button
           onClick={confirm}
           disabled={pending}
-          className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
+          className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-600 disabled:opacity-60"
         >
           {pending ? t("deleting") : tc("confirmDelete")}
         </button>

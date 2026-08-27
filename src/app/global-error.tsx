@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { captureError } from "@/lib/observability";
+
 // Last-resort boundary: catches errors thrown by the ROOT layout itself, where
 // no app chrome (fonts, theme) is available — hence inline styles and its own
-// <html>/<body>.
+// <html>/<body>. Reported at "fatal": reaching this screen means the whole app
+// shell failed, not one route.
 export default function GlobalError({
   error,
   reset,
@@ -10,6 +14,15 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("[global-error-boundary]", error.digest ?? "", error);
+    void captureError(error, {
+      source: "global-error-boundary",
+      level: "fatal",
+      tags: { digest: error.digest, path: window.location.pathname },
+    });
+  }, [error]);
+
   return (
     <html lang="az">
       <body

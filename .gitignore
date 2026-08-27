@@ -45,3 +45,6 @@ Thumbs.db
 
 # design mockups / exports (visual reference, not source)
 /*.html
+
+# Claude Code scratch worktrees
+.claude/worktrees/
