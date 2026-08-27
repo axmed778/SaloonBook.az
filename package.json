@@ -51,7 +51,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^1.31.0",
-    "next": "^15.5.23",
+    "next": "^16.3.2",
     "next-intl": "^4.13.6",
     "prisma": "^6.2.0",
     "qrcode.react": "^4.2.0",
