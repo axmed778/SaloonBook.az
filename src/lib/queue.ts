@@ -58,6 +58,31 @@ function notificationsQueue(): Queue<NotificationJob, void, "send"> {
  * Enqueue a persisted Notification row for delivery.
  * `delayMs` schedules it for later (used for the T-24h reminder).
  */
+/**
+ * Run a best-effort enqueue that can never hold a request open.
+ *
+ * A bare `await enqueue…()` is not safe on a user-facing path: with Redis
+ * unreachable, ioredis parks the command in its offline queue and the promise
+ * simply never settles, so a try/catch around it catches nothing and the staff
+ * member's click hangs until the platform times the request out. Every row this
+ * guards is already persisted QUEUED, and the sweep re-enqueues it later, so
+ * losing the race costs nothing but a few minutes of latency on the message.
+ */
+export const ENQUEUE_TIMEOUT_MS = 2_000;
+
+export async function bestEffortEnqueue(label: string, run: () => Promise<void>): Promise<void> {
+  try {
+    await Promise.race([
+      run(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("enqueue timed out")), ENQUEUE_TIMEOUT_MS),
+      ),
+    ]);
+  } catch (e) {
+    console.error(`[${label}] enqueue failed/timed out (row persisted QUEUED)`, e);
+  }
+}
+
 export async function enqueueNotification(notificationId: string, delayMs?: number): Promise<void> {
   await notificationsQueue().add(
     "send",
