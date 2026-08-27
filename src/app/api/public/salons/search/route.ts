@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ServiceCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { publishableSalonWhere } from "@/app/sitemap";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { bakuToday, bakuWeekday, bakuMinutesOfDay } from "@/lib/time";
 
@@ -59,7 +60,10 @@ export async function GET(req: NextRequest) {
 
   const rows = await prisma.salon.findMany({
     where: {
-      status: "ACTIVE",
+      // Same publishability rule as the sitemap — one definition, so the map and
+      // the index can never advertise a different set of salons (a half-finished
+      // signup with no services was reaching the sitemap; see sitemap.ts).
+      ...publishableSalonWhere,
       latitude: { gte: bbox.south, lte: bbox.north },
       longitude: { gte: bbox.west, lte: bbox.east },
       ...(category ? { services: { some: { category, isActive: true } } } : {}),

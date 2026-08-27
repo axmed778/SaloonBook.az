@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { publishableSalonWhere } from "@/app/sitemap";
 import { Link } from "@/i18n/navigation";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { Logo } from "@/components/site-header";
@@ -39,7 +40,10 @@ export default async function SalonsPage() {
   const t = await getTranslations("Discovery");
 
   const salons = await prisma.salon.findMany({
-    where: { status: "ACTIVE", latitude: { not: null }, longitude: { not: null } },
+    // Same publishability rule as the sitemap and the map search — one
+    // definition, so a half-finished signup cannot be hidden from one public
+    // surface while still being advertised on another.
+    where: { ...publishableSalonWhere, latitude: { not: null }, longitude: { not: null } },
     orderBy: [{ ratingCount: "desc" }, { createdAt: "asc" }],
     take: 60,
     select: {

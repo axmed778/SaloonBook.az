@@ -75,7 +75,7 @@ export function ReviewForm({
         <button
           onClick={submit}
           disabled={pending || rating < 1}
-          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+          className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
         >
           {pending ? t("submitting") : t("submit")}
         </button>

@@ -185,7 +185,7 @@ export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string 
               "shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-60 " +
               (state === "on"
                 ? "border border-border text-secondary-foreground hover:bg-hover"
-                : "bg-rose-500 text-white hover:bg-rose-400")
+                : "bg-rose-600 text-white hover:bg-rose-700")
             }
           >
             {state === "working"

@@ -200,7 +200,7 @@ export function DiscoveryMap() {
 
         <button
           onClick={nearMe}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -275,7 +275,7 @@ export function DiscoveryMap() {
             </div>
             <a
               href={`${prefix}/${selected.slug}`}
-              className="mt-3 flex w-full items-center justify-center rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-400"
+              className="mt-3 flex w-full items-center justify-center rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
             >
               {t("book")}
             </a>

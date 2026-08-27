@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { createCustomer } from "./actions";
+import { useModalA11y } from "@/components/use-modal-a11y";
 
 export type SortKey = "name" | "last" | "visits" | "spent";
 
@@ -49,23 +50,35 @@ function StatusChip({ active }: { active: boolean }) {
 // straight to their new profile.
 function AddClientButton() {
   const t = useTranslations("Clients");
-  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex shrink-0 items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
+      >
+        + {t("add.button")}
+      </button>
+      {open && <AddClientDialog onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// The form lives in its own component so it mounts with the dialog: the draft
+// resets on close for free, and the a11y hook's focus trap / focus restore is
+// scoped to the time the dialog is actually on screen.
+function AddClientDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("Clients");
+  const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
   const [name, setName] = useState("");
   const [digits, setDigits] = useState("");
   const [waOptIn, setWaOptIn] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  function close() {
-    setOpen(false);
-    setName("");
-    setDigits("");
-    setWaOptIn(false);
-    setNote("");
-    setError(null);
-  }
 
   function submit() {
     setError(null);
@@ -80,7 +93,7 @@ function AddClientButton() {
         note: note.trim() || undefined,
       });
       if (res.ok) {
-        close();
+        onClose();
         router.push(`/dashboard/clients/${res.id}`);
       } else {
         setError(res.error);
@@ -92,94 +105,98 @@ function AddClientButton() {
     "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
 
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center justify-center rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        {...dialogProps}
+        className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-soft focus:outline-none"
+        onClick={(e) => e.stopPropagation()}
       >
-        + {t("add.button")}
-      </button>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={close}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-soft"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-base font-semibold text-foreground">{t("add.title")}</h2>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {t("add.name")}
-                </label>
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("add.namePlaceholder")}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {t("add.phone")}
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg border border-border bg-muted px-2.5 py-2 text-sm text-faint-foreground">
-                    +994
-                  </span>
-                  <input
-                    inputMode="numeric"
-                    value={digits}
-                    onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                    placeholder="501234567"
-                    className={inputCls}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {t("add.note")}
-                </label>
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t("add.notePlaceholder")}
-                  className={inputCls}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-secondary-foreground">
-                <input
-                  type="checkbox"
-                  checked={waOptIn}
-                  onChange={(e) => setWaOptIn(e.target.checked)}
-                  className="h-4 w-4 rounded border-border accent-rose-500"
-                />
-                {t("add.waOptIn")}
-              </label>
-              {error && <p className="text-sm text-rose-500">{error}</p>}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={close}
-                className="rounded-lg border border-border px-3 py-2 text-sm text-secondary-foreground transition hover:bg-hover"
-              >
-                {t("add.cancel")}
-              </button>
-              <button
-                onClick={submit}
-                disabled={pending}
-                className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
-              >
-                {pending ? t("add.saving") : t("add.save")}
-              </button>
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {t("add.title")}
+        </h2>
+        <div className="mt-4 space-y-3">
+          <div>
+            <label
+              htmlFor={`${fid}-name`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
+              {t("add.name")}
+            </label>
+            <input
+              id={`${fid}-name`}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("add.namePlaceholder")}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={`${fid}-phone`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
+              {t("add.phone")}
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg border border-border bg-muted px-2.5 py-2 text-sm text-faint-foreground">
+                +994
+              </span>
+              <input
+                id={`${fid}-phone`}
+                inputMode="numeric"
+                value={digits}
+                onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                placeholder="501234567"
+                className={inputCls}
+              />
             </div>
           </div>
+          <div>
+            <label
+              htmlFor={`${fid}-note`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
+              {t("add.note")}
+            </label>
+            <input
+              id={`${fid}-note`}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={t("add.notePlaceholder")}
+              className={inputCls}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+            <input
+              type="checkbox"
+              checked={waOptIn}
+              onChange={(e) => setWaOptIn(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-rose-500"
+            />
+            {t("add.waOptIn")}
+          </label>
+          {error && <p className="text-sm text-rose-500">{error}</p>}
         </div>
-      )}
-    </>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-secondary-foreground transition hover:bg-hover"
+          >
+            {t("add.cancel")}
+          </button>
+          <button
+            onClick={submit}
+            disabled={pending}
+            className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+          >
+            {pending ? t("add.saving") : t("add.save")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -260,6 +277,7 @@ export function ClientsTable({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          aria-label={t("searchPlaceholder")}
           placeholder={t("searchPlaceholder")}
           className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-8 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none"
         />

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
+import { useModalA11y } from "@/components/use-modal-a11y";
 import {
   activateSubscription,
   setExtraBranches,
@@ -203,7 +204,7 @@ function RowGroup({
             )}
             <button
               onClick={onActivate}
-              className="rounded-lg bg-rose-500 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-rose-400"
+              className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-rose-700"
             >
               {t("activate")}
             </button>
@@ -234,6 +235,8 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
   const t = useTranslations("Admin");
   const tc = useTranslations("Common");
   const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<"START" | "BASIC" | "PRO">(
     row.plan === "PRO" ? "PRO" : row.plan === "START" ? "START" : "BASIC",
@@ -276,10 +279,11 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
           {t("activateTitle", { name: r_name(row) })}
         </h2>
         <p className="mt-1 text-xs text-faint-foreground">
@@ -291,8 +295,14 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
         <form onSubmit={submit} className="mt-4 space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("planLabel")}</label>
+              <label
+                htmlFor={`${fid}-plan`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                {t("planLabel")}
+              </label>
               <select
+                id={`${fid}-plan`}
                 className={inputCls + " w-full"}
                 value={plan}
                 onChange={(e) => setPlan(e.target.value as "START" | "BASIC" | "PRO")}
@@ -303,8 +313,14 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("monthsLabel")}</label>
+              <label
+                htmlFor={`${fid}-months`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                {t("monthsLabel")}
+              </label>
               <input
+                id={`${fid}-months`}
                 className={inputCls + " w-full"}
                 inputMode="numeric"
                 value={months}
@@ -312,10 +328,14 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor={`${fid}-amount`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
                 {t("amountLabel")}
               </label>
               <input
+                id={`${fid}-amount`}
                 className={inputCls + " w-full"}
                 inputMode="decimal"
                 placeholder={t("amountPlaceholder")}
@@ -336,7 +356,7 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? tc("pleaseWait") : t("confirm")}
             </button>
@@ -354,6 +374,8 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
   const t = useTranslations("Admin");
   const tc = useTranslations("Common");
   const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
   const [pending, startTransition] = useTransition();
   const [extras, setExtras] = useState(String(row.extraBranches));
   const [amount, setAmount] = useState("");
@@ -397,10 +419,11 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
           {t("branchesTitle", { name: r_name(row) })}
         </h2>
         <p className="mt-1 text-xs text-faint-foreground">
@@ -412,10 +435,14 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
         <form onSubmit={submit} className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor={`${fid}-extras`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
                 {t("extrasLabel")}
               </label>
               <input
+                id={`${fid}-extras`}
                 className={inputCls + " w-full"}
                 inputMode="numeric"
                 value={extras}
@@ -423,10 +450,14 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor={`${fid}-amount`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
                 {t("amountLabel")}
               </label>
               <input
+                id={`${fid}-amount`}
                 className={inputCls + " w-full"}
                 inputMode="decimal"
                 placeholder={added > 0 ? defaultAmount : "0"}
@@ -447,7 +478,7 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? tc("pleaseWait") : t("confirm")}
             </button>
@@ -466,6 +497,8 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
   const t = useTranslations("Admin");
   const tc = useTranslations("Common");
   const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
   const [pending, startTransition] = useTransition();
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -526,10 +559,11 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
           {t("waSender.title", { name: r_name(row) })}
         </h2>
         <div className="mt-2 flex items-center gap-2">
@@ -554,10 +588,14 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
 
         <form onSubmit={submit} className="mt-4 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={`${fid}-wa-phone-id`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("waSender.phoneNumberId")}
             </label>
             <input
+              id={`${fid}-wa-phone-id`}
               className={inputCls + " w-full"}
               value={phoneNumberId}
               onChange={(e) => setPhoneNumberId(e.target.value)}
@@ -565,10 +603,14 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={`${fid}-wa-token`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("waSender.accessToken")}
             </label>
             <input
+              id={`${fid}-wa-token`}
               type="password"
               autoComplete="off"
               className={inputCls + " w-full"}
@@ -578,10 +620,14 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor={`${fid}-wa-waba`}
+              className="mb-1 block text-xs font-medium text-muted-foreground"
+            >
               {t("waSender.wabaId")}
             </label>
             <input
+              id={`${fid}-wa-waba`}
               className={inputCls + " w-full"}
               value={wabaId}
               onChange={(e) => setWabaId(e.target.value)}
@@ -614,7 +660,7 @@ function WhatsAppSenderModal({ row, onClose }: { row: AccountRow; onClose: () =>
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+                className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
               >
                 {pending ? tc("pleaseWait") : t("waSender.save")}
               </button>

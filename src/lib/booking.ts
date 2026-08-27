@@ -1,9 +1,6 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type AppointmentStatus } from "@prisma/client";
 import { enqueueNotification, enqueuePush } from "./queue";
-import { limitsFor } from "./plans";
-import { effectivePlan } from "./subscription";
-import { prisma } from "./prisma";
-import { bakuPeriodYm } from "./time";
+import { consumeBookingQuota } from "./quota";
 import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
 import { sanitizeTemplateParam } from "./whatsapp";
@@ -32,11 +29,34 @@ export class SlotUnavailableError extends Error {
   }
 }
 
-export class PlanLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PlanLimitError";
-  }
+// Quota accounting moved to ./quota so the reschedule path can spend the same
+// counter. Re-exported here because both are part of the booking surface every
+// existing caller imports from.
+export { PlanLimitError, releaseBookingQuota } from "./quota";
+
+/**
+ * How long after an appointment ends its manage token (/a/{token}) keeps
+ * working. The token is a bearer capability that sits forever in a WhatsApp
+ * thread, so once the visit is over it must stop being a read handle on the
+ * customer's name and phone. A week covers the "what time was I there again?"
+ * tail without leaving the link live for years. There is no expiry column on
+ * Appointment — validity is derived from the row's own status and endsAt.
+ */
+export const MANAGE_TOKEN_GRACE_DAYS = 7;
+
+/**
+ * Whether a manage token may still be honored. Callers must translate `false`
+ * into a 404, not a 403: a distinct "expired" answer would confirm that the
+ * token was real.
+ */
+export function isManageTokenActive(
+  appt: { status: AppointmentStatus; endsAt: Date },
+  now: Date = new Date(),
+): boolean {
+  // A cancelled appointment has nothing left to manage; the link is pure
+  // exposure from that moment on.
+  if (appt.status === "CANCELLED") return false;
+  return appt.endsAt.getTime() + MANAGE_TOKEN_GRACE_DAYS * 86_400_000 > now.getTime();
 }
 
 export interface CreateBookingInput {
@@ -56,28 +76,6 @@ export interface CreateBookingInput {
    *  document version accepted; absent for staff-entered bookings. */
   consent?: { version: string };
   source?: "PUBLIC" | "DASHBOARD";
-}
-
-/**
- * Give a booking's monthly-quota slot back. Only called when STAFF cancel an
- * appointment (src/app/[locale]/dashboard/actions.ts) — see the reasoning at
- * the increment site.
- *
- * Keyed on when the booking was CREATED, not on today: a January booking
- * cancelled in February was counted against January, and decrementing February
- * would both leave January stuck and hand the salon a free slot in a month it
- * never spent one. The `bookings: { gt: 0 }` guard makes a double release (or a
- * release against a counter that was never incremented) a no-op rather than an
- * underflow.
- */
-export async function releaseBookingQuota(
-  salonId: string,
-  bookedAt: Date,
-): Promise<void> {
-  await prisma.usageCounter.updateMany({
-    where: { salonId, periodYm: bakuPeriodYm(bookedAt), bookings: { gt: 0 } },
-    data: { bookings: { decrement: 1 } },
-  });
 }
 
 export interface CreateBookingResult {
@@ -107,7 +105,6 @@ export function isOverlapError(e: unknown): boolean {
  */
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResult> {
   const source = input.source ?? "PUBLIC";
-  const periodYm = bakuPeriodYm(new Date());
 
   // Sanitize the client-supplied name once: it is stored and later flows into
   // the owner's WhatsApp alert (and, eventually, the dashboard).
@@ -146,36 +143,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     const endUtc = check.endUtc;
 
     // --- Plan booking-limit enforcement (FREE = 30/month, see PLAN_LIMITS) ---
-    // Atomic guard: increment first, then validate. The row lock on
-    // UsageCounter serializes concurrent bookings, so the post-increment value
-    // is unique per transaction and an over-limit attempt rolls back its own
-    // increment when it throws — closing the check-then-increment race.
-    //
-    // The counter is NOT decremented when a customer cancels or reschedules. The
-    // monthly quota measures booking *activity*, not live appointments —
-    // otherwise a "book, cancel, repeat" loop would let a FREE salon exceed its
-    // quota indefinitely.
-    //
-    // Staff cancellation is the one exception (releaseBookingQuota below), and it
-    // exists because the asymmetry was exploitable from outside: thirty spam
-    // bookings with thirty different numbers exhaust a FREE salon's month, and
-    // cancelling them did nothing for the counter, so every real customer was
-    // refused until the 1st with no way to reset it from the UI. Requiring a
-    // staff action to release keeps the loop closed — a customer cannot trigger
-    // one — while giving the salon a way out of someone else's abuse.
-    const plan = effectivePlan(salon.account.subscription);
-    const maxBookings = limitsFor(plan).maxBookingsPerMonth;
-    const usage = await tx.usageCounter.upsert({
-      where: { salonId_periodYm: { salonId: input.salonId, periodYm } },
-      create: { salonId: input.salonId, periodYm, bookings: 1 },
-      update: { bookings: { increment: 1 } },
-      select: { bookings: true },
+    // Shared with the reschedule path (see src/lib/quota.ts for why the counter
+    // is never given back to a customer-initiated action). Throws PlanLimitError,
+    // which rolls the whole transaction back — including its own increment.
+    await consumeBookingQuota(tx, input.salonId, {
+      subscription: salon.account.subscription,
     });
-    if (Number.isFinite(maxBookings) && usage.bookings > maxBookings) {
-      throw new PlanLimitError(
-        `Monthly booking limit reached for the ${plan} plan (${maxBookings}).`,
-      );
-    }
 
     // Public bookings are unauthenticated: never let a booking with someone
     // else's phone rewrite their existing customer record. Create only when

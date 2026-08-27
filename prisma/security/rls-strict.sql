@@ -77,6 +77,11 @@ DECLARE
   t text;
   -- ADD ONE TABLE AT A TIME, in the order above, only when the checklist holds.
   -- Empty by default: running this file as-is does nothing.
+  --
+  -- salonId-keyed tables ONLY. WorkingHour, TimeOff and ServiceEmployee have no
+  -- such column — the loop below would build a policy referencing a column that
+  -- does not exist — so tightening those means hand-writing the parent-EXISTS
+  -- form from rls.sql without its permissive branch.
   strict_tables text[] := ARRAY[]::text[];
 BEGIN
   IF array_length(strict_tables, 1) IS NULL THEN

@@ -2,7 +2,9 @@
 // Conventions:
 //   * Money is stored as integer minor units (qəpik). Never floats.
 //   * Time-of-day fields are minutes from local midnight (Asia/Baku).
-//   * Instant fields (startsAt/endsAt/...) are timestamptz, always written as UTC.
+//   * EVERY DateTime column is timestamptz (@db.Timestamptz), always written as
+//     UTC. Prisma's bare default is `timestamp without time zone`, which is only
+//     read back correctly while the session's TimeZone happens to be UTC.
 //   * salonId is the tenant discriminator on operational tables (RLS keys on it).
 //   * Account is the paying business; in MVP it owns exactly one Salon.
 
@@ -37,7 +39,7 @@ model User {
   isPlatformAdmin Boolean              @default(false)
   memberships     Membership[]
   resetTokens     PasswordResetToken[]
-  createdAt       DateTime             @default(now())
+  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
   // Session cutoff: cookies issued before this instant are rejected (see
   // getSession). Bumped on password reset so a stolen session can't outlive it.
   sessionsValidFrom DateTime?          @db.Timestamptz(6)
@@ -52,7 +54,7 @@ model PasswordResetToken {
   expiresAt DateTime  @db.Timestamptz(6)
   usedAt    DateTime? @db.Timestamptz(6)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
 }
@@ -68,13 +70,13 @@ model Account {
   // and the data-processing consent are accepted together; marketing is opt-in.
   // Versions (see src/lib/legal.ts) are stored so a consent stays auditable
   // after the document text changes.
-  legalAcceptedAt DateTime?
+  legalAcceptedAt DateTime? @db.Timestamptz(3)
   offerVersion    String?
   privacyVersion  String?
   marketingOptIn  Boolean   @default(false)
   /// Append-only history of every acceptance, including superseded versions.
   legalConsents   LegalConsent[]
-  createdAt    DateTime      @default(now())
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
 }
 
 model Membership {
@@ -149,7 +151,7 @@ model Salon {
   customerNotes CustomerNote[]
   whatsAppSender WhatsAppSender?
   reviews      Review[]
-  createdAt    DateTime      @default(now())
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
 
   @@index([accountId])
   @@index([slug])
@@ -209,7 +211,7 @@ model Employee {
   appointments Appointment[]
   membership   Membership?
   payouts      Payout[]
-  createdAt    DateTime          @default(now())
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([salonId])
 }
@@ -248,7 +250,7 @@ model Service {
   salon        Salon             @relation(fields: [salonId], references: [id])
   employees    ServiceEmployee[]
   appointments Appointment[]
-  createdAt    DateTime          @default(now())
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([salonId])
 }
@@ -304,7 +306,7 @@ model Customer {
   salon        Salon          @relation(fields: [salonId], references: [id])
   appointments Appointment[]
   crmNotes     CustomerNote[]
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
 
   @@unique([salonId, phone])
   @@index([salonId])
@@ -324,7 +326,7 @@ model CustomerNote {
   body       String
   salon      Salon    @relation(fields: [salonId], references: [id])
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([customerId, createdAt])
   @@index([salonId])
@@ -364,7 +366,7 @@ model Appointment {
   customer      Customer          @relation(fields: [customerId], references: [id])
   notifications Notification[]
   review        Review?
-  createdAt     DateTime          @default(now())
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
 
   // The no-overlap exclusion constraint is added in prisma/constraints.sql
   // (Prisma can't express EXCLUDE USING gist).
@@ -411,7 +413,7 @@ model Notification {
   attempts      Int          @default(0)
   lastError     String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
-  createdAt     DateTime     @default(now())
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
 
   @@index([status, sendAfter])
   @@index([salonId])
@@ -453,8 +455,8 @@ model WhatsAppSender {
   verifiedName   String? // Meta-verified business display name
   lastError      String? // last activation/validation failure, for the admin UI
   salon          Salon                @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @db.Timestamptz(3)
 
   @@index([phoneNumberId])
 }
@@ -486,7 +488,7 @@ model PushSubscription {
   p256dh     String // client public key (base64url), for payload encryption
   auth       String // client auth secret (base64url)
   userAgent  String? // captured at subscribe time, for the "your devices" UI
-  createdAt  DateTime @default(now())
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
   lastSeenAt DateTime @default(now()) @db.Timestamptz(6) // bumped on re-subscribe
 
   @@index([userId])
@@ -508,7 +510,7 @@ model Client {
   // Data-processing consent captured at OTP sign-up (see src/lib/legal.ts).
   consentAt      DateTime? @db.Timestamptz(6)
   consentVersion String?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   lastLoginAt    DateTime? @db.Timestamptz(6)
   /// Session cutoff: cookies issued before this instant are rejected. Bumped on
   /// logout so signing out actually revokes the token, not just the cookie.
@@ -557,7 +559,7 @@ model Review {
   client        Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   salon         Salon       @relation(fields: [salonId], references: [id])
   appointment   Appointment @relation(fields: [appointmentId], references: [id])
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
 
   @@index([salonId, createdAt])
   @@index([clientId])
@@ -582,8 +584,8 @@ model Subscription {
   providerSubId      String?
   account            Account   @relation(fields: [accountId], references: [id])
   payments           Payment[]
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
 
   @@index([status, trialEndsAt])
 }
@@ -643,7 +645,7 @@ model Invite {
   note        String?
   createdBy   String // admin user id
   expiresAt   DateTime? @db.Timestamptz(6)
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
 }
 
 // ---------------------------------------------------------------------------

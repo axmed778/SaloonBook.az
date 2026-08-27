@@ -7,7 +7,11 @@ import { withTenantScope } from "@/lib/tenant";
 import { featuresFor } from "@/lib/plans";
 import { effectivePlan } from "@/lib/subscription";
 import { localeFromCookie } from "@/i18n/request-locale";
-import { toCsv } from "@/lib/csv";
+import {
+  csvStreamResponse,
+  EXPORT_BATCH_SIZE,
+  MAX_EXPORT_ROWS,
+} from "../_lib/csv-stream";
 import {
   bakuToday,
   bakuYmd,
@@ -85,32 +89,22 @@ export async function GET(req: NextRequest) {
   const where: Prisma.AppointmentWhereInput = { salonId };
   if (gte || lt) where.startsAt = { ...(gte ? { gte } : {}), ...(lt ? { lt } : {}) };
 
-  const [t, appointments] = await Promise.all([
-    getTranslations({ locale: await localeFromCookie(), namespace: "Export.csv" }),
-    // Inside the RLS scope: on the restricted role Postgres refuses to return
-    // another salon's rows, so `where.salonId` is belt-and-braces rather than
-    // the only guard. This route dumps a salon's whole appointment history —
-    // customer names and phones included — in one response.
-    withTenantScope(salonId, (tx) =>
-      tx.appointment.findMany({
-        where,
-        orderBy: { startsAt: "asc" },
-        select: {
-          startsAt: true,
-          endsAt: true,
-          status: true,
-          source: true,
-          priceMinor: true,
-          notes: true,
-          createdAt: true,
-          attendeeName: true,
-          customer: { select: { name: true, phone: true } },
-          service: { select: { name: true } },
-          employee: { select: { name: true } },
-        },
-      }),
-    ),
+  const locale = await localeFromCookie();
+  const [t, tLimits] = await Promise.all([
+    getTranslations({ locale, namespace: "Export.csv" }),
+    getTranslations({ locale, namespace: "Export.limits" }),
   ]);
+
+  // Size the export BEFORE writing a byte. range=all has no upper bound, and a
+  // count is one indexed aggregate — cheap next to discovering the problem
+  // halfway through a multi-megabyte download that cannot be turned back into
+  // an error response once the headers are out.
+  const total = await withTenantScope(salonId, (tx) => tx.appointment.count({ where }));
+  if (total > MAX_EXPORT_ROWS) {
+    return new Response(tLimits("appointments", { count: total, max: MAX_EXPORT_ROWS }), {
+      status: 413,
+    });
+  }
 
   const headers = [
     t("headers.date"),
@@ -127,29 +121,63 @@ export async function GET(req: NextRequest) {
     t("headers.created"),
   ];
 
-  const rows = appointments.map((a) => [
-    bakuYmd(a.startsAt),
-    minutesToHHMM(bakuMinutesOfDay(a.startsAt)),
-    minutesToHHMM(bakuMinutesOfDay(a.endsAt)),
-    t(`status.${a.status}`),
-    t(`source.${a.source}`),
-    a.attendeeName ?? a.customer.name,
-    a.customer.phone,
-    a.service.name,
-    a.employee.name,
-    (a.priceMinor / 100).toFixed(2),
-    a.notes ?? "",
-    bakuYmd(a.createdAt),
-  ]);
+  // Keyset pagination on (startsAt, id). `id` is in the ordering as well as the
+  // cursor because startsAt is not unique — two bookings that start at the same
+  // minute would otherwise have no stable order between batches, and a row could
+  // be skipped or repeated at a batch boundary.
+  let cursorId: string | null = null;
 
-  const csv = toCsv(headers, rows);
   const filename = `salonbook-appointments-${range}-${bakuToday()}.csv`;
 
-  return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
+  return csvStreamResponse({
+    filename,
+    headers,
+    nextBatch: async () => {
+      // One SHORT transaction per batch. Inside the RLS scope: on the restricted
+      // role Postgres refuses to return another salon's rows, so `where.salonId`
+      // is belt-and-braces rather than the only guard. This route dumps a
+      // salon's appointment history — customer names and phones included.
+      const appointments = await withTenantScope(salonId, (tx) =>
+        tx.appointment.findMany({
+          where,
+          orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+          take: EXPORT_BATCH_SIZE,
+          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+          select: {
+            id: true,
+            startsAt: true,
+            endsAt: true,
+            status: true,
+            source: true,
+            priceMinor: true,
+            notes: true,
+            createdAt: true,
+            attendeeName: true,
+            customer: { select: { name: true, phone: true } },
+            service: { select: { name: true } },
+            employee: { select: { name: true } },
+          },
+        }),
+      );
+
+      if (appointments.length > 0) {
+        cursorId = appointments[appointments.length - 1].id;
+      }
+
+      return appointments.map((a) => [
+        bakuYmd(a.startsAt),
+        minutesToHHMM(bakuMinutesOfDay(a.startsAt)),
+        minutesToHHMM(bakuMinutesOfDay(a.endsAt)),
+        t(`status.${a.status}`),
+        t(`source.${a.source}`),
+        a.attendeeName ?? a.customer.name,
+        a.customer.phone,
+        a.service.name,
+        a.employee.name,
+        (a.priceMinor / 100).toFixed(2),
+        a.notes ?? "",
+        bakuYmd(a.createdAt),
+      ]);
     },
   });
 }

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { useModalA11y } from "@/components/use-modal-a11y";
 import { minutesToHHMM } from "@/lib/time";
 import { setAppointmentStatus, rescheduleSlots, rescheduleAppointment } from "../actions";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
@@ -28,6 +29,7 @@ export function AppointmentPopup({
   const t = useTranslations("Calendar");
   const tc = useTranslations("Common");
   const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -140,12 +142,15 @@ export function AppointmentPopup({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">{block.title}</h2>
+            <h2 id={titleId} className="text-base font-semibold text-foreground">
+              {block.title}
+            </h2>
             <span
               className={
                 "mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium " +
@@ -307,6 +312,7 @@ export function AppointmentPopup({
             </div>
             <input
               type="date"
+              aria-label={t("modal.date")}
               min={todayYmd}
               value={rDay}
               onChange={(e) => loadRSlots(e.target.value)}

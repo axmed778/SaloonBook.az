@@ -15,8 +15,8 @@
     "worker:start": "tsx worker/index.ts",
     "db:up": "tsx scripts/embedded-pg.ts",
     "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p tsconfig.sw.json",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run src",
+    "test:watch": "vitest src",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -24,10 +24,13 @@
     "db:rls": "tsx scripts/apply-sql.ts prisma/security/rls.sql",
     "db:indexes": "tsx scripts/apply-sql.ts prisma/indexes.sql",
     "db:rls-grants": "tsx scripts/apply-sql.ts prisma/security/rls-grants.sql",
-    "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:indexes && pnpm db:rls-grants",
+    "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:indexes && pnpm db:checks && pnpm db:rls-grants",
     "test:rls": "vitest run src/lib/tenant.rls.test.ts",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "lint": "eslint .",
+    "e2e": "playwright test",
+    "db:checks": "tsx scripts/apply-sql.ts prisma/checks.sql"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -60,6 +63,9 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.3.3",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/leaflet.markercluster": "^1.5.6",
@@ -68,8 +74,12 @@
     "@types/react-dom": "^19.2.4",
     "@types/web-push": "^3.6.4",
     "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "^9",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.10"
   }
 }

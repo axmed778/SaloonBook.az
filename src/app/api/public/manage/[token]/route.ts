@@ -3,7 +3,8 @@ import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots, isSlotBookable } from "@/lib/availability";
-import { isOverlapError, MAX_BOOKING_AHEAD_DAYS } from "@/lib/booking";
+import { isOverlapError, isManageTokenActive, MAX_BOOKING_AHEAD_DAYS } from "@/lib/booking";
+import { consumeBookingQuota, PlanLimitError } from "@/lib/quota";
 import { enqueueNotification, enqueuePush } from "@/lib/queue";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { localeFromCookie } from "@/i18n/request-locale";
@@ -20,7 +21,7 @@ const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function loadByToken(token: string) {
   if (!TOKEN_RE.test(token)) return null;
-  return prisma.appointment.findUnique({
+  const appt = await prisma.appointment.findUnique({
     where: { manageToken: token },
     select: {
       id: true,
@@ -29,11 +30,19 @@ async function loadByToken(token: string) {
       serviceId: true,
       status: true,
       startsAt: true,
+      endsAt: true,
       salon: { select: { name: true, phone: true, status: true } },
       service: { select: { name: true } },
       customer: { select: { name: true, phone: true } },
     },
   });
+  // The link is forwarded, quoted and archived in WhatsApp threads forever, so
+  // it must stop resolving once it has no job left to do — otherwise it stays a
+  // permanent read handle on this customer's name and phone. Callers turn null
+  // into a plain 404, identical to a token that never existed (see
+  // isManageTokenActive).
+  if (!appt || !isManageTokenActive(appt)) return null;
+  return appt;
 }
 
 // --- GET: free slots for a day (reschedule picker) ---------------------------
@@ -105,7 +114,10 @@ export async function POST(
   }
 
   const appt = await loadByToken(token);
-  if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Unknown, cancelled and expired tokens all end here: one 404 with one
+  // generic (translated) message, so the response never reveals that a token
+  // was ever valid.
+  if (!appt) return NextResponse.json({ error: t("notActive") }, { status: 404 });
 
   const now = new Date();
   if (appt.status !== "CONFIRMED") {
@@ -206,6 +218,14 @@ export async function POST(
       });
       if (res.count === 0) throw new Error("conflict");
 
+      // A reschedule spends a quota slot, exactly like a booking: it writes a
+      // fresh confirmation, a fresh reminder and an owner alert, all outbound
+      // WhatsApp on the salon's plan. Without this the endpoint was a free
+      // message printer — whoever holds the link could move the appointment in a
+      // loop and bill the salon for every round. Charged inside the transaction
+      // so a conflicting/overlapping update rolls the increment back too.
+      await consumeBookingQuota(tx, appt.salonId);
+
       // Old reminder carries the old time — kill anything still queued.
       await tx.notification.updateMany({
         where: { appointmentId: appt.id, status: "QUEUED" },
@@ -272,6 +292,14 @@ export async function POST(
   } catch (e) {
     if (e instanceof Error && e.message === "conflict") {
       return NextResponse.json({ error: t("notActive") }, { status: 409 });
+    }
+    if (e instanceof PlanLimitError) {
+      // Same wording as a suspended salon, and the same reasoning as the public
+      // booking route: which tier the salon pays for, and how much of it is
+      // left, is nobody's business on a customer-facing page. Log it, tell the
+      // customer only that no new time can be taken — cancelling still works.
+      console.warn(`[manage] plan limit for salon ${appt.salonId}: ${e.message}`);
+      return NextResponse.json({ error: t("salonUnavailable") }, { status: 409 });
     }
     if (isOverlapError(e)) {
       return NextResponse.json({ error: t("slotTaken") }, { status: 409 });

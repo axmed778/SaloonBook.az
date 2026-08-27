@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Before typecheck on purpose: lint is the cheapest of the three checks
+      # (no TS program, no bundling), so a lint-only mistake fails in seconds
+      # instead of after a full typecheck+build.
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -40,6 +46,91 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # ── End-to-end smoke (Playwright) ──────────────────────────────────────
+  # Boots a production build against a real Postgres and drives a real browser
+  # through the two flows that must never break: the public booking page (the
+  # link every salon shares with its customers) and the login form's rejection
+  # of bad credentials.
+  #
+  # SOFT GATE — continue-on-error is deliberate, not an oversight.
+  # This job was authored without a database available to validate it against,
+  # so its seeding/boot sequence is unproven end-to-end. A required job that is
+  # red for infrastructure reasons trains everyone to ignore CI, which is worse
+  # than no gate at all. The failures are still visible in the run summary.
+  # OWNER TODO: once this has passed green a few times on main, delete the
+  # `continue-on-error: true` line below to make it a hard gate.
+  e2e:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/e2e"
+      # This job migrates, and schema.prisma routes migrations through
+      # `directUrl = env("DIRECT_URL")` — same reasoning as the `rls` job below.
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/e2e"
+      # No Redis service: rate limiting fails open (src/lib/ratelimit.ts) and
+      # enqueueing is time-bounded and best-effort, so the app serves without it.
+      REDIS_URL: "redis://localhost:6379"
+      APP_URL: "http://127.0.0.1:3000"
+      # Throwaway credentials for a database that is destroyed with the runner.
+      # prisma/seed.ts refuses to invent passwords, and they must satisfy the
+      # signup policy (8+ chars, upper/lower/digit/special).
+      SEED_ADMIN_PASSWORD: "Ci-E2e-Throwaway-1!"
+      SEED_OWNER_PASSWORD: "Ci-E2e-Throwaway-2!"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Enable pnpm (corepack)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Chromium only — the suite declares a single chromium project, and
+      # downloading Firefox/WebKit would triple the slowest step for nothing.
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Migrate and constrain
+        run: pnpm db:setup
+
+      # Creates the 'demostudio' salon the booking spec reads (e2e/fixtures.ts).
+      - name: Seed fixtures
+        run: pnpm db:seed
+
+      # playwright.config.ts owns the webServer (`pnpm build && pnpm start`), so
+      # there is no separate build step here — one place decides how the app
+      # under test is started, locally and in CI alike.
+      - name: Run smoke suite
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/.artifacts/report
+          retention-days: 7
+          if-no-files-found: ignore
 
   # ── Dependency vulnerability scan ─────────────────────────────────────────
   # A separate job on purpose: a red audit must not mask — or be masked by — a

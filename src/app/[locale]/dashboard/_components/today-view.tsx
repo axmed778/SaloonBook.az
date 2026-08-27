@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { setAppointmentStatus } from "../actions";
+import { setAppointmentStatus, type ActionResult } from "../actions";
 import { PullToRefresh } from "@/components/pwa/pull-to-refresh";
 import { ErrorToast } from "./toast";
 import { TodayAppointmentRow } from "./today-appointment-row";
@@ -59,14 +59,23 @@ export function TodayView({
         pending: true,
       },
     }));
-    const res = await setAppointmentStatus({ id, status });
-    if (res.ok) {
+    let res: ActionResult | null = null;
+    try {
+      res = await setAppointmentStatus({ id, status });
+    } catch {
+      // The action never reached the server (offline, deploy mid-flight). Null
+      // means "unknown outcome" — treated below exactly like a failure.
+      res = null;
+    }
+    if (res?.ok) {
       // Pull canonical data; the useEffect above clears the overlay on arrival.
       router.refresh();
-    } else {
-      setOverrides((o) => ({ ...o, [id]: rollback ?? {} }));
-      setError(res.error);
+      return;
     }
+    // Nothing changed server-side, so the overlay must go: a silently hidden
+    // row would leave the salon believing the appointment was cancelled.
+    setOverrides((o) => ({ ...o, [id]: rollback ?? {} }));
+    setError(res?.ok === false ? res.error : t("errors.network"));
   }
 
   const visible = items

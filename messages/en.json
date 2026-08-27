@@ -94,7 +94,10 @@
     "loadingSlots": "Loading…",
     "prevDay": "Previous day",
     "nextDay": "Next day",
-    "close": "Close"
+    "close": "Close",
+    "errors": {
+      "network": "Network error. Please try again."
+    }
   },
   "ClientAuth": {
     "title": "Sign in",
@@ -130,7 +133,8 @@
       "unavailable": "Service temporarily unavailable. Try again.",
       "invalid": "Incorrect code.",
       "expired": "The code expired. Request a new one.",
-      "too_many_attempts": "Too many wrong attempts. Request a new code."
+      "too_many_attempts": "Too many wrong attempts. Request a new code.",
+      "captcha_required": "Please confirm you're not a robot."
     }
   },
   "Discovery": {
@@ -685,7 +689,11 @@
     },
     "waSender": {
       "title": "Your own WhatsApp number",
-      "badge": { "active": "Connected", "pending": "In review", "disabled": "Disabled" },
+      "badge": {
+        "active": "Connected",
+        "pending": "In review",
+        "disabled": "Disabled"
+      },
       "proTeaserTitle": "Pro plan feature",
       "proTeaserBody": "Send messages from the salon's own WhatsApp number — upgrade to Pro.",
       "connected": "Sending from your number: {name} · {phone}",
@@ -791,13 +799,23 @@
     "upgradeToPro": "Upgrade to Pro",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "totals": { "earned": "Earned (this month)", "paid": "Paid", "balance": "Balance" },
+    "totals": {
+      "earned": "Earned (this month)",
+      "paid": "Paid",
+      "balance": "Balance"
+    },
     "emptyTitle": "No staff yet",
     "emptyBody": "Add staff in the Staff section first.",
     "inactive": "inactive",
     "changeModel": "Change model",
     "recordPayout": "Record payout",
-    "row": { "completed": "Completed appointments", "revenue": "Revenue", "commission": "Commission", "earned": "Earned", "balance": "Balance" },
+    "row": {
+      "completed": "Completed appointments",
+      "revenue": "Revenue",
+      "commission": "Commission",
+      "earned": "Earned",
+      "balance": "Balance"
+    },
     "delete": "Delete",
     "deletePayout": "Delete payout",
     "deletePayoutTitle": "Delete payout record",
@@ -972,6 +990,10 @@
         "active": "Active",
         "inactive": "Inactive"
       }
+    },
+    "limits": {
+      "appointments": "This export would contain {count} bookings, which is over the {max}-row limit for a single file. Choose a shorter period and download again.",
+      "clients": "Your client base has {count} records, which is over the {max}-row limit for a single file. Contact support to get the full list."
     }
   },
   "LegalReconsent": {
@@ -996,15 +1018,83 @@
       "updated": "6 July 2026",
       "contactLine": "For questions and requests: WhatsApp {wa} or the contact channels on the site.",
       "sections": [
-        { "title": "1. General information", "body": ["SalonBook.az (the “Platform”) is an online booking service for salons, barbershops and clinics. This policy explains what personal data is collected, how it is used and how it is protected when using the Platform. By using the Platform, you agree to this policy."] },
-        { "title": "2. Data we collect", "body": ["We collect the following data:", { "items": ["Salon account data: email address, name, salon name and salon profile data (address, phone, business hours, services, staff). Passwords are stored only as a one-way hash.", "Customer data: the name, phone number and chosen appointment details (service, staff, date and time) entered during online booking.", "Technical data: IP address, session cookie and similar technical records for security and abuse prevention."] }] },
-        { "title": "3. Purposes of data use", "body": [{ "items": ["To provide the online booking and appointment management service;", "To send appointment-related notifications via WhatsApp (booking confirmation, reminder before the appointment, new-booking alert to the salon);", "To keep the account secure and prevent abuse;", "To show the salon owner statistics about their activity."] }, "WhatsApp notifications are only transactional, appointment-related messages — no advertising or marketing messages are sent to your phone number."] },
-        { "title": "4. Data sharing", "body": ["We do not sell your personal data to third parties. Data is shared only where necessary to provide the service:", { "items": ["Meta Platforms (WhatsApp Business API) — the phone number and message content are transmitted to deliver notification messages;", "Hosting and database providers — data is stored on secure servers so the Platform can operate;", "Authorized government bodies where required by law."] }, "Customer data is visible only to the salon where they booked — one salon's data is not accessible to other salons."] },
-        { "title": "5. Cookies", "body": ["The Platform uses only essential cookies: the cookie that keeps your session after logging in and interface preferences (e.g. theme). No tracking or advertising cookies are used."] },
-        { "title": "6. Data retention and security", "body": ["Data is kept while the account is active. Data transmission is encrypted with HTTPS, passwords are protected with a hashing algorithm, and database access is restricted."] },
-        { "title": "7. Your rights", "body": ["You have the right to access, correct or request deletion of your personal data. To do so, contact us via the channel below — requests are answered within a reasonable time."] },
-        { "title": "8. Changes", "body": ["This policy may be updated from time to time. Significant changes are published on this page and the “Last updated” date is updated."] },
-        { "title": "9. Contact", "body": ["__contact__"] }
+        {
+          "title": "1. General information",
+          "body": [
+            "SalonBook.az (the “Platform”) is an online booking service for salons, barbershops and clinics. This policy explains what personal data is collected, how it is used and how it is protected when using the Platform. By using the Platform, you agree to this policy."
+          ]
+        },
+        {
+          "title": "2. Data we collect",
+          "body": [
+            "We collect the following data:",
+            {
+              "items": [
+                "Salon account data: email address, name, salon name and salon profile data (address, phone, business hours, services, staff). Passwords are stored only as a one-way hash.",
+                "Customer data: the name, phone number and chosen appointment details (service, staff, date and time) entered during online booking.",
+                "Technical data: IP address, session cookie and similar technical records for security and abuse prevention."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "3. Purposes of data use",
+          "body": [
+            {
+              "items": [
+                "To provide the online booking and appointment management service;",
+                "To send appointment-related notifications via WhatsApp (booking confirmation, reminder before the appointment, new-booking alert to the salon);",
+                "To keep the account secure and prevent abuse;",
+                "To show the salon owner statistics about their activity."
+              ]
+            },
+            "WhatsApp notifications are only transactional, appointment-related messages — no advertising or marketing messages are sent to your phone number."
+          ]
+        },
+        {
+          "title": "4. Data sharing",
+          "body": [
+            "We do not sell your personal data to third parties. Data is shared only where necessary to provide the service:",
+            {
+              "items": [
+                "Meta Platforms (WhatsApp Business API) — the phone number and message content are transmitted to deliver notification messages;",
+                "Hosting and database providers — data is stored on secure servers so the Platform can operate;",
+                "Authorized government bodies where required by law."
+              ]
+            },
+            "Customer data is visible only to the salon where they booked — one salon's data is not accessible to other salons."
+          ]
+        },
+        {
+          "title": "5. Cookies",
+          "body": [
+            "The Platform uses only essential cookies: the cookie that keeps your session after logging in and interface preferences (e.g. theme). No tracking or advertising cookies are used."
+          ]
+        },
+        {
+          "title": "6. Data retention and security",
+          "body": [
+            "Data is kept while the account is active. Data transmission is encrypted with HTTPS, passwords are protected with a hashing algorithm, and database access is restricted."
+          ]
+        },
+        {
+          "title": "7. Your rights",
+          "body": [
+            "You have the right to access, correct or request deletion of your personal data. To do so, contact us via the channel below — requests are answered within a reasonable time."
+          ]
+        },
+        {
+          "title": "8. Changes",
+          "body": [
+            "This policy may be updated from time to time. Significant changes are published on this page and the “Last updated” date is updated."
+          ]
+        },
+        {
+          "title": "9. Contact",
+          "body": [
+            "__contact__"
+          ]
+        }
       ]
     },
     "terms": {
@@ -1013,17 +1103,81 @@
       "title": "Terms of Service",
       "updated": "6 July 2026",
       "contactLine": "These terms are governed by the laws of the Republic of Azerbaijan. For questions: WhatsApp {wa}.",
-      "privacyLink": { "before": "The rules for collecting and using personal data are described separately in the", "link": "Privacy Policy", "after": "." },
+      "privacyLink": {
+        "before": "The rules for collecting and using personal data are described separately in the",
+        "link": "Privacy Policy",
+        "after": "."
+      },
       "sections": [
-        { "title": "1. Service description", "body": ["SalonBook.az is an online booking platform for salons, barbershops and clinics: customers book appointments themselves through the salon's page, while the salon manages appointments via a calendar and receives/sends WhatsApp notifications. By using the Platform, you agree to these terms."] },
-        { "title": "2. Account and responsibility", "body": [{ "items": ["You must provide accurate and up-to-date information to create an account;", "You are responsible for protecting your account's login credentials;", "The salon is responsible for the accuracy of the information it publishes on its page (services, prices, business hours);", "The salon is responsible for using its customers' phone numbers only for appointment-related notifications and for having customer consent to do so."] }] },
-        { "title": "3. Prohibited use", "body": [{ "items": ["Creating false bookings or bookings in someone else's name;", "Using the Platform to send spam or unwanted messages;", "Interfering with the Platform's operation or sending automated bulk requests;", "Using it for any activity that violates the law."] }, "Accounts that break these rules may be suspended or deleted without notice."] },
-        { "title": "4. Plans and payment", "body": ["The Platform operates with a free trial period and paid plans. Current prices are shown in the “Pricing” section of the site and are calculated in AZN. Payments are currently accepted directly (manually) — contact us for details. Plans may be changed with prior notice."] },
-        { "title": "5. WhatsApp notifications", "body": ["Booking confirmations and reminders are sent via the WhatsApp Business API (Meta Platforms). Message delivery depends on Meta's service and the Platform does not fully guarantee delivery. No reminders are sent for cancelled appointments."] },
-        { "title": "6. Service availability and limitation of liability", "body": ["We make reasonable efforts to keep the Platform running continuously, but the service is provided “as is”. The Platform is not liable for losses arising from technical outages, the downtime of third-party services (hosting, WhatsApp) or force-majeure events. The Platform is not a party to the relationship between the salon and the customer (service quality, payment, etc.)."] },
-        { "title": "7. Personal data", "body": ["__privacyLink__"] },
-        { "title": "8. Changes and termination", "body": ["These terms may be updated from time to time; continued use constitutes acceptance of the updated terms. You may close your account at any time — contact us to do so."] },
-        { "title": "9. Governing law and contact", "body": ["__contact__"] }
+        {
+          "title": "1. Service description",
+          "body": [
+            "SalonBook.az is an online booking platform for salons, barbershops and clinics: customers book appointments themselves through the salon's page, while the salon manages appointments via a calendar and receives/sends WhatsApp notifications. By using the Platform, you agree to these terms."
+          ]
+        },
+        {
+          "title": "2. Account and responsibility",
+          "body": [
+            {
+              "items": [
+                "You must provide accurate and up-to-date information to create an account;",
+                "You are responsible for protecting your account's login credentials;",
+                "The salon is responsible for the accuracy of the information it publishes on its page (services, prices, business hours);",
+                "The salon is responsible for using its customers' phone numbers only for appointment-related notifications and for having customer consent to do so."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "3. Prohibited use",
+          "body": [
+            {
+              "items": [
+                "Creating false bookings or bookings in someone else's name;",
+                "Using the Platform to send spam or unwanted messages;",
+                "Interfering with the Platform's operation or sending automated bulk requests;",
+                "Using it for any activity that violates the law."
+              ]
+            },
+            "Accounts that break these rules may be suspended or deleted without notice."
+          ]
+        },
+        {
+          "title": "4. Plans and payment",
+          "body": [
+            "The Platform operates with a free trial period and paid plans. Current prices are shown in the “Pricing” section of the site and are calculated in AZN. Payments are currently accepted directly (manually) — contact us for details. Plans may be changed with prior notice."
+          ]
+        },
+        {
+          "title": "5. WhatsApp notifications",
+          "body": [
+            "Booking confirmations and reminders are sent via the WhatsApp Business API (Meta Platforms). Message delivery depends on Meta's service and the Platform does not fully guarantee delivery. No reminders are sent for cancelled appointments."
+          ]
+        },
+        {
+          "title": "6. Service availability and limitation of liability",
+          "body": [
+            "We make reasonable efforts to keep the Platform running continuously, but the service is provided “as is”. The Platform is not liable for losses arising from technical outages, the downtime of third-party services (hosting, WhatsApp) or force-majeure events. The Platform is not a party to the relationship between the salon and the customer (service quality, payment, etc.)."
+          ]
+        },
+        {
+          "title": "7. Personal data",
+          "body": [
+            "__privacyLink__"
+          ]
+        },
+        {
+          "title": "8. Changes and termination",
+          "body": [
+            "These terms may be updated from time to time; continued use constitutes acceptance of the updated terms. You may close your account at any time — contact us to do so."
+          ]
+        },
+        {
+          "title": "9. Governing law and contact",
+          "body": [
+            "__contact__"
+          ]
+        }
       ]
     },
     "dataDeletion": {
@@ -1033,10 +1187,38 @@
       "updated": "22 July 2026",
       "contactLine": "To request deletion, contact us on WhatsApp {wa}.",
       "sections": [
-        { "title": "1. Overview", "body": ["This page explains how to request deletion of the personal data that SalonBook.az stores about you. It applies both to salons that use the Platform and to customers who booked an appointment through a salon's page."] },
-        { "title": "2. What data can be deleted", "body": ["On request we delete:", { "items": ["Salon account data: email address, salon profile (address, phone, business hours), staff and services;", "Customer data: name, phone number and appointment history entered during online booking;", "Technical records tied to your account or phone number."] }] },
-        { "title": "3. How to request deletion", "body": ["Send us a request through the contact channel below and include the phone number or email address linked to the data, so we can identify and remove it. If you booked as a customer, you can also ask the salon directly to delete your record.", "__contact__"] },
-        { "title": "4. Processing time", "body": ["We process deletion requests within 30 days. Some data may be kept longer only where the law requires it (for example, accounting records). Once deleted, the data cannot be recovered."] }
+        {
+          "title": "1. Overview",
+          "body": [
+            "This page explains how to request deletion of the personal data that SalonBook.az stores about you. It applies both to salons that use the Platform and to customers who booked an appointment through a salon's page."
+          ]
+        },
+        {
+          "title": "2. What data can be deleted",
+          "body": [
+            "On request we delete:",
+            {
+              "items": [
+                "Salon account data: email address, salon profile (address, phone, business hours), staff and services;",
+                "Customer data: name, phone number and appointment history entered during online booking;",
+                "Technical records tied to your account or phone number."
+              ]
+            }
+          ]
+        },
+        {
+          "title": "3. How to request deletion",
+          "body": [
+            "Send us a request through the contact channel below and include the phone number or email address linked to the data, so we can identify and remove it. If you booked as a customer, you can also ask the salon directly to delete your record.",
+            "__contact__"
+          ]
+        },
+        {
+          "title": "4. Processing time",
+          "body": [
+            "We process deletion requests within 30 days. Some data may be kept longer only where the law requires it (for example, accounting records). Once deleted, the data cannot be recovered."
+          ]
+        }
       ]
     }
   },
@@ -1074,7 +1256,9 @@
       "emailTaken": "This email is already registered.",
       "registerFailed": "Sign-up failed.",
       "invalidData": "Invalid data.",
-      "resetLinkInvalid": "The link is invalid or expired. Request a new reset."
+      "resetLinkInvalid": "The link is invalid or expired. Request a new reset.",
+      "captchaFailed": "Verification failed. Please try again.",
+      "accountSuspended": "This account has been suspended. Please contact SalonBook support."
     },
     "email": {
       "resetSubject": "SalonBook.az — password reset",
@@ -1134,7 +1318,8 @@
       "invalidTitle": "Invalid link",
       "invalidBody": "The reset link is missing or incomplete.",
       "requestAgain": "Request a new reset"
-    }
+    },
+    "confirmHuman": "Please confirm you're not a robot."
   },
   "AppError": {
     "title": "Something went wrong",
@@ -1164,7 +1349,8 @@
     "metaTitleSuffix": "Online booking",
     "metaNotFound": "Salon not found — SalonBook.az",
     "metaDescription": "{name}{addr} — book your time online, 24/7. With SalonBook.az.",
-    "ogTagline": "Book your time online — 24/7"
+    "ogTagline": "Book your time online — 24/7",
+    "closed": "Closed"
   },
   "Booking": {
     "eyebrow": "Online booking",
@@ -1261,7 +1447,9 @@
       "pickDate": "Choose a date.",
       "rescheduling": "Rescheduling…",
       "confirmNewTime": "Confirm new time — {time}",
-      "pickTime": "Choose a time"
+      "pickTime": "Choose a time",
+      "slotsError": "Couldn't load times.",
+      "retry": "Try again"
     },
     "goToSalon": "Go to {name} page",
     "api": {

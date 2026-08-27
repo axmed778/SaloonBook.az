@@ -153,7 +153,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
         {!open && (
           <button
             onClick={startAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-rose-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-400"
+            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
             {t("new")}
@@ -241,7 +241,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             <button
               onClick={submit}
               disabled={pending}
-              className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? t("saving") : t("save")}
             </button>

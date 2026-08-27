@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/app/[locale]/dashboard/_components/confirm-dial
 import { ErrorToast } from "@/app/[locale]/dashboard/_components/toast";
 import { saveEmployeePay, recordPayout, deletePayout } from "./actions";
 import { parseAznToMinor } from "@/lib/money";
+import { useModalA11y } from "@/components/use-modal-a11y";
 
 // Loose translator type (avoids depending on next-intl's exact generic shape).
 type Tr = (key: string, values?: Record<string, string | number>) => string;
@@ -206,7 +207,7 @@ export function PayrollManager({
                     </button>
                     <button
                       onClick={() => setPayoutFor(r)}
-                      className="rounded-lg bg-rose-500 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-rose-400"
+                      className="rounded-lg bg-rose-600 px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700"
                     >
                       {t("recordPayout")}
                     </button>
@@ -459,16 +460,20 @@ function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const { titleId, dialogProps } = useModalA11y(onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl"
+        {...dialogProps}
+        className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <h2 id={titleId} className="text-sm font-semibold text-foreground">
+          {title}
+        </h2>
         <div className="mt-4">{children}</div>
       </div>
     </div>
@@ -497,7 +502,7 @@ function ModalActions({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-rose-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-400 disabled:opacity-60"
+        className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
       >
         {pending ? tc("pleaseWait") : submitLabel}
       </button>

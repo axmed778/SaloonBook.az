@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getClientSession } from "@/lib/auth/client-session";
 import { acceptClientConsents } from "@/lib/legal-consent";
+import { applyRatingDelta } from "../_lib/salon-rating";
 
 // Server actions for the client area. Every action re-derives the caller from the
 // client session and scopes work to the session's VERIFIED phone — a phone is
@@ -67,10 +68,9 @@ export async function submitReview(input: unknown): Promise<ReviewResult> {
       });
       // Keep the salon's denormalized aggregate in step (drives the min-rating
       // filter). Same transaction, so the count/sum never drift from the rows.
-      await tx.salon.update({
-        where: { id: appt.salonId },
-        data: { ratingCount: { increment: 1 }, ratingSum: { increment: rating } },
-      });
+      // Goes through the shared helper so add and remove stay symmetrical —
+      // deleting a customer subtracts through the same delta path.
+      await applyRatingDelta(tx, appt.salonId, 1, rating);
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

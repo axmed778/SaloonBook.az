@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { setRequestLocale, getTranslations } from "next-intl/server";
+import { setRequestLocale, getTranslations, getMessages } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { ogLocale } from "@/i18n/format";
 import { ThemeSync } from "@/components/theme-sync";
@@ -89,6 +89,49 @@ export const viewport: Viewport = {
 // dangerouslySetInnerHTML below. If it ever grows an interpolated value (a
 // server-chosen default theme, a locale, a nonce), serialize that value with
 // serializeJsonLd from @/lib/json-ld — a raw value could close this <script>.
+// Namespaces that some "use client" component actually reads. Without a
+// `messages` prop NextIntlClientProvider serializes the WHOLE catalogue into
+// every HTML document (~80 KB of JSON for ru) — most of it strings only the
+// server ever renders (Landing, Legal, Footer, metadata…), paid for on every
+// page load, on Azerbaijani mobile data. Anything a Server Component reads via
+// getTranslations does NOT belong here.
+//
+// KEEP IN SYNC: a namespace missing here throws in the client component that
+// asks for it. When a client component starts using a new one, add it —
+//   grep -rn 'useTranslations(' src/
+// lists every call site (they are all string literals today).
+const CLIENT_NAMESPACES = [
+  "Admin",
+  "AppError",
+  "Audience",
+  "Auth",
+  "Booking",
+  "Calendar",
+  "ClientAuth",
+  "ClientProfile",
+  "Clients",
+  "Common",
+  "Discovery",
+  "Export",
+  "Faq",
+  "History",
+  "Landing", // salon-map reads Landing.map
+  "LanguageSwitcher",
+  "LegalReconsent",
+  "Manage",
+  "Nav",
+  "Payroll",
+  "Pwa",
+  "Reviews",
+  "SalonPage",
+  "Services",
+  "Settings", // location-picker reads Settings.location
+  "ThemeToggle",
+  "Today",
+  "Weekdays",
+  "Workers",
+] as const;
+
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}var d=document.documentElement;d.classList.remove('light','dark');d.classList.add(t);}catch(e){}})();`;
 
 export default async function LocaleLayout({
@@ -104,6 +147,11 @@ export default async function LocaleLayout({
   // Enables static rendering for this request's locale.
   setRequestLocale(locale);
 
+  const messages = await getMessages();
+  const clientMessages = Object.fromEntries(
+    CLIENT_NAMESPACES.filter((ns) => ns in messages).map((ns) => [ns, messages[ns]] as const),
+  );
+
   return (
     <html
       lang={locale}
@@ -113,7 +161,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeSync />
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={clientMessages}>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { matchesClientGender, type Audience } from "@/lib/audience";
@@ -146,6 +146,10 @@ export function BookingWidget({
       : null;
   const presetStep = canPreset ? (presetEmployee ? idx("date") : idx("employee")) : 0;
 
+  // Prefix for the contact-step field ids: a salon page can embed the widget
+  // more than once (page + "book" button), and duplicate ids would point every
+  // label at the first copy's inputs.
+  const fid = useId();
   const [current, setCurrent] = useState(presetStep);
   const [gender, setGender] = useState<Gender | null>(
     needGender ? presetGender : (salonAudience as Gender),
@@ -671,20 +675,35 @@ export function BookingWidget({
                     </p>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("nameLabel")}</label>
+                    <label
+                      htmlFor={`${fid}-name`}
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
+                    >
+                      {t("nameLabel")}
+                    </label>
                     <input
+                      id={`${fid}-name`}
+                      aria-describedby={`${fid}-name-hint`}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder={t("namePlaceholder")}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
-                    <p className="mt-1 text-xs text-faint-foreground">{t("nameHint")}</p>
+                    <p id={`${fid}-name-hint`} className="mt-1 text-xs text-faint-foreground">
+                      {t("nameHint")}
+                    </p>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("phoneLabel")}</label>
+                    <label
+                      htmlFor={`${fid}-phone`}
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
+                    >
+                      {t("phoneLabel")}
+                    </label>
                     <div className="flex items-center gap-2">
                       <span className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">+994</span>
                       <input
+                        id={`${fid}-phone`}
                         value={phoneDigits}
                         onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
                         inputMode="numeric"
@@ -694,8 +713,14 @@ export function BookingWidget({
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("notesLabel")}</label>
+                    <label
+                      htmlFor={`${fid}-notes`}
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
+                    >
+                      {t("notesLabel")}
+                    </label>
                     <textarea
+                      id={`${fid}-notes`}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value.slice(0, 500))}
                       rows={2}

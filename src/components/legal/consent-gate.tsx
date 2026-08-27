@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { useModalA11y } from "@/components/use-modal-a11y";
 
 // Blocking re-consent dialog. Shown when a signed-in party's accepted version of
 // a legal document is superseded (see src/lib/legal-consent.ts). Mandatory by
@@ -37,6 +38,9 @@ export function ConsentGate({
 }) {
   const t = useTranslations("LegalReconsent");
   const router = useRouter();
+  // `null` close handler: this gate is deliberately non-dismissable, so the
+  // hook only contributes the dialog role, the name, and the focus trap.
+  const { titleId, dialogProps } = useModalA11y(null);
   const [checked, setChecked] = useState(false);
   const [pending, start] = useTransition();
   const [leaving, setLeaving] = useState(false);
@@ -74,14 +78,12 @@ export function ConsentGate({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="reconsent-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
-        <h2 id="reconsent-title" className="text-lg font-semibold text-foreground">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
+      <div
+        {...dialogProps}
+        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl focus:outline-none"
+      >
+        <h2 id={titleId} className="text-lg font-semibold text-foreground">
           {t("title")}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

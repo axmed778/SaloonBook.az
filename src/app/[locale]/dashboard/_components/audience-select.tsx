@@ -29,7 +29,7 @@ export function AudienceSelect({
             className={
               "rounded-md px-3 py-1.5 text-sm font-medium transition " +
               (value === o.value
-                ? "bg-rose-500 text-white"
+                ? "bg-rose-600 text-white"
                 : "text-muted-foreground hover:text-foreground")
             }
           >

@@ -30,6 +30,46 @@ const rl = new IORedis(redisUrl, {
 // we don't want unhandled 'error' events tearing down the process.
 rl.on("error", () => {});
 
+// INCR and EXPIRE as two round trips is a real leak: if the process dies (or the
+// connection times out) between them, the counter is left WITHOUT a TTL and
+// never resets — that phone number or IP stays blocked forever. One Lua script
+// makes it a single atomic round trip, and the `ttl < 0` branch also repairs a
+// key that somehow already lost its expiry (from an older deploy, a FLUSH-less
+// restore, or a manual SET). It returns the TTL too, so callers don't need a
+// third round trip to build resetSec.
+export const INCR_WITH_TTL_LUA = `
+local count = redis.call('INCR', KEYS[1])
+local ttl = redis.call('TTL', KEYS[1])
+if count == 1 or ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return {count, ttl}
+`;
+
+/**
+ * The script above, as ioredis exposes it after defineCommand (which caches it
+ * server-side via EVALSHA and falls back to EVAL on NOSCRIPT). Declared as an
+ * interface so the counter helper can be driven by a fake client in tests —
+ * defineCommand-registered commands are not part of ioredis' static types.
+ */
+export interface IncrWithTtlClient {
+  rlIncrWithTtl(key: string, windowSec: number): Promise<[number, number]>;
+}
+
+rl.defineCommand("rlIncrWithTtl", { numberOfKeys: 1, lua: INCR_WITH_TTL_LUA });
+const counter = rl as unknown as IncrWithTtlClient;
+
+/** Atomic fixed-window increment. Returns the new count and the window's TTL. */
+export async function incrWithTtl(
+  client: IncrWithTtlClient,
+  key: string,
+  windowSec: number,
+): Promise<{ count: number; ttl: number }> {
+  const [count, ttl] = await client.rlIncrWithTtl(key, windowSec);
+  return { count, ttl };
+}
+
 // The same app-tuned client, exported for OTP storage (src/lib/auth/otp.ts).
 // OTP is security-critical and must FAIL CLOSED, so — unlike rateLimit() — its
 // callers let Redis errors propagate rather than swallowing them.
@@ -81,11 +121,7 @@ export async function rateLimit(
 ): Promise<RateLimitResult> {
   const redisKey = `rl:${key}`;
   try {
-    const count = await rl.incr(redisKey);
-    if (count === 1) {
-      await rl.expire(redisKey, windowSec);
-    }
-    const ttl = await rl.ttl(redisKey);
+    const { count, ttl } = await incrWithTtl(counter, redisKey, windowSec);
     return {
       allowed: count <= limit,
       remaining: Math.max(0, limit - count),
@@ -111,10 +147,7 @@ export async function consumeOutboundQuota(
 ): Promise<boolean> {
   const redisKey = `out:${phone}`;
   try {
-    const count = await rl.incr(redisKey);
-    if (count === 1) {
-      await rl.expire(redisKey, windowSec);
-    }
+    const { count } = await incrWithTtl(counter, redisKey, windowSec);
     return count <= max;
   } catch (e) {
     console.error("[ratelimit] outbound quota redis error, failing open", e);

@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { isDemoSalon } from "@/lib/demo";
 import { getClientSession } from "@/lib/auth/client-session";
 import type { Audience } from "@/lib/audience";
-import { bakuToday, shiftYmd } from "@/lib/time";
+import { parseBusinessHours } from "@/lib/business-hours";
+import { bakuMinutesOfDay, bakuToday, bakuWeekday, shiftYmd } from "@/lib/time";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor } from "@/lib/plans";
 import { serializeJsonLd } from "@/lib/json-ld";
@@ -103,6 +104,7 @@ export default async function BookingPage({
       phone: true,
       status: true,
       audience: true,
+      businessHours: true,
       account: {
         select: {
           subscription: {
@@ -111,7 +113,14 @@ export default async function BookingPage({
           salons: {
             where: { status: "ACTIVE" },
             orderBy: { createdAt: "asc" },
-            select: { id: true, slug: true, name: true, address: true, audience: true },
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              address: true,
+              audience: true,
+              businessHours: true,
+            },
           },
         },
       },
@@ -132,7 +141,14 @@ export default async function BookingPage({
   const selected =
     branches?.find((b) => b.slug === branchParam) ??
     siblings.find((b) => b.id === salon.id) ??
-    { id: salon.id, slug, name: salon.name, address: salon.address, audience: salon.audience };
+    {
+      id: salon.id,
+      slug,
+      name: salon.name,
+      address: salon.address,
+      audience: salon.audience,
+      businessHours: salon.businessHours,
+    };
 
   // Catalog of the SELECTED branch (each branch has its own staff + services),
   // plus its rating aggregate and recent reviews (public; no client identity).
@@ -172,6 +188,24 @@ export default async function BookingPage({
     month: "short",
     year: "numeric",
   });
+
+  // Open/closed badge for the SELECTED branch, from its weekly opening hours in
+  // Baku time (they are stored as Baku-local minutes — see lib/business-hours).
+  // The page is force-dynamic (top of this file), so this is evaluated on every
+  // request and can't freeze at build time advertising a salon as open at 02:00.
+  // `null` = the owner never configured hours: show no badge at all rather than
+  // guess — a wrong "Open" sends a client to a locked door.
+  const branchHours = parseBusinessHours(selected.businessHours);
+  const nowMin = bakuMinutesOfDay(new Date());
+  const todayWeekday = bakuWeekday(bakuToday());
+  const openState =
+    branchHours.length === 0
+      ? null
+      : branchHours.some(
+            (h) => h.weekday === todayWeekday && h.openMin <= nowMin && nowMin < h.closeMin,
+          )
+        ? "open"
+        : "closed";
 
   // Next 14 Baku days for the booking date picker (availability is validated
   // server-side, so past/closed days simply return no slots).
@@ -276,10 +310,22 @@ export default async function BookingPage({
               <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 {salon.name}
               </h1>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                {t("open")}
-              </span>
+              {openState && (
+                <span
+                  className={
+                    openState === "open"
+                      ? "inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2.5 py-1 text-xs font-medium text-success"
+                      : "inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                  }
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      openState === "open" ? "bg-success" : "bg-muted-foreground"
+                    }`}
+                  />
+                  {openState === "open" ? t("open") : t("closed")}
+                </span>
+              )}
             </div>
             {salon.description && (
               <p className="mt-2 text-pretty leading-relaxed text-muted-foreground">

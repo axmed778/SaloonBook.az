@@ -4,6 +4,7 @@ import {
   reviveNotification,
   MAX_NOTIFICATION_ATTEMPTS,
 } from "../../src/lib/queue";
+import { syncPushReminders } from "./push-sync";
 
 // Re-enqueue notifications that will otherwise never send. Three ways that
 // happens:
@@ -42,6 +43,16 @@ const BATCH = 500;
 // Only consider a FAILED row abandoned once it has been due for longer than the
 // whole retry window can last.
 const FAILED_GRACE_MS = 30 * 60_000;
+// Upper bound on how far back the sweep will look. Production carries a backlog
+// of rows that went FAILED before the revival above existed — 52 of them at the
+// time of writing, 47 for appointments that are already in the past, the oldest
+// from 2026-07-02. Without this bound the first deploy of the revival would pick
+// the whole backlog up in one pass. The processor would refuse to send them (it
+// re-checks the appointment and the recipient's consent), so nothing reaches a
+// customer either way — but there is no reason to push two months of dead rows
+// through Redis to find that out. Anything this old is a dead letter for a human
+// to look at, not work for the queue.
+const STALE_AFTER_MS = 3 * 24 * 60 * 60_000;
 // Cap each enqueue: with Redis down, ioredis buffers the command in its offline
 // queue and never resolves, so a bare await would hang the whole sweep. Match
 // the booking/manage enqueue policy (time-bounded, best-effort).
@@ -57,10 +68,19 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function sweepNotifications(): Promise<void> {
+  // The salon's delayed T-2h push has the same class of problem as a stuck
+  // notification row — Redis holds a schedule that Postgres has since changed —
+  // so it rides this timer rather than adding a second one. Kept independent:
+  // a push-queue problem must not stop WhatsApp rows from being re-enqueued.
+  // (Cost note, same as below: no extra database wakeups, one more query per
+  // tick on a compute this timer already keeps awake.)
+  await syncPushReminders().catch((e) => console.error("[sweep] push reminder sync failed", e));
+
   const now = Date.now();
   const stuck = await prisma.notification.findMany({
     where: {
       createdAt: { lt: new Date(now - CREATED_GRACE_MS) },
+      sendAfter: { gte: new Date(now - STALE_AFTER_MS) },
       attempts: { lt: MAX_NOTIFICATION_ATTEMPTS },
       OR: [
         { status: "QUEUED", sendAfter: { lte: new Date(now - DUE_GRACE_MS) } },

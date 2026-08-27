@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { useModalA11y } from "@/components/use-modal-a11y";
 import type { Slot } from "@/lib/availability";
 import { availableSlots, createManualBooking } from "../actions";
 import {
@@ -35,6 +36,10 @@ export function BookingModal({
   const t = useTranslations("Calendar");
   const tc = useTranslations("Common");
   const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  // One prefix per mounted modal keeps the field ids unique even if two of
+  // these ever render at once (Clients CRM opens one over the calendar's).
+  const fid = useId();
   const [employeeId, setEmployeeId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [day, setDay] = useState(defaultDay);
@@ -110,11 +115,14 @@ export function BookingModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-border bg-card shadow-2xl"
+        {...dialogProps}
+        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-border bg-card shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">{t("newBooking")}</h2>
+          <h2 id={titleId} className="text-base font-semibold text-foreground">
+            {t("newBooking")}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -128,8 +136,11 @@ export function BookingModal({
         <div className="space-y-4 overflow-y-auto px-5 py-4">
           {/* Master */}
           <div>
-            <label className={labelCls}>{t("modal.employee")}</label>
+            <label className={labelCls} htmlFor={`${fid}-employee`}>
+              {t("modal.employee")}
+            </label>
             <select
+              id={`${fid}-employee`}
               className={inputCls + " w-full"}
               value={employeeId}
               onChange={(e) => {
@@ -150,8 +161,11 @@ export function BookingModal({
 
           {/* Service */}
           <div>
-            <label className={labelCls}>{t("modal.service")}</label>
+            <label className={labelCls} htmlFor={`${fid}-service`}>
+              {t("modal.service")}
+            </label>
             <select
+              id={`${fid}-service`}
               className={inputCls + " w-full disabled:opacity-50"}
               value={serviceId}
               disabled={!employeeId}
@@ -179,8 +193,11 @@ export function BookingModal({
 
           {/* Date */}
           <div>
-            <label className={labelCls}>{t("modal.date")}</label>
+            <label className={labelCls} htmlFor={`${fid}-date`}>
+              {t("modal.date")}
+            </label>
             <input
+              id={`${fid}-date`}
               type="date"
               className={inputCls + " w-full"}
               value={day}
@@ -195,8 +212,10 @@ export function BookingModal({
 
           {/* Slots */}
           {ready && (
-            <div>
-              <label className={labelCls}>{t("modal.freeSlot")}</label>
+            <div role="group" aria-labelledby={`${fid}-slots`}>
+              <span id={`${fid}-slots`} className={labelCls}>
+                {t("modal.freeSlot")}
+              </span>
               {slotsLoading ? (
                 <div className="grid grid-cols-4 gap-2" aria-busy="true">
                   {Array.from({ length: 8 }, (_, i) => (
@@ -231,8 +250,11 @@ export function BookingModal({
 
           {/* Customer */}
           <div>
-            <label className={labelCls}>{t("modal.customerName")}</label>
+            <label className={labelCls} htmlFor={`${fid}-name`}>
+              {t("modal.customerName")}
+            </label>
             <input
+              id={`${fid}-name`}
               className={inputCls + " w-full"}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -240,12 +262,15 @@ export function BookingModal({
             />
           </div>
           <div>
-            <label className={labelCls}>{t("modal.phone")}</label>
+            <label className={labelCls} htmlFor={`${fid}-phone`}>
+              {t("modal.phone")}
+            </label>
             <div className="flex items-center gap-2">
               <span className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
                 +994
               </span>
               <input
+                id={`${fid}-phone`}
                 className={inputCls + " w-full"}
                 value={phoneDigits}
                 inputMode="numeric"
@@ -256,8 +281,11 @@ export function BookingModal({
             </div>
           </div>
           <div>
-            <label className={labelCls}>{t("modal.notes")}</label>
+            <label className={labelCls} htmlFor={`${fid}-notes`}>
+              {t("modal.notes")}
+            </label>
             <textarea
+              id={`${fid}-notes`}
               className={inputCls + " w-full resize-y"}
               value={notes}
               onChange={(e) => setNotes(e.target.value.slice(0, 500))}
@@ -274,7 +302,7 @@ export function BookingModal({
             type="button"
             disabled={submitting}
             onClick={submit}
-            className="w-full rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+            className="w-full rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-50"
           >
             {submitting ? t("modal.creating") : t("modal.create")}
           </button>

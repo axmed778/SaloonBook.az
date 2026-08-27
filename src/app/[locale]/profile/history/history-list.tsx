@@ -65,7 +65,7 @@ export function HistoryList({ visits }: { visits: Visit[] }) {
             {v.canReview && reviewing !== v.id && (
               <button
                 onClick={() => setReviewing(v.id)}
-                className="inline-flex h-9 items-center rounded-lg bg-rose-500 px-3 text-sm font-medium text-white transition hover:bg-rose-400"
+                className="inline-flex h-9 items-center rounded-lg bg-rose-600 px-3 text-sm font-medium text-white transition hover:bg-rose-700"
               >
                 {tReviews("writeReview")}
               </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useModalA11y } from "@/components/use-modal-a11y";
 
 // Replacement for native confirm(): same modal chrome as the rest of the
 // dashboard. Render conditionally — `{state && <ConfirmDialog …/>}` — with the
@@ -21,14 +22,18 @@ export function ConfirmDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("Common");
+  const { titleId, dialogProps } = useModalA11y(onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        {...dialogProps}
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {title}
+        </h2>
         <div className="mt-2 text-sm text-muted-foreground">{body}</div>
         <div className="mt-5 flex justify-end gap-2">
           <button
@@ -41,7 +46,7 @@ export function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={pending}
-            className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
+            className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-600 disabled:opacity-60"
           >
             {pending ? t("pleaseWait") : (confirmLabel ?? t("confirmDelete"))}
           </button>
