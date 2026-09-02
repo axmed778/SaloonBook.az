@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerPage } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { SettingsManager, type BranchRow } from "./settings-manager";
@@ -7,7 +7,7 @@ import { SettingsManager, type BranchRow } from "./settings-manager";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const session = (await getSession())!;
+  const session = await requireOwnerPage();
   const t = await getTranslations("Dashboard");
   if (!session.salonId) {
     return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;

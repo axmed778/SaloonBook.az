@@ -53,9 +53,15 @@
     "loggingOut": "Logging out…",
     "roleAdmin": "Platform Admin",
     "roleOwner": "Salon owner",
+    "roleStaff": "Master",
     "branch": "Branch",
     "branchSwitcherLabel": "Active branch",
     "manageBranches": "Manage branches"
+  },
+  "StaffBlocked": {
+    "title": "Access closed",
+    "plan": "The salon's plan no longer includes staff logins. Ask the salon owner.",
+    "inactive": "The salon owner has switched this login off."
   },
   "Pwa": {
     "installTitle": "Add SalonBook to your home screen",
@@ -457,6 +463,31 @@
     "servicesCount": "{count} services",
     "workDaysCount": "{count} work days",
     "timeOff": "Time off",
+    "access": {
+      "badge": "Login",
+      "action": "Access",
+      "titleFor": "Login for {name}",
+      "explainer": "The master signs in on their own phone and sees only their own schedule and their own bookings. Prices, the client base, analytics and settings stay with the owner.",
+      "planRequired": "Staff logins are part of the paid plans. Upgrade to enable them.",
+      "inactive": "This employee is deactivated — activate them first.",
+      "email": "Email",
+      "emailPlaceholder": "master@example.com",
+      "password": "Password",
+      "newPassword": "New password",
+      "generate": "Generate",
+      "grantSubmit": "Grant access",
+      "resetSubmit": "Change password",
+      "issued": "Password saved — hand it to the master now:",
+      "issuedNote": "This password will not be shown again.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "revoke": "Revoke access",
+      "revokeConfirm": "Revoke this login?",
+      "errors": {
+        "passwordRequired": "Enter a password.",
+        "emailRequired": "Enter an email."
+      }
+    },
     "editAction": "Edit",
     "deactivate": "Deactivate",
     "activate": "Activate",
@@ -475,7 +506,13 @@
       "timeOffTooLong": "Time off can't be longer than 1 year.",
       "recordNotFound": "Record not found.",
       "hasAppointments": "This staff member has appointments. Deactivate them instead of deleting.",
-      "seatLimit": "Your plan allows up to {max} active staff. Upgrade your plan for more staff (Pricing page)."
+      "seatLimit": "Your plan allows up to {max} active staff. Upgrade your plan for more staff (Pricing page).",
+      "accessPlan": "Staff logins are part of the paid plans. Upgrade to enable them.",
+      "accessInactive": "A deactivated employee cannot be given a login.",
+      "accessExists": "This employee already has a login.",
+      "accessEmailTaken": "That email is already in use.",
+      "accessEmailInvalid": "That email is not valid.",
+      "accessMissing": "This employee has no login."
     },
     "timeOffModal": {
       "titleFor": "Time off — {name}",
@@ -869,7 +906,8 @@
       "hours": "The staff member isn't working at this time.",
       "timeoff": "The staff member is on time off then.",
       "overlap": "This time is already taken."
-    }
+    },
+    "notYours": "That booking isn't yours."
   },
   "Analytics": {
     "adminTitle": "Platform management",
@@ -1559,7 +1597,7 @@
         "overlapProtection": "Double-booking protection",
         "roiPanel": "ROI analytics dashboard",
         "payroll": "Payroll module (salary + commission)",
-        "roles": "Role management (coming soon)",
+        "roles": "A separate login for each master",
         "exports": "Data export",
         "deposits": "Deposit / no-show protection (coming soon)"
       },

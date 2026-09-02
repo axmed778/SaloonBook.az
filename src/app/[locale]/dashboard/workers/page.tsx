@@ -1,5 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerPage } from "@/lib/auth/guards";
+import { featuresFor } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate, shiftYmd } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
@@ -8,7 +9,7 @@ import { WorkersManager } from "./workers-manager";
 export const dynamic = "force-dynamic";
 
 export default async function WorkersPage() {
-  const session = (await getSession())!;
+  const session = await requireOwnerPage();
   if (!session.salonId) {
     const t = await getTranslations("Dashboard");
     return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;
@@ -27,6 +28,8 @@ export default async function WorkersPage() {
         phone: true,
         isActive: true,
         audience: true,
+        // The master's own login, when the owner has issued one.
+        membership: { select: { user: { select: { email: true } } } },
         services: { select: { serviceId: true } },
         workingHours: { select: { weekday: true, startMin: true, endMin: true } },
         // Current + upcoming time off (past entries don't matter for planning).
@@ -51,6 +54,7 @@ export default async function WorkersPage() {
     phone: e.phone,
     isActive: e.isActive,
     audience: e.audience,
+    access: e.membership ? { email: e.membership.user.email } : null,
     serviceIds: e.services.map((s) => s.serviceId),
     hours: e.workingHours.map((h) => ({
       weekday: h.weekday,
@@ -72,5 +76,12 @@ export default async function WorkersPage() {
     }),
   }));
 
-  return <WorkersManager employees={employeeRows} services={services} />;
+  return (
+    <WorkersManager
+      employees={employeeRows}
+      services={services}
+      // Staff logins are a paid feature; the actions re-check it server-side.
+      staffLoginsEnabled={featuresFor(session.plan).staffRoles}
+    />
+  );
 }

@@ -9,6 +9,9 @@ import {
   deleteEmployee,
   addTimeOff,
   deleteTimeOff,
+  grantStaffAccess,
+  resetStaffPassword,
+  revokeStaffAccess,
 } from "./actions";
 import { type Audience } from "@/lib/audience";
 import { bakuToday } from "@/lib/time";
@@ -20,6 +23,8 @@ import { ErrorToast } from "../_components/toast";
 type Svc = { id: string; name: string; isActive: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
 export type TimeOffRow = { id: string; label: string; reason: string | null };
+/** The master's own login, or null when the owner has not issued one. */
+export type AccessRow = { email: string };
 export type EmployeeRow = {
   id: string;
   name: string;
@@ -27,6 +32,7 @@ export type EmployeeRow = {
   phone: string | null;
   isActive: boolean;
   audience: Audience;
+  access: AccessRow | null;
   serviceIds: string[];
   hours: HourRow[];
   timeOff: TimeOffRow[];
@@ -130,9 +136,11 @@ const emptyForm = {
 export function WorkersManager({
   employees,
   services,
+  staffLoginsEnabled,
 }: {
   employees: EmployeeRow[];
   services: Svc[];
+  staffLoginsEnabled: boolean;
 }) {
   const t = useTranslations("Workers");
   const tc = useTranslations("Common");
@@ -146,6 +154,7 @@ export function WorkersManager({
   const [hours, setHours] = useState<HoursState>(defaultHours);
   const [error, setError] = useState<string | null>(null);
   const [timeOffFor, setTimeOffFor] = useState<EmployeeRow | null>(null);
+  const [accessFor, setAccessFor] = useState<EmployeeRow | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<EmployeeRow | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -477,6 +486,14 @@ export function WorkersManager({
                         {t("inactive")}
                       </span>
                     )}
+                    {e.access && (
+                      <span
+                        title={e.access.email}
+                        className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                      >
+                        {t("access.badge")}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-faint-foreground">
                     {e.position || "—"}
@@ -489,6 +506,13 @@ export function WorkersManager({
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
+                <button
+                  onClick={() => setAccessFor(e)}
+                  disabled={pending}
+                  className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
+                >
+                  {t("access.action")}
+                </button>
                 <button
                   onClick={() => setTimeOffFor(e)}
                   disabled={pending}
@@ -528,6 +552,15 @@ export function WorkersManager({
         </ul>
       )}
 
+      {accessFor && (
+        <AccessModal
+          // Same reason as the time-off modal: re-resolve from props so the
+          // panel reflects a grant/revoke that just refreshed the list.
+          employee={employees.find((x) => x.id === accessFor.id) ?? accessFor}
+          enabled={staffLoginsEnabled}
+          onClose={() => setAccessFor(null)}
+        />
+      )}
       {timeOffFor && (
         <TimeOffModal
           // Re-resolve from props so the list inside the modal stays fresh
@@ -703,6 +736,266 @@ function TimeOffModal({
             {t("timeOffModal.note")}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Per-master login ---------------------------------------------------------
+// The owner hands a master their own email + password here. What that login can
+// then reach is decided server-side (lib/auth/access); this panel only says so
+// plainly, because "can my masters log in and see ONLY their own schedule" is
+// the question salons ask before they buy.
+
+const PW_LOWER = "abcdefghijkmnopqrstuvwxyz"; // no l — it reads as 1 over the phone
+const PW_UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I, no O
+const PW_DIGITS = "23456789"; // no 0/1
+const PW_SPECIAL = "!@#$%*?";
+
+function pick(set: string, n: number): string[] {
+  const buf = new Uint32Array(n);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (v) => set[v % set.length]);
+}
+
+/**
+ * A password that satisfies the server's policy by construction (lower, upper,
+ * digit, special, 10 chars) out of characters that survive being read aloud.
+ */
+function generatePassword(): string {
+  const chars = [
+    ...pick(PW_LOWER, 4),
+    ...pick(PW_UPPER, 3),
+    ...pick(PW_DIGITS, 2),
+    ...pick(PW_SPECIAL, 1),
+  ];
+  // Shuffle, or the character classes would always land in the same positions.
+  const order = new Uint32Array(chars.length);
+  crypto.getRandomValues(order);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = order[i] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
+function AccessModal({
+  employee,
+  enabled,
+  onClose,
+}: {
+  employee: EmployeeRow;
+  enabled: boolean;
+  onClose: () => void;
+}) {
+  const t = useTranslations("Workers");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const hasAccess = employee.access !== null;
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  // The plaintext of a password that was just saved. Shown once, so the owner
+  // can copy it before handing it over — it is not recoverable afterwards.
+  const [issued, setIssued] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setIssued(null);
+    if (!password) return setError(t("access.errors.passwordRequired"));
+    if (!hasAccess && !email.trim()) return setError(t("access.errors.emailRequired"));
+
+    startTransition(async () => {
+      const res = hasAccess
+        ? await resetStaffPassword({ employeeId: employee.id, password })
+        : await grantStaffAccess({ employeeId: employee.id, email: email.trim(), password });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setIssued(password);
+      setPassword("");
+      setCopied(false);
+      router.refresh();
+    });
+  }
+
+  function revoke() {
+    setError(null);
+    startTransition(async () => {
+      const res = await revokeStaffAccess(employee.id);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setConfirmRevoke(false);
+      setIssued(null);
+      router.refresh();
+    });
+  }
+
+  async function copy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+    } catch {
+      // Clipboard access needs a secure context and can simply be refused; the
+      // password is on screen either way, so this is not worth an error.
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">
+            {t("access.titleFor", { name: employee.name })}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={tc("close")} title={tc("close")}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <p className="mt-2 text-sm text-faint-foreground">{t("access.explainer")}</p>
+
+        {!enabled ? (
+          <p className="mt-4 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+            {t("access.planRequired")}
+          </p>
+        ) : !employee.isActive && !hasAccess ? (
+          <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+            {t("access.inactive")}
+          </p>
+        ) : (
+          <>
+            <form onSubmit={submit} className="mt-4 space-y-3">
+              <div>
+                <label className={labelCls}>{t("access.email")}</label>
+                {hasAccess ? (
+                  <p className="rounded-lg bg-muted px-3 py-2 font-mono text-sm text-secondary-foreground">
+                    {employee.access!.email}
+                  </p>
+                ) : (
+                  <input
+                    type="email"
+                    autoComplete="off"
+                    className={inputCls + " w-full"}
+                    placeholder={t("access.emailPlaceholder")}
+                    maxLength={200}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  {hasAccess ? t("access.newPassword") : t("access.password")}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    className={inputCls + " w-full font-mono"}
+                    maxLength={200}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPassword(generatePassword())}
+                    className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
+                  >
+                    {t("access.generate")}
+                  </button>
+                </div>
+              </div>
+
+              {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={pending}
+                className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+              >
+                {pending
+                  ? t("saving")
+                  : hasAccess
+                    ? t("access.resetSubmit")
+                    : t("access.grantSubmit")}
+              </button>
+            </form>
+
+            {issued && (
+              <div className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2.5">
+                <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                  {t("access.issued")}
+                </p>
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <code className="min-w-0 truncate text-sm text-foreground">{issued}</code>
+                  <button
+                    type="button"
+                    onClick={() => copy(issued)}
+                    className="shrink-0 text-xs font-medium text-emerald-700 transition hover:underline dark:text-emerald-300"
+                  >
+                    {copied ? t("access.copied") : t("access.copy")}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-faint-foreground">{t("access.issuedNote")}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {hasAccess && (
+          <div className="mt-5 border-t border-border pt-4">
+            {confirmRevoke ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="min-w-0 text-sm text-secondary-foreground">
+                  {t("access.revokeConfirm")}
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => setConfirmRevoke(false)}
+                    disabled={pending}
+                    className="rounded-lg border border-border px-3 py-1.5 text-sm text-secondary-foreground transition hover:bg-hover disabled:opacity-60"
+                  >
+                    {tc("cancel")}
+                  </button>
+                  <button
+                    onClick={revoke}
+                    disabled={pending}
+                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+                  >
+                    {t("access.revoke")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmRevoke(true)}
+                disabled={pending}
+                className="text-sm text-rose-700 transition hover:text-rose-400 disabled:opacity-60 dark:text-rose-400/80"
+              >
+                {t("access.revoke")}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

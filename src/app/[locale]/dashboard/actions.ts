@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getSession, setActiveBranch } from "@/lib/auth/session";
+import { requireScope } from "@/lib/auth/guards";
+import { appointmentScope, canActForEmployee } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
 import { acceptSalonConsents } from "@/lib/legal-consent";
 import { bestEffortEnqueue, enqueueNotification } from "@/lib/queue";
@@ -18,17 +20,14 @@ import {
 } from "@/lib/booking";
 
 // Server actions backing the dashboard calendar: staff-entered ("manual")
-// bookings and appointment status changes. Every action re-derives the caller's
-// salon from the session and scopes writes to it — the tenant guard is `salonId`
-// in the where-filter, exactly like the other dashboard actions.
+// bookings and appointment status changes. Unlike the salon-management actions,
+// these are the one surface BOTH roles use, so they carry two guards rather than
+// one: `salonId` as the tenant guard, plus — for a master's own login —
+// `employeeId`, so the day they can read and rewrite is only ever their own.
+// Both come from requireScope(); spreading appointmentScope() into the filter
+// keeps them from drifting apart.
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-
-async function requireSalonId(): Promise<string> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  return session.salonId;
-}
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -63,14 +62,18 @@ export type SlotsResult =
   | { ok: false; error: string };
 
 export async function availableSlots(input: unknown): Promise<SlotsResult> {
-  const salonId = await requireSalonId();
+  const scope = await requireScope();
   const t = await getTranslations("Actions");
   const parsed = slotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
   const { employeeId, serviceId, day } = parsed.data;
 
+  // A master may only ever look at their own diary — including through a
+  // hand-crafted request carrying a colleague's id.
+  if (!canActForEmployee(scope, employeeId)) return { ok: false, error: t("notYours") };
+
   // Never expose availability for a pair that isn't this tenant's.
-  if (!(await assertServiceLink(salonId, serviceId, employeeId))) {
+  if (!(await assertServiceLink(scope.salonId, serviceId, employeeId))) {
     return { ok: false, error: t("serviceNotOffered") };
   }
 
@@ -97,13 +100,17 @@ const bookingSchema = z.object({
 });
 
 export async function createManualBooking(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const scope = await requireScope();
+  const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = bookingSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: t("invalidData") };
   }
   const d = parsed.data;
+
+  // A master books into their own column, never a colleague's.
+  if (!canActForEmployee(scope, d.employeeId)) return { ok: false, error: t("notYours") };
 
   if (!(await assertServiceLink(salonId, d.serviceId, d.employeeId))) {
     return { ok: false, error: t("serviceNotOffered") };
@@ -182,7 +189,8 @@ const statusSchema = z.object({
 });
 
 export async function setAppointmentStatus(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const scope = await requireScope();
+  const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = statusSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -190,7 +198,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
 
   // Pre-read for the cancellation notice below (previous status, phone, names).
   const appt = await prisma.appointment.findFirst({
-    where: { id, salonId },
+    where: { id, ...appointmentScope(scope) },
     select: {
       status: true,
       startsAt: true,
@@ -212,10 +220,11 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
     return { ok: false, error: t("futureStatus") };
   }
 
-  // salonId in the filter is the tenant guard; only CONFIRMED/COMPLETED/NO_SHOW
-  // appointments are shown, so any of them is a valid transition target.
+  // The scope in the filter is the guard (salon, plus the master's own employee
+  // id); only CONFIRMED/COMPLETED/NO_SHOW appointments are shown, so any of them
+  // is a valid transition target.
   const res = await prisma.appointment.updateMany({
-    where: { id, salonId },
+    where: { id, ...appointmentScope(scope) },
     data: { status },
   });
   if (res.count === 0) return { ok: false, error: t("apptNotFound") };
@@ -289,13 +298,13 @@ const rescheduleSlotsSchema = z.object({
 /** Free slots for the reschedule picker: the appointment's own (employee,
  *  service) on the given day, excluding its current interval. */
 export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
-  const salonId = await requireSalonId();
+  const scope = await requireScope();
   const t = await getTranslations("Actions");
   const parsed = rescheduleSlotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
 
   const appt = await prisma.appointment.findFirst({
-    where: { id: parsed.data.id, salonId },
+    where: { id: parsed.data.id, ...appointmentScope(scope) },
     select: { employeeId: true, serviceId: true },
   });
   if (!appt) return { ok: false, error: t("apptNotFound") };
@@ -315,14 +324,15 @@ const rescheduleSchema = z.object({
 });
 
 export async function rescheduleAppointment(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const scope = await requireScope();
+  const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = rescheduleSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
   const startUtc = new Date(parsed.data.startUtc);
 
   const appt = await prisma.appointment.findFirst({
-    where: { id: parsed.data.id, salonId },
+    where: { id: parsed.data.id, ...appointmentScope(scope) },
     select: {
       status: true,
       employeeId: true,
@@ -355,7 +365,7 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
   try {
     toEnqueue = await prisma.$transaction(async (tx) => {
       const res = await tx.appointment.updateMany({
-        where: { id: parsed.data.id, salonId, status: "CONFIRMED" },
+        where: { id: parsed.data.id, ...appointmentScope(scope), status: "CONFIRMED" },
         data: { startsAt: startUtc, endsAt: check.endUtc },
       });
       if (res.count === 0) throw new Error("conflict");
@@ -430,10 +440,14 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
 /**
  * Records this account's acceptance of the re-consent gate. Scoped to the
  * session's account; which documents are stale is re-derived server-side.
+ *
+ * Owner-only: accepting a revised offer binds the paying account, which is not a
+ * master's to give. Their dashboard is never gated on it (see the layout), so
+ * this stays a silent no-op for them rather than an error.
  */
 export async function acceptLegalConsents(): Promise<void> {
   const session = await getSession();
-  if (!session?.accountId) return;
+  if (session?.role !== "OWNER" || !session.accountId) return;
   await acceptSalonConsents(session.accountId);
   revalidatePath("/dashboard");
 }

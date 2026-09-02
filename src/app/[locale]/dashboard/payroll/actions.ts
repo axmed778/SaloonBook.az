@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerSession } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { featuresFor } from "@/lib/plans";
 import { effectivePlan, subscriptionForSalon } from "@/lib/subscription";
@@ -16,14 +16,13 @@ import { effectivePlan, subscriptionForSalon } from "@/lib/subscription";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function requirePayrollSalon(): Promise<string> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  const sub = await subscriptionForSalon(prisma, session.salonId);
+  const session = await requireOwnerSession();
+  const sub = await subscriptionForSalon(prisma, session.salonId!);
   if (!featuresFor(effectivePlan(sub)).payroll) {
     const t = await getTranslations("Payroll");
     throw new Error(t("proOnly"));
   }
-  return session.salonId;
+  return session.salonId!;
 }
 
 // 100 000 AZN in qəpik — sanity ceiling for salaries and payouts.

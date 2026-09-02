@@ -53,9 +53,15 @@
     "loggingOut": "Çıxılır…",
     "roleAdmin": "Platform Admin",
     "roleOwner": "Salon sahibi",
+    "roleStaff": "Usta",
     "branch": "Filial",
     "branchSwitcherLabel": "Aktiv filial",
     "manageBranches": "Filialları idarə et"
+  },
+  "StaffBlocked": {
+    "title": "Giriş bağlıdır",
+    "plan": "Salonun planı artıq usta girişlərini əhatə etmir. Salon sahibi ilə əlaqə saxlayın.",
+    "inactive": "Salon sahibi bu girişi dayandırıb."
   },
   "Pwa": {
     "installTitle": "SalonBook-u ana ekrana əlavə edin",
@@ -457,6 +463,31 @@
     "servicesCount": "{count} xidmət",
     "workDaysCount": "{count} iş günü",
     "timeOff": "Məzuniyyət",
+    "access": {
+      "badge": "Giriş",
+      "action": "Giriş",
+      "titleFor": "{name} üçün giriş",
+      "explainer": "Usta öz telefonundan daxil olur və yalnız öz iş qrafikini və öz rezervasiyalarını görür. Qiymətlər, müştəri bazası, analitika və tənzimləmələr salon sahibində qalır.",
+      "planRequired": "Usta girişləri ödənişli planlara daxildir. Planı yüksəldin (Tariflər).",
+      "inactive": "İşçi deaktivdir — əvvəlcə onu aktivləşdirin.",
+      "email": "E-poçt",
+      "emailPlaceholder": "usta@example.com",
+      "password": "Şifrə",
+      "newPassword": "Yeni şifrə",
+      "generate": "Yarat",
+      "grantSubmit": "Girişi ver",
+      "resetSubmit": "Şifrəni yenilə",
+      "issued": "Şifrə yadda saxlanıldı — indi ustaya verin:",
+      "issuedNote": "Bu şifrə bir daha göstərilməyəcək.",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "revoke": "Girişi ləğv et",
+      "revokeConfirm": "Giriş ləğv edilsin?",
+      "errors": {
+        "passwordRequired": "Şifrə daxil edin.",
+        "emailRequired": "E-poçt daxil edin."
+      }
+    },
     "editAction": "Redaktə",
     "deactivate": "Deaktiv et",
     "activate": "Aktiv et",
@@ -475,7 +506,13 @@
       "timeOffTooLong": "Məzuniyyət 1 ildən uzun ola bilməz.",
       "recordNotFound": "Qeyd tapılmadı.",
       "hasAppointments": "Bu işçidə görüşlər var. Silmək əvəzinə onu deaktiv edin.",
-      "seatLimit": "Planınız ən çox {max} aktiv işçiyə icazə verir. Daha çox işçi üçün planı yüksəldin (Tariflər səhifəsi)."
+      "seatLimit": "Planınız ən çox {max} aktiv işçiyə icazə verir. Daha çox işçi üçün planı yüksəldin (Tariflər səhifəsi).",
+      "accessPlan": "Usta girişləri ödənişli planlara daxildir. Planı yüksəldin (Tariflər).",
+      "accessInactive": "Deaktiv işçi üçün giriş yaradıla bilməz.",
+      "accessExists": "Bu işçinin artıq girişi var.",
+      "accessEmailTaken": "Bu e-poçt artıq istifadə olunur.",
+      "accessEmailInvalid": "E-poçt düzgün deyil.",
+      "accessMissing": "Bu işçinin girişi yoxdur."
     },
     "timeOffModal": {
       "titleFor": "Məzuniyyət — {name}",
@@ -869,7 +906,8 @@
       "hours": "İşçi bu vaxt işləmir.",
       "timeoff": "İşçi bu vaxt məzuniyyətdədir.",
       "overlap": "Bu vaxt artıq tutulub."
-    }
+    },
+    "notYours": "Bu qeyd sizin deyil."
   },
   "Analytics": {
     "adminTitle": "Platforma idarəetməsi",
@@ -1559,7 +1597,7 @@
         "overlapProtection": "İkiqat rezervasiya qoruması",
         "roiPanel": "ROI analitika paneli",
         "payroll": "Əməkhaqqı modulu (maaş + komissiya)",
-        "roles": "Rol idarəetməsi (tezliklə)",
+        "roles": "Hər usta üçün ayrıca giriş",
         "exports": "Məlumat eksportu",
         "deposits": "Depozit / no-show qoruması (tezliklə)"
       },

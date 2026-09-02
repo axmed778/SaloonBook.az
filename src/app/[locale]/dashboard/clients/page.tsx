@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { getTranslations, getLocale } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerPage } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
@@ -51,7 +51,7 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const session = (await getSession())!;
+  const session = await requireOwnerPage();
   const df = intlLocale(await getLocale());
 
   if (session.isAdmin || !session.salonId) {

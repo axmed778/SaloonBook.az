@@ -6,6 +6,7 @@ import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { ConsentGate } from "@/components/legal/consent-gate";
 import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
 import { acceptLegalConsents } from "./actions";
+import { LogoutButton } from "./logout-button";
 import { DashboardShell } from "./_components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,30 @@ export default async function DashboardLayout({
     return null; // unreachable — redirect() throws — but narrows `session`
   }
 
+  // A master whose login has been cut off — the account fell to a tier without
+  // staff logins, or the owner deactivated them — keeps a valid session but no
+  // salon. Say which it is: they cannot fix either themselves, and an empty
+  // dashboard would just look broken.
+  if (session.staffBlocked) {
+    const tb = await getTranslations("StaffBlocked");
+    return (
+      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16 text-center">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">{tb("title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{tb(session.staffBlocked)}</p>
+        </div>
+        <LogoutButton />
+      </main>
+    );
+  }
+
   const t = await getTranslations("Nav");
   const displayName = session.user.fullName?.trim() || session.user.email;
-  const roleLabel = session.isAdmin ? t("roleAdmin") : t("roleOwner");
+  const roleLabel = session.isAdmin
+    ? t("roleAdmin")
+    : session.isStaff
+      ? t("roleStaff")
+      : t("roleOwner");
   const initial = displayName.charAt(0).toUpperCase();
 
   // Branch switcher: only meaningful for a Pro owner with 2+ ACTIVE branches.
@@ -47,13 +69,17 @@ export default async function DashboardLayout({
 
   // Re-consent gate: blocks the dashboard when a legal document the account
   // accepted has since been revised. Platform admins are exempt — they have no
-  // membership, so there is no account to record an acceptance against.
-  const stale = session.accountId ? staleSalonDocs(session.legal) : [];
+  // membership, so there is no account to record an acceptance against. So are
+  // masters: accepting a revised offer binds the paying account, which is the
+  // owner's decision, and blocking a master's day on it would strand them.
+  const stale =
+    session.role === "OWNER" && session.accountId ? staleSalonDocs(session.legal) : [];
 
   return (
     <DashboardShell
       user={{ name: displayName, role: roleLabel, initial }}
       isAdmin={session.isAdmin}
+      isStaff={session.isStaff}
       branch={branch}
       installDismissed={installDismissed}
     >

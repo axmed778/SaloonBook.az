@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
+import { appointmentScope } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
 import {
   bakuToday,
@@ -33,6 +34,10 @@ export default async function DashboardTodayPage() {
   }
 
   const salonId = session.salonId;
+  // A master's dashboard is their own column and nothing else. `scope` carries
+  // that as data (null employeeId = the whole salon, i.e. the owner), so every
+  // query below is narrowed the same way the server actions are.
+  const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
   const today = bakuToday();
   const { startUtc, endUtc } = bakuDayBoundsUtc(today);
   const now = Date.now();
@@ -46,7 +51,7 @@ export default async function DashboardTodayPage() {
   // Today's bookings, chronological. CANCELLED are excluded (same as the calendar).
   const appts = await prisma.appointment.findMany({
     where: {
-      salonId,
+      ...appointmentScope(scope),
       status: { not: "CANCELLED" },
       startsAt: { gte: startUtc, lt: endUtc },
     },
