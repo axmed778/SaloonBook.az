@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { getSession, type Session } from "@/lib/auth/session";
+import { requireOwnerSalonId, requireOwnerSession } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
 // Server actions for the Settings (Tənzimləmələr) screen. Each action derives the
@@ -12,18 +13,11 @@ import { prisma } from "@/lib/prisma";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function requireSalonId(): Promise<string> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  return session.salonId;
-}
 
-/** Branch management is owner-only (staff can't create/rename/disable branches). */
+/** Branch management additionally needs the account, not just the salon. */
 async function requireOwner(): Promise<Session> {
-  const session = await getSession();
-  if (!session?.accountId || session.role !== "OWNER") {
-    throw new Error("Unauthorized: owner account required");
-  }
+  const session = await requireOwnerSession();
+  if (!session.accountId) throw new Error("Unauthorized: owner account required");
   return session;
 }
 
@@ -39,7 +33,7 @@ const profileSchema = z.object({
 });
 
 export async function updateProfile(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Settings.errors");
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) {
@@ -75,7 +69,7 @@ const locationSchema = z
   });
 
 export async function updateLocation(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Settings.errors");
   const parsed = locationSchema.safeParse(input);
   if (!parsed.success) {
@@ -177,7 +171,7 @@ const businessHoursSchema = z
   });
 
 export async function updateBusinessHours(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Settings.errors");
   const parsed = businessHoursSchema.safeParse(input);
   if (!parsed.success) {
@@ -353,6 +347,27 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
   ]);
   if (appointments > 0 || customers > 0) return { ok: false, error: t("hasData") };
 
+  // The branch's masters lose their logins with it. Collect the user rows behind
+  // those memberships too: dropping only the membership would leave a working
+  // password attached to nothing, and an email address permanently spent. A user
+  // who somehow also belongs to another salon is left alone — this action was
+  // not asked to touch that one.
+  const staffUserIds = (
+    await prisma.membership.findMany({
+      where: { salonId: id, role: "STAFF" },
+      select: { userId: true },
+    })
+  ).map((m) => m.userId);
+  const elsewhere = new Set(
+    (
+      await prisma.membership.findMany({
+        where: { userId: { in: staffUserIds }, NOT: { salonId: id, role: "STAFF" } },
+        select: { userId: true },
+      })
+    ).map((m) => m.userId),
+  );
+  const orphanedUserIds = staffUserIds.filter((uid) => !elsewhere.has(uid));
+
   try {
     await prisma.$transaction([
       // Belt-and-braces: with zero appointments/customers these are empty, but
@@ -364,6 +379,8 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
       // Branch-bound STAFF logins go with the branch; the OWNER membership
       // always points at the primary, which is never deletable.
       prisma.membership.deleteMany({ where: { salonId: id, role: "STAFF" } }),
+      prisma.passwordResetToken.deleteMany({ where: { userId: { in: orphanedUserIds } } }),
+      prisma.user.deleteMany({ where: { id: { in: orphanedUserIds } } }),
       // WorkingHour/TimeOff/ServiceEmployee cascade from employees/services.
       prisma.employee.deleteMany({ where: { salonId: id } }),
       prisma.service.deleteMany({ where: { salonId: id } }),

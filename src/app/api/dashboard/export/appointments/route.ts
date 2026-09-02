@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
-  if (session.isAdmin || !session.salonId) {
+  if (session.isAdmin || session.isStaff || !session.salonId) {
     return new Response("Forbidden", { status: 403 });
   }
   const salonId = session.salonId;

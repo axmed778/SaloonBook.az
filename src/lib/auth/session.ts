@@ -11,6 +11,7 @@ import type { Plan, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
+import { staffBlockedReason, type StaffBlockedReason } from "./access";
 
 const COOKIE_NAME = "sb_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 30; // ~30 days
@@ -151,6 +152,8 @@ export async function setActiveBranch(salonId: string): Promise<void> {
   });
 }
 
+export type { StaffBlockedReason };
+
 export interface SessionBranch {
   id: string;
   name: string;
@@ -166,6 +169,20 @@ export interface Session {
   };
   /** Role of the user's (single, MVP) membership, if any. */
   role: Role | null;
+  /**
+   * Employee the membership is tied to. Always set for a STAFF login (that is
+   * what makes it "this master's account"), always null for an OWNER.
+   */
+  employeeId: string | null;
+  /** True when this is a per-master (STAFF) login rather than the owner's. */
+  isStaff: boolean;
+  /**
+   * Why a STAFF login is currently denied its salon, or null when it is fine.
+   * When set, `salonId` is deliberately null so every existing salon guard
+   * (`requireSalonId`, `where: { salonId }`) fails closed without knowing this
+   * rule exists; the dashboard layout reads the reason only to explain it.
+   */
+  staffBlocked: StaffBlockedReason | null;
   /**
    * The salon every dashboard page/action is scoped to. For a Pro owner this is
    * the branch picked in the switcher (sb_branch cookie); otherwise the
@@ -218,6 +235,9 @@ export async function getSession(): Promise<Session | null> {
           role: true,
           salonId: true,
           accountId: true,
+          employeeId: true,
+          // A staff login is only as alive as the master it points at.
+          employee: { select: { isActive: true } },
           account: {
             select: {
               offerVersion: true,
@@ -258,7 +278,19 @@ export async function getSession(): Promise<Session | null> {
   const membership = user.memberships[0] ?? null;
   const sub = membership?.account.subscription ?? null;
   const plan = effectivePlan(sub);
-  const multiBranch = featuresFor(plan).multiBranch;
+  const features = featuresFor(plan);
+  const multiBranch = features.multiBranch;
+
+  // Is this a master's own login, and is it still entitled to one? Both answers
+  // are derived here, per request, from the plan and the employee row — never
+  // from the cookie — so a downgrade or a deactivation takes effect on the very
+  // next page load rather than whenever the session happens to expire.
+  const isStaff = membership?.role === "STAFF";
+  const staffBlocked = staffBlockedReason({
+    isStaff,
+    staffRolesEnabled: features.staffRoles,
+    employeeIsActive: membership?.employee?.isActive,
+  });
   // Paid extra slots only count while the plan actually has multi-branch —
   // after a downgrade they lie dormant until the account is Pro again.
   const maxBranches =
@@ -269,7 +301,11 @@ export async function getSession(): Promise<Session | null> {
   // account may override it via the switcher cookie — but only to a salon that
   // is still an ACTIVE member of THEIR account. Staff stay pinned to theirs.
   let salonId = membership?.salonId ?? null;
-  if (membership?.role === "OWNER") {
+  // Fail closed: a blocked master keeps a valid session (so the layout can say
+  // why) but carries no salon, which is what every dashboard guard already
+  // refuses on. No other call site has to know this rule exists.
+  if (staffBlocked) salonId = null;
+  else if (membership?.role === "OWNER") {
     if (!salonId) salonId = branches[0]?.id ?? null;
     const picked = store.get(BRANCH_COOKIE)?.value;
     if (picked && multiBranch && branches.some((b) => b.id === picked)) {
@@ -285,6 +321,9 @@ export async function getSession(): Promise<Session | null> {
       isPlatformAdmin: user.isPlatformAdmin,
     },
     role: membership?.role ?? null,
+    employeeId: membership?.employeeId ?? null,
+    isStaff,
+    staffBlocked,
     salonId,
     accountId: membership?.accountId ?? null,
     plan,

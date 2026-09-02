@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerSalonId } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
 // Server actions for the Services (Xidmətlər) screen. Every action re-derives
@@ -12,11 +12,6 @@ import { prisma } from "@/lib/prisma";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function requireSalonId(): Promise<string> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  return session.salonId;
-}
 
 const serviceInput = z.object({
   name: z.string().trim().min(1, "Ad tələb olunur.").max(120),
@@ -35,7 +30,7 @@ function toMinor(priceAzn: number): number {
 }
 
 export async function createService(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
@@ -58,7 +53,7 @@ export async function createService(input: unknown): Promise<ActionResult> {
 }
 
 export async function updateService(id: string, input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
@@ -75,14 +70,14 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
 }
 
 export async function setServiceActive(id: string, isActive: boolean): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   await prisma.service.updateMany({ where: { id, salonId }, data: { isActive } });
   revalidatePath("/dashboard/services");
   return { ok: true };
 }
 
 export async function deleteService(id: string): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Services.errors");
   try {
     const res = await prisma.service.deleteMany({ where: { id, salonId } });

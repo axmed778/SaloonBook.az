@@ -51,6 +51,10 @@ export interface PlanFeatures {
 }
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
+  // staffRoles is the one advanced-sounding flag every PAID tier carries: a
+  // two-chair salon on Start is exactly who needs a login per master. FREE keeps
+  // it off — it is the lapsed-trial floor, and a staff login must stop working
+  // the moment the account stops paying (enforced in getSession).
   FREE: {
     multiBranch: false,
     advancedAnalytics: false,
@@ -60,12 +64,12 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     payroll: false,
     ownWhatsappNumber: false,
   },
-  // Start = same feature floor as Basic/Free (no advanced features); it differs
-  // only in enforcement limits (2 staff / 1 branch, see PLAN_LIMITS).
+  // Start = same feature floor as Basic (no advanced features); it differs only
+  // in enforcement limits (2 staff / 1 branch, see PLAN_LIMITS).
   START: {
     multiBranch: false,
     advancedAnalytics: false,
-    staffRoles: false,
+    staffRoles: true,
     exports: false,
     deposits: false,
     payroll: false,
@@ -74,7 +78,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   BASIC: {
     multiBranch: false,
     advancedAnalytics: false,
-    staffRoles: false,
+    staffRoles: true,
     exports: false,
     deposits: false,
     payroll: false,

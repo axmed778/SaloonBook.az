@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerPage } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc } from "@/lib/time";
 import { featuresFor } from "@/lib/plans";
@@ -24,7 +24,7 @@ export default async function PayrollPage({
 }: {
   searchParams: Promise<{ ay?: string }>;
 }) {
-  const session = (await getSession())!;
+  const session = await requireOwnerPage();
   const t = await getTranslations("Payroll");
 
   if (session.isAdmin || !session.salonId) {

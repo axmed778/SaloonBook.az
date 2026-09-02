@@ -1,11 +1,18 @@
 "use server";
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerSalonId, requireOwnerSession } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
-import { assertEmployeeSeatAvailable } from "@/lib/subscription";
+import { hashPassword, passwordIssues } from "@/lib/auth/password";
+import { featuresFor } from "@/lib/plans";
+import {
+  assertEmployeeSeatAvailable,
+  effectivePlan,
+  subscriptionForSalon,
+} from "@/lib/subscription";
 import { bakuDayBoundsUtc, bakuToday } from "@/lib/time";
 
 // Server actions for the Workers (İşçilər) screen. Every action re-derives the
@@ -16,11 +23,6 @@ import { bakuDayBoundsUtc, bakuToday } from "@/lib/time";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function requireSalonId(): Promise<string> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  return session.salonId;
-}
 
 const hourSchema = z
   .object({
@@ -69,7 +71,7 @@ const employeeSchema = z
   });
 
 export async function saveEmployee(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Workers.errors");
   const parsed = employeeSchema.safeParse(input);
   if (!parsed.success) {
@@ -154,7 +156,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
 }
 
 export async function setEmployeeActive(id: string, isActive: boolean): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Workers.errors");
   try {
     await prisma.$transaction(async (tx) => {
@@ -187,7 +189,7 @@ const timeOffSchema = z
   .refine((d) => d.from <= d.to, { message: "Bitmə tarixi başlanğıcdan əvvəl ola bilməz." });
 
 export async function addTimeOff(input: unknown): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Workers.errors");
   const parsed = timeOffSchema.safeParse(input);
   if (!parsed.success) {
@@ -224,7 +226,7 @@ export async function addTimeOff(input: unknown): Promise<ActionResult> {
 }
 
 export async function deleteTimeOff(id: string): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Workers.errors");
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
@@ -239,17 +241,214 @@ export async function deleteTimeOff(id: string): Promise<ActionResult> {
 }
 
 export async function deleteEmployee(id: string): Promise<ActionResult> {
-  const salonId = await requireSalonId();
+  const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Workers.errors");
   try {
-    const res = await prisma.employee.deleteMany({ where: { id, salonId } });
-    if (res.count === 0) return { ok: false, error: t("notFound") };
-  } catch {
+    await prisma.$transaction(async (tx) => {
+      // Take the master's login with them. The membership's employee relation is
+      // optional, so the FK would otherwise just null out `employeeId` and leave
+      // working credentials behind that no screen lists any more.
+      await revokeAccessRows(tx, salonId, id);
+      const res = await tx.employee.deleteMany({ where: { id, salonId } });
+      if (res.count === 0) throw new Error("not-found");
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "not-found") {
+      return { ok: false, error: t("notFound") };
+    }
     // FK violation: appointments reference this employee. Keep history — steer to
     // deactivate instead of destroying it.
     return { ok: false, error: t("hasAppointments") };
   }
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Per-master logins ------------------------------------------------------
+// A master signs in with their own email + password and lands on a dashboard
+// holding exactly their own day: their column of the calendar, their bookings,
+// nothing about the salon's money, clients or colleagues (see lib/auth/access).
+//
+// The credential is deliberately thin: the owner sets the password and hands it
+// over. There is no invite email — most masters here are handed the login in
+// person, and a mail round-trip is one more thing to go wrong on day one. They
+// can change it later through the normal password-reset flow.
+
+/** Tx-safe client: these helpers run both inside and outside a transaction. */
+type Tx = Prisma.TransactionClient;
+
+/**
+ * Owner of a salon whose CURRENT plan includes staff logins. The plan is
+ * re-read from the subscription rather than trusted from the session, for the
+ * same reason payroll does: stale UI must not be able to grant an entitlement
+ * the account has stopped paying for.
+ */
+async function requireStaffAccessOwner(): Promise<{ salonId: string; accountId: string }> {
+  const session = await requireOwnerSession();
+  const salonId = session.salonId!;
+  const sub = await subscriptionForSalon(prisma, salonId);
+  if (!featuresFor(effectivePlan(sub)).staffRoles) {
+    const t = await getTranslations("Workers.errors");
+    throw new Error(t("accessPlan"));
+  }
+  return { salonId, accountId: session.accountId! };
+}
+
+/**
+ * Drops a master's login: the membership, and the user behind it when that user
+ * exists for no other reason. Shared by revokeStaffAccess and deleteEmployee.
+ */
+async function revokeAccessRows(tx: Tx, salonId: string, employeeId: string): Promise<void> {
+  const membership = await tx.membership.findFirst({
+    where: { employeeId, salonId, role: "STAFF" },
+    select: { id: true, userId: true },
+  });
+  if (!membership) return;
+
+  await tx.membership.delete({ where: { id: membership.id } });
+
+  // A staff user is created for exactly one membership, but check rather than
+  // assume: deleting a user who had grown a second membership would lock them
+  // out of a salon this action was never asked to touch.
+  const others = await tx.membership.count({ where: { userId: membership.userId } });
+  if (others === 0) {
+    await tx.passwordResetToken.deleteMany({ where: { userId: membership.userId } });
+    await tx.user.delete({ where: { id: membership.userId } });
+  } else {
+    // Left in place, so at least end the sessions this login already had.
+    await tx.user.update({
+      where: { id: membership.userId },
+      data: { sessionsValidFrom: new Date() },
+    });
+  }
+}
+
+const grantSchema = z.object({
+  employeeId: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email().max(200),
+  password: z.string().min(1).max(200),
+});
+
+export async function grantStaffAccess(input: unknown): Promise<ActionResult> {
+  const t = await getTranslations("Workers.errors");
+  const parsed = grantSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("accessEmailInvalid") };
+  const d = parsed.data;
+
+  // Same policy as owner signup — a master's login opens the same dashboard.
+  const issues = passwordIssues(d.password);
+  if (issues.length > 0) {
+    const tp = await getTranslations("Auth.passwordIssues");
+    return { ok: false, error: issues.map((c) => tp(c)).join(" ") };
+  }
+
+  try {
+    const { salonId, accountId } = await requireStaffAccessOwner();
+    const passwordHash = await hashPassword(d.password);
+
+    await prisma.$transaction(async (tx) => {
+      // The master must be one of ours, and still working here: a login for a
+      // deactivated employee would be refused at sign-in anyway.
+      const employee = await tx.employee.findFirst({
+        where: { id: d.employeeId, salonId },
+        select: { id: true, name: true, isActive: true, membership: { select: { id: true } } },
+      });
+      if (!employee) throw new Error(t("notFound"));
+      if (!employee.isActive) throw new Error(t("accessInactive"));
+      if (employee.membership) throw new Error(t("accessExists"));
+
+      const taken = await tx.user.findUnique({
+        where: { email: d.email },
+        select: { id: true },
+      });
+      if (taken) throw new Error(t("accessEmailTaken"));
+
+      const user = await tx.user.create({
+        data: { email: d.email, fullName: employee.name, passwordHash },
+        select: { id: true },
+      });
+      await tx.membership.create({
+        data: {
+          userId: user.id,
+          accountId,
+          role: "STAFF",
+          // Both of these are what confines the login: the branch it belongs to
+          // and the master it speaks for.
+          salonId,
+          employeeId: employee.id,
+        },
+      });
+    });
+  } catch (e) {
+    // A concurrent grant with the same email loses the unique index, not the
+    // transaction's read.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: false, error: t("accessEmailTaken") };
+    }
+    return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
+  }
+
+  revalidatePath("/dashboard/workers");
+  return { ok: true };
+}
+
+const resetSchema = z.object({
+  employeeId: z.string().uuid(),
+  password: z.string().min(1).max(200),
+});
+
+export async function resetStaffPassword(input: unknown): Promise<ActionResult> {
+  const t = await getTranslations("Workers.errors");
+  const parsed = resetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  const issues = passwordIssues(parsed.data.password);
+  if (issues.length > 0) {
+    const tp = await getTranslations("Auth.passwordIssues");
+    return { ok: false, error: issues.map((c) => tp(c)).join(" ") };
+  }
+
+  try {
+    const { salonId } = await requireStaffAccessOwner();
+    const passwordHash = await hashPassword(parsed.data.password);
+
+    const membership = await prisma.membership.findFirst({
+      where: { employeeId: parsed.data.employeeId, salonId, role: "STAFF" },
+      select: { userId: true },
+    });
+    if (!membership) return { ok: false, error: t("accessMissing") };
+
+    // Cut the old sessions too. A password is usually reset because the last one
+    // leaked or the phone it was typed into is gone; leaving the existing
+    // cookies valid would make the reset cosmetic.
+    await prisma.user.update({
+      where: { id: membership.userId },
+      data: { passwordHash, sessionsValidFrom: new Date() },
+    });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
+  }
+
+  revalidatePath("/dashboard/workers");
+  return { ok: true };
+}
+
+export async function revokeStaffAccess(employeeId: string): Promise<ActionResult> {
+  const t = await getTranslations("Workers.errors");
+  if (!z.string().uuid().safeParse(employeeId).success) {
+    return { ok: false, error: t("invalidData") };
+  }
+
+  try {
+    // Revoking is deliberately NOT plan-gated: an account that lost the feature
+    // must still be able to take a login away.
+    const session = await requireOwnerSession();
+    await prisma.$transaction((tx) => revokeAccessRows(tx, session.salonId!, employeeId));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
+  }
+
+  revalidatePath("/dashboard/workers");
   return { ok: true };
 }

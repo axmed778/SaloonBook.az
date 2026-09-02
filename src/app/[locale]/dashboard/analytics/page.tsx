@@ -1,5 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requireOwnerPage } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import {
   BAKU_TZ,
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
   // The layout already guarantees a session (redirects otherwise).
-  const session = (await getSession())!;
+  const session = await requireOwnerPage();
   const t = await getTranslations("Analytics");
   const locale = await getLocale();
   const df = intlLocale(locale);

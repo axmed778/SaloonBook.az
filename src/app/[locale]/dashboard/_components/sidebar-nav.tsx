@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
+import { isOwnerOnlySection } from "@/lib/auth/access";
 
 // Sidebar navigation. Supports a collapsed (icon-only) mode and an onNavigate
 // callback (used to close the mobile drawer). Labels come from the Nav
@@ -115,14 +116,23 @@ export function SidebarNav({
   collapsed = false,
   onNavigate,
   isAdmin = false,
+  isStaff = false,
 }: {
   collapsed?: boolean;
   onNavigate?: () => void;
   isAdmin?: boolean;
+  isStaff?: boolean;
 }) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
-  const navItems = isAdmin ? adminItems : items;
+  // Hiding these is cosmetic — requireOwnerPage() is what actually refuses them.
+  // Both read the same OWNER_ONLY_SECTIONS list so the menu can never offer a
+  // master a door that closes in their face.
+  const navItems = isAdmin
+    ? adminItems
+    : isStaff
+      ? items.filter((i) => !isOwnerOnlySection(i.href))
+      : items;
 
   return (
     <nav className="flex flex-col gap-1">

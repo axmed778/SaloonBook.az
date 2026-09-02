@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
+import { appointmentScope } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
 import { intlLocale } from "@/i18n/format";
 import {
@@ -157,6 +158,10 @@ export default async function CalendarPage({
   }
 
   const salonId = session.salonId;
+  // A master's dashboard is their own column and nothing else. `scope` carries
+  // that as data (null employeeId = the whole salon, i.e. the owner), so every
+  // query below is narrowed the same way the server actions are.
+  const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
   const { day: dayParam, view: viewParam } = await searchParams;
   const view = viewParam === "week" ? "week" : "day";
   const today = bakuToday();
@@ -172,7 +177,9 @@ export default async function CalendarPage({
   // Catalog for the manual-booking form: active employees + the active services
   // each can perform. Doubles as the day-view column list.
   const employees = await prisma.employee.findMany({
-    where: { salonId, isActive: true },
+    where: scope.employeeId
+      ? { salonId, isActive: true, id: scope.employeeId }
+      : { salonId, isActive: true },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
@@ -208,7 +215,7 @@ export default async function CalendarPage({
 
     const appts = (await prisma.appointment.findMany({
       where: {
-        salonId,
+        ...appointmentScope(scope),
         status: { not: "CANCELLED" },
         startsAt: { gte: startUtc, lt: endUtc },
       },
@@ -251,7 +258,7 @@ export default async function CalendarPage({
   const dateLabel = formatBakuDate(day, df);
   const appts = (await prisma.appointment.findMany({
     where: {
-      salonId,
+      ...appointmentScope(scope),
       status: { not: "CANCELLED" },
       startsAt: { gte: startUtc, lt: endUtc },
     },

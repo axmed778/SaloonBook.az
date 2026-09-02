@@ -248,7 +248,7 @@ export default async function Home() {
       { label: t("pricing.rows.overlapProtection"), value: true },
       { label: t("pricing.rows.roiPanel"), value: true },
       { label: t("pricing.rows.payroll"), value: plan.advanced },
-      { label: t("pricing.rows.roles"), value: plan.advanced },
+      { label: t("pricing.rows.roles"), value: true },
       { label: t("pricing.rows.exports"), value: plan.advanced },
       { label: t("pricing.rows.deposits"), value: plan.advanced },
     ];

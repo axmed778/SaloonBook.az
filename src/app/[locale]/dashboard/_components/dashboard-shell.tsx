@@ -20,12 +20,15 @@ const STORAGE_KEY = "sb_sidebar_collapsed";
 export function DashboardShell({
   user,
   isAdmin = false,
+  isStaff = false,
   branch = null,
   installDismissed = false,
   children,
 }: {
   user: User;
   isAdmin?: boolean;
+  /** A master's own login: the salon-management sections are not theirs. */
+  isStaff?: boolean;
   branch?: BranchData | null;
   installDismissed?: boolean;
   children: React.ReactNode;
@@ -67,6 +70,7 @@ export function DashboardShell({
         <SidebarContent
           user={user}
           isAdmin={isAdmin}
+          isStaff={isStaff}
           branch={branch}
           collapsed={collapsed}
           onToggleCollapse={toggleCollapse}
@@ -91,6 +95,7 @@ export function DashboardShell({
           <SidebarContent
             user={user}
             isAdmin={isAdmin}
+            isStaff={isStaff}
             branch={branch}
             collapsed={false}
             onNavigate={() => setMobileOpen(false)}
@@ -132,7 +137,7 @@ export function DashboardShell({
       </div>
 
       {/* Phone-only bottom navigation (hidden on lg, which keeps the sidebar). */}
-      <BottomTabBar />
+      <BottomTabBar isStaff={isStaff} />
 
       {/* Installable-PWA prompt (Android beforeinstallprompt / iOS instructions).
           Client-side; renders nothing when already installed or dismissed. */}
@@ -144,6 +149,7 @@ export function DashboardShell({
 function SidebarContent({
   user,
   isAdmin,
+  isStaff,
   branch,
   collapsed,
   onToggleCollapse,
@@ -152,6 +158,7 @@ function SidebarContent({
 }: {
   user: User;
   isAdmin: boolean;
+  isStaff: boolean;
   branch?: BranchData | null;
   collapsed: boolean;
   onToggleCollapse?: () => void;
@@ -216,7 +223,12 @@ function SidebarContent({
       )}
 
       <div className="flex-1 overflow-y-auto px-3 py-2">
-        <SidebarNav collapsed={collapsed} onNavigate={onNavigate} isAdmin={isAdmin} />
+        <SidebarNav
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+          isAdmin={isAdmin}
+          isStaff={isStaff}
+        />
       </div>
 
       <div className="border-t border-border p-3">
