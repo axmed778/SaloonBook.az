@@ -17,6 +17,8 @@
 --   SELECT pg_has_role('salonbook_app', 'neon_superuser', 'member');
 
 DO $$
+DECLARE
+  t text;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'salonbook_app') THEN
     RAISE NOTICE 'salonbook_app absent - skipping RLS grants';
@@ -43,6 +45,20 @@ BEGIN
   ) THEN
     EXECUTE 'REVOKE ALL ON TABLE "_prisma_migrations" FROM salonbook_app';
   END IF;
+
+  -- Instagram Direct: platform-level, NOT salon-level, so the blanket grant
+  -- above is wrong for it. IgToken holds the long-lived access token in
+  -- plaintext and IgThread/IgMessage hold every lead's DM history; RLS cannot
+  -- scope either (no salonId), and withTenantScope — the only user of this role
+  -- — never touches them. Least privilege by revocation instead of by policy.
+  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage']) LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = t
+    ) THEN
+      EXECUTE format('REVOKE ALL ON TABLE %I FROM salonbook_app', t);
+    END IF;
+  END LOOP;
 
   -- NOTE: there is deliberately no `ALTER ROLE salonbook_app SET
   -- app.rls_strict = 'on'` here. Setting a CUSTOM parameter that way requires a

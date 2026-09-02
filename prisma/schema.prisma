@@ -663,3 +663,58 @@ model AuditLog {
 
   @@index([accountId, createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// Instagram Direct (Instagram API with Instagram Login)
+// ---------------------------------------------------------------------------
+// Inbound/outbound DMs for the salon's OWN Instagram account (IG_USER_ID), so
+// leads that arrive by Direct land in the same place bookings do.
+//
+// NOT tenant tables: there is one Instagram account per deployment, not one per
+// salon, so these carry no salonId and are outside RLS by construction (the
+// drift assertion in src/lib/tenant.rls.test.ts keys on tenant-bearing columns
+// and so never sees them). Access is limited instead by REVOKEing them from the
+// restricted salonbook_app role in prisma/security/rls-grants.sql.
+
+/// One conversation, keyed by the other party's Instagram-scoped id (IGSID).
+/// An IGSID is stable per (user, app) pair but means nothing outside it.
+model IgThread {
+  id            String      @id
+  igUserId      String      @unique // the LEAD's IGSID — never our own IG_USER_ID
+  username      String? // @handle, filled in asynchronously by the profile job
+  name          String? // display name, same source
+  phone         String? // set by hand once the lead shares a number
+  lastMessageAt DateTime?   @db.Timestamptz(6) // advanced monotonically; drives inbox order
+  lastSender    String? // "ME" | "LEAD"
+  stage         String      @default("new") // lead pipeline slot; free-form for now
+  messages      IgMessage[]
+
+  @@index([lastMessageAt])
+}
+
+/// One Direct message. `id` IS Instagram's message id (mid), which is what makes
+/// webhook retries and backfill re-runs idempotent instead of duplicating rows.
+model IgMessage {
+  id       String   @id // Instagram mid
+  threadId String
+  thread   IgThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  fromMe   Boolean // true for our own sends (webhook echoes)
+  text     String?  @db.Text
+  attach   Json? // raw attachment payload; media URLs from Meta are short-lived
+  sentAt   DateTime @db.Timestamptz(6)
+
+  @@index([threadId, sentAt])
+}
+
+/// The live Instagram long-lived access token — a SINGLE row (id = "default").
+///
+/// Exists because the token expires after 60 days and refreshing it returns a
+/// NEW string that no process can write back into a Railway variable. Without
+/// somewhere to put it, the monthly refresh cron would be decorative. See
+/// src/lib/ig-token.ts; IG_ACCESS_TOKEN remains the bootstrap/fallback value.
+model IgToken {
+  id          String    @id
+  accessToken String
+  expiresAt   DateTime? @db.Timestamptz(6)
+  refreshedAt DateTime  @updatedAt @db.Timestamptz(3)
+}

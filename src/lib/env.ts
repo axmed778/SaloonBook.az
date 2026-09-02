@@ -181,6 +181,32 @@ export function assertEnv(service: ServiceRole = "web"): void {
           "needs a rebuild, not just a restart.",
       ]);
     }
+
+    // Instagram Direct is entirely optional — nothing warns when all of it is
+    // absent. A HALF-configured one is the problem: /api/ig/webhook is routed
+    // either way, so without IG_VERIFY_TOKEN Meta's handshake can never
+    // succeed, and without IG_APP_SECRET the handler fails closed on every
+    // delivery in production. Both look like "Instagram just doesn't work"
+    // from the outside, with nothing in the logs to say which half is missing.
+    //
+    // Warn-only: an unset integration is a feature that is off, not a hole.
+    // IG_APP_ID is listed because the app dashboard pairs it with the secret,
+    // and a deployment missing it is one that was configured by half-copying.
+    const igVars = [
+      "IG_USER_ID",
+      "IG_APP_ID",
+      "IG_APP_SECRET",
+      "IG_ACCESS_TOKEN",
+      "IG_VERIFY_TOKEN",
+    ] as const;
+    const igMissing = igVars.filter((n) => isPlaceholder(process.env[n]));
+    if (igMissing.length > 0 && igMissing.length < igVars.length) {
+      console.warn(
+        `[env] WARNING: Instagram Direct is half-configured — missing ${igMissing.join(", ")}. ` +
+          "The /api/ig/webhook endpoint is live but will reject or drop deliveries. " +
+          "Note IG_APP_SECRET is the INSTAGRAM app's secret, not WHATSAPP_APP_SECRET.",
+      );
+    }
   }
 
   // --- Worker service ------------------------------------------------------

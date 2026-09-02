@@ -5,6 +5,7 @@ export const QUEUE_NAMES = {
   notifications: "notifications",
   subscriptions: "subscriptions",
   push: "push",
+  instagram: "instagram",
 } as const;
 
 export interface NotificationJob {
@@ -246,4 +247,58 @@ export async function syncPushReminder(appointmentId: string, startsAt: Date): P
  */
 export async function cancelPushReminder(appointmentId: string): Promise<void> {
   await pushQueue().remove(pushJobId("reminder", appointmentId));
+}
+
+// ---------------------------------------------------------------------------
+// Instagram Direct
+// ---------------------------------------------------------------------------
+// One queue for both Instagram background jobs, discriminated by `type`. They
+// share a queue because they share a rate limit and a failure mode: both are
+// Graph calls on one access token, and neither should ever be able to starve
+// WhatsApp delivery.
+//
+//   profile       — resolve an IGSID to a name/@handle after a lead writes in.
+//                   Enqueued from the webhook, which must answer Meta in ~2s
+//                   and so cannot make this call inline.
+//   token-refresh — monthly renewal of the 60-day long-lived token. Scheduled
+//                   by worker/index.ts, never enqueued by the request path.
+export type IgJob = { type: "profile"; igUserId: string } | { type: "token-refresh" };
+
+/** Single BullMQ job name for the queue; the discriminator lives in the data. */
+export const IG_JOB_NAME = "ig";
+
+let igQueueRef: Queue<IgJob, void, typeof IG_JOB_NAME> | null = null;
+
+/** Lazily constructed, for the same build-time reason as the queues above. */
+export function instagramQueue(): Queue<IgJob, void, typeof IG_JOB_NAME> {
+  if (!igQueueRef) {
+    igQueueRef = new Queue<IgJob, void, typeof IG_JOB_NAME>(QUEUE_NAMES.instagram, {
+      connection,
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: "exponential", delay: 30_000 },
+        removeOnComplete: 500,
+        removeOnFail: 500,
+      },
+    });
+  }
+  return igQueueRef;
+}
+
+/**
+ * Ask the worker to fill in name/@handle for a thread.
+ *
+ * The job id buckets by UTC day: a chatty lead sending twenty messages in an
+ * afternoon costs one Graph call, while a lookup that failed all day still gets
+ * a fresh attempt tomorrow. A stable `ig-profile:<igsid>` id would have been the
+ * obvious choice and is a trap — BullMQ silently ignores an add() whose id is
+ * still in the completed/failed set, so a lookup that exhausted its attempts
+ * could never be retried by anything.
+ */
+export async function enqueueIgProfile(igUserId: string): Promise<void> {
+  await instagramQueue().add(
+    IG_JOB_NAME,
+    { type: "profile", igUserId },
+    { jobId: `ig-profile:${igUserId}:${Math.floor(Date.now() / 86_400_000)}` },
+  );
 }

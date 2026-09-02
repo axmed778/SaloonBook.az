@@ -1,9 +1,16 @@
 import { Queue, Worker } from "bullmq";
 import { assertEnv } from "../src/lib/env";
 import { connection } from "../src/lib/redis";
-import { QUEUE_NAMES, type NotificationJob, type PushJob } from "../src/lib/queue";
+import {
+  QUEUE_NAMES,
+  IG_JOB_NAME,
+  type IgJob,
+  type NotificationJob,
+  type PushJob,
+} from "../src/lib/queue";
 import { processNotification } from "./processors/notifications";
 import { processPush } from "./processors/push";
+import { processIg } from "./processors/ig";
 import { sweepSubscriptions } from "./processors/subscriptions";
 import { sweepNotifications } from "./processors/notification-sweep";
 import { reconcileOverdue } from "./processors/reconcile";
@@ -89,6 +96,41 @@ void (async () => {
     console.log("[worker] subscription sweep scheduled (daily 23:30 UTC)");
   } catch (e) {
     console.error("[worker] failed to schedule subscription sweep", e);
+  }
+})();
+
+// Instagram Direct: profile lookups for new leads, plus the monthly access-token
+// renewal. Concurrency 2 because both job types spend one Instagram access token
+// against Graph's per-token rate limit — parallelism here buys throttling, not
+// throughput.
+const igWorker = new Worker<IgJob>(QUEUE_NAMES.instagram, processIg, {
+  connection,
+  concurrency: 2,
+});
+igWorker.on("failed", (job, err) =>
+  console.error(`[worker] instagram job failed ${job?.id}: ${err?.message}`),
+);
+console.log("[worker] instagram worker started");
+
+// Token refresh: 1st of the month at 04:10 UTC. The token lives 60 days, so
+// monthly leaves a full month of slack — a missed run is a non-event, while an
+// expired token cannot be recovered programmatically at all (it has to be
+// re-issued through the app's login flow).
+//
+// No run-on-boot here, unlike the subscription sweep: refreshing is a write
+// against Meta, and a worker that restarts often would refresh on every boot for
+// no benefit. The schedule alone is enough given the margin.
+const igQueue = new Queue<IgJob>(QUEUE_NAMES.instagram, { connection });
+void (async () => {
+  try {
+    await igQueue.upsertJobScheduler(
+      "ig-token-refresh",
+      { pattern: "10 4 1 * *" },
+      { name: IG_JOB_NAME, data: { type: "token-refresh" } },
+    );
+    console.log("[worker] instagram token refresh scheduled (monthly, 1st 04:10 UTC)");
+  } catch (e) {
+    console.error("[worker] failed to schedule instagram token refresh", e);
   }
 })();
 
@@ -204,6 +246,8 @@ async function shutdown(signal: string) {
     pushWorker.close(),
     subsWorker.close(),
     subsQueue.close(),
+    igWorker.close(),
+    igQueue.close(),
   ]);
   await connection.quit();
   process.exit(0);
