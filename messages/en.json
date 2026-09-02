@@ -1287,6 +1287,11 @@
       "digit": "Must include at least one digit.",
       "special": "Must include at least one special character."
     },
+    "guard": {
+      "noSalon": "Your session is not linked to a salon. Please sign in again.",
+      "ownerOnly": "This action is the salon owner's. Refresh the page and sign in with the owner account.",
+      "sessionInvalid": "This session is not valid. Sign out and sign in again."
+    },
     "api": {
       "invalidCredentials": "Email or password is incorrect.",
       "passwordMismatch": "Passwords don't match.",

@@ -5,10 +5,23 @@
 // Every action therefore opens with one of these, exactly as every action
 // already opened with a salon check.
 
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession, type Session } from "./session";
 import type { SalonScope } from "./access";
+
+/**
+ * These refusals are "should never happen" guards — the UI does not offer a
+ * master the buttons they protect. But a stale tab is enough to reach one: sign
+ * in as somebody else in the same browser and the page already on screen still
+ * shows the previous account's controls, whose next click arrives with the new
+ * session. That lands the message in front of a real person, so it is written
+ * for one, in their language, and says what to do about it.
+ */
+async function refusal(key: "noSalon" | "ownerOnly" | "sessionInvalid"): Promise<Error> {
+  const t = await getTranslations("Auth.guard");
+  return new Error(t(key));
+}
 
 /**
  * The caller's salon, whoever they are (owner or master). Throws when the
@@ -17,7 +30,7 @@ import type { SalonScope } from "./access";
  */
 export async function requireSalonId(): Promise<string> {
   const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
+  if (!session?.salonId) throw await refusal("noSalon");
   return session.salonId;
 }
 
@@ -28,12 +41,12 @@ export async function requireSalonId(): Promise<string> {
  */
 export async function requireScope(): Promise<SalonScope> {
   const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
+  if (!session?.salonId) throw await refusal("noSalon");
   // A STAFF membership always has an employeeId (grantStaffAccess writes them
   // together). Treating a missing one as "the whole salon" would silently widen
   // a master to owner reach, so refuse instead.
   if (session.isStaff && !session.employeeId) {
-    throw new Error("Forbidden: staff membership without an employee");
+    throw await refusal("sessionInvalid");
   }
   return {
     salonId: session.salonId,
@@ -44,8 +57,8 @@ export async function requireScope(): Promise<SalonScope> {
 /** Full session of an OWNER caller. Throws for a master's login. */
 export async function requireOwnerSession(): Promise<Session> {
   const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
-  if (session.role !== "OWNER") throw new Error("Forbidden: owner only");
+  if (!session?.salonId) throw await refusal("noSalon");
+  if (session.role !== "OWNER") throw await refusal("ownerOnly");
   return session;
 }
 

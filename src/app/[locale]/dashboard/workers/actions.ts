@@ -150,6 +150,10 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
     return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
   }
 
+  // Same as setEmployeeActive: an edit that switches the master off closes
+  // their login, so it must close their devices too.
+  if (d.id && !d.isActive) await silenceStaffDevices(salonId, d.id);
+
   revalidatePath("/dashboard/workers");
   revalidatePath("/dashboard"); // calendar columns depend on the employee list
   return { ok: true };
@@ -164,6 +168,9 @@ export async function setEmployeeActive(id: string, isActive: boolean): Promise<
       if (isActive) await assertEmployeeSeatAvailable(tx, salonId, id);
       await tx.employee.updateMany({ where: { id, salonId }, data: { isActive } });
     });
+    // Deactivating already blocks the login on the next request (see
+    // getSession); this stops the notifications their phone would keep getting.
+    if (!isActive) await silenceStaffDevices(salonId, id);
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
   }
@@ -296,8 +303,34 @@ async function requireStaffAccessOwner(): Promise<{ salonId: string; accountId: 
 }
 
 /**
- * Drops a master's login: the membership, and the user behind it when that user
- * exists for no other reason. Shared by revokeStaffAccess and deleteEmployee.
+ * Unsubscribes a master's installed devices.
+ *
+ * The worker fans push notifications out by SALON, not by user (see
+ * worker/processors/push.ts) — so a device left subscribed keeps receiving every
+ * booking the salon takes, with the customer's name in the body, long after the
+ * login behind it stopped working. Closing the login has to close the devices.
+ */
+async function dropStaffDevices(tx: Tx, userId: string): Promise<void> {
+  await tx.pushSubscription.deleteMany({ where: { userId } });
+}
+
+/**
+ * Cuts the devices of a master who is still on the books but can no longer sign
+ * in — deactivated rather than revoked. Their subscription would otherwise
+ * outlive the block, which is the same leak by a quieter door.
+ */
+async function silenceStaffDevices(salonId: string, employeeId: string): Promise<void> {
+  const membership = await prisma.membership.findFirst({
+    where: { employeeId, salonId, role: "STAFF" },
+    select: { userId: true },
+  });
+  if (membership) await dropStaffDevices(prisma, membership.userId);
+}
+
+/**
+ * Drops a master's login: the devices, the membership, and the user behind it
+ * when that user exists for no other reason. Shared by revokeStaffAccess and
+ * deleteEmployee.
  */
 async function revokeAccessRows(tx: Tx, salonId: string, employeeId: string): Promise<void> {
   const membership = await tx.membership.findFirst({
@@ -306,6 +339,7 @@ async function revokeAccessRows(tx: Tx, salonId: string, employeeId: string): Pr
   });
   if (!membership) return;
 
+  await dropStaffDevices(tx, membership.userId);
   await tx.membership.delete({ where: { id: membership.id } });
 
   // A staff user is created for exactly one membership, but check rather than

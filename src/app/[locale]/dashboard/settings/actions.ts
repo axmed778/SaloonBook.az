@@ -373,6 +373,9 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
       // Belt-and-braces: with zero appointments/customers these are empty, but
       // sweeping them keeps the salon delete below FK-safe no matter what.
       prisma.notification.deleteMany({ where: { salonId: id } }),
+      // Push subscriptions are keyed by salon and have no FK to cascade through;
+      // left behind they would point at a branch that no longer exists.
+      prisma.pushSubscription.deleteMany({ where: { salonId: id } }),
       prisma.customerNote.deleteMany({ where: { salonId: id } }),
       prisma.payout.deleteMany({ where: { salonId: id } }),
       prisma.usageCounter.deleteMany({ where: { salonId: id } }),

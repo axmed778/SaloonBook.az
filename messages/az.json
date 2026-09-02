@@ -1287,6 +1287,11 @@
       "digit": "Ən az bir rəqəm olmalıdır.",
       "special": "Ən az bir xüsusi simvol olmalıdır."
     },
+    "guard": {
+      "noSalon": "Sessiyanız salona bağlı deyil. Yenidən daxil olun.",
+      "ownerOnly": "Bu əməliyyat yalnız salon sahibi üçündür. Səhifəni yeniləyin və salon sahibi hesabı ilə daxil olun.",
+      "sessionInvalid": "Sessiya etibarlı deyil. Çıxıb yenidən daxil olun."
+    },
     "api": {
       "invalidCredentials": "E-poçt və ya şifrə yanlışdır.",
       "passwordMismatch": "Şifrələr uyğun gəlmir.",
