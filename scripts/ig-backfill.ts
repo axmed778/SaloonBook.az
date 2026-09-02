@@ -1,34 +1,36 @@
 // One-off importer for Instagram Direct history.
 //
-// The webhook only ever sees messages that arrive AFTER the subscription was
-// set up, so a salon that has been using Direct for months starts with an empty
-// inbox. This walks /me/conversations and pulls the recent messages of each
-// thread into the same tables the webhook writes.
+// The webhook only sees messages that arrive AFTER the subscription is set up,
+// so a salon that has been using Direct for months starts with an empty inbox.
+// This walks /me/conversations and pulls each thread's recent messages into the
+// same tables the webhook writes.
 //
 // Run by hand, against whichever database DATABASE_URL points at:
 //   npx tsx scripts/ig-backfill.ts
 //   npx tsx scripts/ig-backfill.ts --depth=5        # 5 pages of messages/thread
 //   npx tsx scripts/ig-backfill.ts --limit=25 --dry-run
 //
-// Safe to re-run and safe to run while the webhook is live: every write goes
-// through recordIgMessage, which is keyed by Instagram's message id, so an
-// overlap converges on the same rows instead of duplicating them.
+// Needs IG_ACCESS_TOKEN and IG_USER_ID. Safe to re-run, and safe to run while
+// the webhook is live: every write goes through recordIgMessage, which is keyed
+// by Instagram's message id, so an overlap converges on the same rows instead
+// of duplicating them. The final tally reports how many messages were genuinely
+// new versus already stored, which is what makes a second run readable.
 //
-// RATE LIMIT: Graph tolerates about 2 requests/second on one token, and blowing
-// through that gets the token throttled for everyone — including the live
-// webhook's profile lookups. Every request is preceded by a 600 ms pause, which
-// keeps this under ~1.7 rps with no burst at all. Do not "optimise" it with
-// Promise.all.
+// RATE LIMIT: Instagram tolerates about 2 requests/second on one token, and
+// blowing through that gets the token throttled for everyone — including the
+// live webhook's profile lookups. Every request is preceded by a 600 ms pause,
+// which keeps this under ~1.7 rps with no burst at all. Do not "optimise" it
+// with Promise.all.
 
 import { igSelfId, IG_GRAPH, graphError } from "../src/lib/instagram";
 import { igAccessToken } from "../src/lib/ig-token";
-import { recordIgMessage } from "../src/lib/ig-store";
+import { recordIgMessage, fillIgThreadProfile } from "../src/lib/ig-store";
 import { GRAPH_TIMEOUT_MS } from "../src/lib/http";
 
-/** Pause between every outgoing Graph call. See the rate-limit note above. */
+/** Pause before every outgoing Graph call. See the rate-limit note above. */
 const REQUEST_PAUSE_MS = 600;
 
-/** Conversations per page. Meta caps this well above our default. */
+/** Conversations per page. */
 const DEFAULT_PAGE_LIMIT = 50;
 
 /** Messages fetched per thread page. */
@@ -81,14 +83,33 @@ async function graphGet(url: string, token: string): Promise<Record<string, unkn
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     // The URL is never printed: paging links carry the access token.
-    throw new Error(`[ig:backfill] Graph ${res.status}: ${graphError(body)}`);
+    throw new Error(`Graph ${res.status}: ${graphError(body)}`);
   }
   return (body ?? {}) as Record<string, unknown>;
 }
 
-interface Participant {
-  id?: unknown;
-  username?: unknown;
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+interface Peer {
+  id: string;
+  username: string | null;
+}
+
+/**
+ * The other party in a conversation: the participant that is not us. Their
+ * @handle comes free with the participants list, which is why the backfill can
+ * name a thread without spending a profile lookup on it.
+ */
+function peerFromParticipants(conv: Record<string, unknown>, self: string): Peer | null {
+  const data = asArray((conv.participants as { data?: unknown } | undefined)?.data);
+  for (const p of data as Array<{ id?: unknown; username?: unknown }>) {
+    if (typeof p?.id === "string" && p.id !== self) {
+      return { id: p.id, username: typeof p.username === "string" ? p.username : null };
+    }
+  }
+  return null;
 }
 
 interface RawMessage {
@@ -99,7 +120,7 @@ interface RawMessage {
 }
 
 /**
- * Meta returns `2026-08-30T12:34:56+0000` — ISO 8601 with a colon-less offset,
+ * Graph returns `2026-08-30T12:34:56+0000` — ISO 8601 with a colon-less offset,
  * which is not what Date's spec-defined parser accepts. Node happens to cope,
  * other runtimes do not; normalising is one regex and removes the doubt.
  * Returns null rather than an Invalid Date so the caller can skip the row.
@@ -110,28 +131,17 @@ function parseGraphTime(raw: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function asArray(v: unknown): unknown[] {
-  return Array.isArray(v) ? v : [];
-}
-
-/** The other party in a conversation: the participant that is not us. */
-function peerFromParticipants(conv: Record<string, unknown>, self: string): string | null {
-  const data = asArray((conv.participants as { data?: unknown } | undefined)?.data);
-  for (const p of data as Participant[]) {
-    if (typeof p?.id === "string" && p.id !== self) return p.id;
-  }
-  return null;
-}
-
 interface Totals {
-  threads: number;
-  stored: number;
-  skipped: number;
+  conversations: number;
+  created: number;
+  existing: number;
+  unusable: number;
 }
 
 async function importConversation(
   convId: string,
-  peer: string,
+  peer: Peer,
+  self: string,
   token: string,
   args: Args,
   totals: Totals,
@@ -139,12 +149,11 @@ async function importConversation(
   let url =
     `${IG_GRAPH}/${encodeURIComponent(convId)}` +
     `?fields=messages.limit(${MESSAGE_PAGE_SIZE}){id,from,message,created_time}`;
-  const self = igSelfId() as string;
 
   for (let page = 0; page < args.depth && url; page++) {
     const body = await graphGet(url, token);
 
-    // First page nests the edge under `messages`; a paging link returns the
+    // The first page nests the edge under `messages`; a paging link returns the
     // edge itself, so accept either shape.
     const edge = (body.messages ?? body) as { data?: unknown; paging?: { next?: unknown } };
 
@@ -155,17 +164,21 @@ async function importConversation(
       // A message we cannot key or date is not importable. Skipping keeps the
       // run going rather than aborting a 200-thread import over one bad row.
       if (typeof mid !== "string" || mid === "" || !sentAt || typeof fromId !== "string") {
-        totals.skipped++;
+        totals.unusable++;
         continue;
       }
 
       if (args.dryRun) {
-        totals.stored++;
+        totals.created++;
         continue;
       }
 
+      // recordIgMessage upserts the thread, upserts the message by mid, and
+      // advances lastMessageAt/lastSender under a monotonic guard — so the
+      // newest message wins those fields no matter what order history arrives
+      // in, and a re-run changes nothing.
       const { created } = await recordIgMessage({
-        igUserId: peer,
+        igUserId: peer.id,
         mid,
         fromMe: fromId === self,
         text: typeof raw.message === "string" ? raw.message : null,
@@ -174,7 +187,8 @@ async function importConversation(
         attach: null,
         sentAt,
       });
-      if (created) totals.stored++;
+      if (created) totals.created++;
+      else totals.existing++;
     }
 
     const next = edge?.paging?.next;
@@ -206,7 +220,7 @@ async function main(): Promise<void> {
       `${args.depth} message page(s)/thread${args.dryRun ? ", DRY RUN" : ""}`,
   );
 
-  const totals: Totals = { threads: 0, stored: 0, skipped: 0 };
+  const totals: Totals = { conversations: 0, created: 0, existing: 0, unusable: 0 };
   let url =
     `${IG_GRAPH}/me/conversations` +
     `?platform=instagram&fields=participants,updated_time&limit=${args.limit}`;
@@ -220,31 +234,39 @@ async function main(): Promise<void> {
 
       const peer = peerFromParticipants(conv, self);
       if (!peer) {
-        // A conversation whose only participant is us (or whose participants
-        // Graph withheld). Nothing to attribute the messages to.
-        totals.skipped++;
+        // A conversation whose only participant is us, or whose participants
+        // Graph withheld. Nothing to attribute the messages to.
+        totals.unusable++;
         continue;
       }
 
-      totals.threads++;
+      totals.conversations++;
       try {
-        await importConversation(convId, peer, token, args, totals);
+        await importConversation(convId, peer, self, token, args, totals);
+        // After the messages, so the thread is guaranteed to exist. Only fills
+        // a blank handle — see fillIgThreadProfile.
+        if (!args.dryRun && peer.username) {
+          await fillIgThreadProfile(peer.id, { username: peer.username });
+        }
       } catch (e) {
         // One unreadable thread must not end the run. Log the id, never the
         // contents, and move on.
-        console.error(`[ig:backfill] thread ${convId} failed:`, (e as Error).message);
+        console.error(`[ig:backfill] thread ${convId} failed: ${(e as Error).message}`);
       }
     }
 
     const next = (body.paging as { next?: unknown } | undefined)?.next;
     url = typeof next === "string" ? next : "";
-    if (url) console.log(`[ig:backfill] page ${page + 1} done (${totals.threads} threads so far)`);
+    if (url) {
+      console.log(`[ig:backfill] page ${page + 1} done (${totals.conversations} threads so far)`);
+    }
   }
 
   console.log(
-    `[ig:backfill] done — ${totals.threads} thread(s), ` +
-      `${totals.stored} message(s) ${args.dryRun ? "would be imported" : "imported"}, ` +
-      `${totals.skipped} skipped`,
+    `[ig:backfill] done — conversations: ${totals.conversations}, ` +
+      `messages ${args.dryRun ? "that would be created" : "created"}: ${totals.created}, ` +
+      `already present: ${totals.existing}` +
+      (totals.unusable > 0 ? `, unusable: ${totals.unusable}` : ""),
   );
 }
 

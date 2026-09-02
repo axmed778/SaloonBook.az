@@ -10,7 +10,6 @@
 //   * IgMessage.id  = the Instagram message id (mid)
 //   * IgThread      = keyed by igUserId (unique)
 
-import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 
@@ -37,11 +36,16 @@ export interface IgRecordResult {
 /**
  * Ensures the thread for `igUserId` exists and returns its id.
  *
- * upsert is not atomic against a concurrent insert of the same igUserId — two
- * webhook deliveries for a brand-new conversation can both miss the row and
- * both try to create it, and the loser gets P2002 on the unique index. Meta
- * fans deliveries out in parallel, so this is a real race, not a theoretical
- * one: retry once and the second pass finds the row the winner wrote.
+ * The id IS the IGSID. A random id would work — igUserId carries the unique
+ * index either way — but a deterministic one means the webhook and the backfill
+ * mint the same id for the same lead no matter which of them sees the
+ * conversation first, so a thread can never exist under two identities and
+ * nothing depends on who won the race.
+ *
+ * That race is real, not theoretical: upsert is not atomic against a concurrent
+ * insert, and Meta fans webhook deliveries out in parallel, so two events for a
+ * brand-new conversation can both miss the row and both try to create it. The
+ * loser gets P2002; retry once and the second pass finds what the winner wrote.
  */
 async function ensureThread(igUserId: string): Promise<string> {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -51,7 +55,7 @@ async function ensureThread(igUserId: string): Promise<string> {
         // Nothing to change here — lastMessageAt/lastSender are advanced
         // separately, under a monotonic guard (see below).
         update: {},
-        create: { id: randomUUID(), igUserId },
+        create: { id: igUserId, igUserId },
         select: { id: true },
       });
       return thread.id;
@@ -64,6 +68,29 @@ async function ensureThread(igUserId: string): Promise<string> {
   // Unreachable: the retry above either returns or rethrows. Kept so the
   // function has a total return type without an `as` cast.
   throw new Error("[ig] failed to create thread");
+}
+
+/**
+ * Fill in a thread's display name / @handle, but only where they are still
+ * blank.
+ *
+ * The "still blank" filter is the point. Two writers race for this field — the
+ * profile job and the backfill's participants list — and a human may correct it
+ * by hand in between; first value wins, and a later pass never clobbers it.
+ * Passing nothing useful is a no-op rather than a write of nulls.
+ */
+export async function fillIgThreadProfile(
+  igUserId: string,
+  profile: { username?: string | null; name?: string | null },
+): Promise<void> {
+  const username = profile.username?.trim() || null;
+  const name = profile.name?.trim() || null;
+  if (!username && !name) return;
+
+  await prisma.igThread.updateMany({
+    where: { igUserId, username: null },
+    data: { username, name },
+  });
 }
 
 /**

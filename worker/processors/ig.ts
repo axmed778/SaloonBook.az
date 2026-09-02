@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import { prisma } from "../../src/lib/prisma";
 import { fetchIgProfile } from "../../src/lib/instagram";
 import { igAccessToken, refreshAndStoreIgToken } from "../../src/lib/ig-token";
+import { fillIgThreadProfile } from "../../src/lib/ig-store";
 import type { IgJob } from "../../src/lib/queue";
 
 /**
@@ -48,18 +49,10 @@ async function fillProfile(igUserId: string): Promise<void> {
   }
 
   const profile = await fetchIgProfile(igUserId, token);
-  if (!profile.username && !profile.name) return;
-
-  // updateMany with the "still blank" filter, not update: two jobs for the same
-  // lead must not overwrite each other, and a handle a human corrected by hand
-  // outranks whatever Graph returns.
-  await prisma.igThread.updateMany({
-    where: { id: thread.id, username: null },
-    data: {
-      username: profile.username ?? null,
-      name: profile.name ?? null,
-    },
-  });
+  // Shared with the backfill, which reads the same fields out of a
+  // conversation's participants list: whoever gets there first wins, and a
+  // handle corrected by hand outranks whatever Graph returns later.
+  await fillIgThreadProfile(igUserId, profile);
   console.log(`[worker:ig] profile filled for thread ${thread.id}`);
 }
 
