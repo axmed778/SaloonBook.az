@@ -182,31 +182,51 @@ export function assertEnv(service: ServiceRole = "web"): void {
       ]);
     }
 
-    // Instagram Direct is entirely optional — nothing warns when all of it is
-    // absent. A HALF-configured one is the problem: /api/ig/webhook is routed
-    // either way, so without IG_VERIFY_TOKEN Meta's handshake can never
-    // succeed, and without IG_APP_SECRET the handler fails closed on every
-    // delivery in production. Both look like "Instagram just doesn't work"
-    // from the outside, with nothing in the logs to say which half is missing.
+    // --- Instagram Direct -------------------------------------------------
+    // Boot-critical, not warn-only. /api/ig/webhook is routed whether or not
+    // Instagram is configured, so every missing variable here is a SILENT
+    // runtime failure: Meta's handshake goes unanswered, or the handler fails
+    // closed on every delivery, or echoes get filed under the wrong thread.
+    // From the outside all three look identical — "Instagram doesn't work" —
+    // with nothing in the logs naming the missing half. Converting that into a
+    // loud boot failure is the whole point.
     //
-    // Warn-only: an unset integration is a feature that is off, not a hole.
-    // IG_APP_ID is listed because the app dashboard pairs it with the secret,
-    // and a deployment missing it is one that was configured by half-copying.
-    const igVars = [
-      "IG_USER_ID",
-      "IG_APP_ID",
-      "IG_APP_SECRET",
-      "IG_ACCESS_TOKEN",
-      "IG_VERIFY_TOKEN",
-    ] as const;
-    const igMissing = igVars.filter((n) => isPlaceholder(process.env[n]));
-    if (igMissing.length > 0 && igMissing.length < igVars.length) {
-      console.warn(
-        `[env] WARNING: Instagram Direct is half-configured — missing ${igMissing.join(", ")}. ` +
-          "The /api/ig/webhook endpoint is live but will reject or drop deliveries. " +
-          "Note IG_APP_SECRET is the INSTAGRAM app's secret, not WHATSAPP_APP_SECRET.",
-      );
-    }
+    // As everywhere in this file, "critical" means REFUSE TO BOOT IN
+    // PRODUCTION and warn elsewhere, so local dev and CI still run without any
+    // Instagram credentials.
+    critical.push([
+      process.env.IG_USER_ID,
+      "IG_USER_ID is unset — the webhook cannot tell our own messages from a lead's, " +
+        "so an echo would open a thread keyed by the salon's own account.",
+    ]);
+    // Nothing reads IG_APP_ID at runtime. It is required anyway because the app
+    // dashboard hands out the id and the secret together: a deployment missing
+    // it was configured by half-copying, and the halves that ARE load-bearing
+    // sit directly below it.
+    critical.push([
+      process.env.IG_APP_ID,
+      "IG_APP_ID is unset — a sign the Instagram app's credentials were only " +
+        "half-copied; check IG_APP_SECRET and IG_ACCESS_TOKEN too.",
+    ]);
+    critical.push([
+      process.env.IG_APP_SECRET,
+      "IG_APP_SECRET is unset — the Instagram webhook cannot verify Meta's signature " +
+        "and fails closed on every delivery, so no Direct message is ever stored. " +
+        "Note this is the INSTAGRAM app's secret, NOT WHATSAPP_APP_SECRET.",
+    ]);
+    critical.push([
+      process.env.IG_VERIFY_TOKEN,
+      "IG_VERIFY_TOKEN is unset — Meta's GET verification handshake can never succeed, " +
+        "so the webhook subscription cannot be created or re-verified.",
+    ]);
+    // The web service does not call Graph itself, but scripts/ig-backfill.ts is
+    // run against it and IG_ACCESS_TOKEN is the bootstrap value the IgToken row
+    // is seeded from. Required here for the same half-copied-config reason.
+    critical.push([
+      process.env.IG_ACCESS_TOKEN,
+      "IG_ACCESS_TOKEN is unset — scripts/ig-backfill.ts cannot run, and a fresh " +
+        "database has no token to bootstrap the IgToken row from.",
+    ]);
   }
 
   // --- Worker service ------------------------------------------------------
@@ -230,6 +250,26 @@ export function assertEnv(service: ServiceRole = "web"): void {
       process.env.REDIS_URL,
       "REDIS_URL is unset on the worker — it would fall back to localhost and " +
         "process no jobs at all.",
+    ]);
+
+    // Instagram Direct on the worker: ONE variable, deliberately.
+    //
+    // The worker runs two Instagram jobs — the lead profile lookup and the
+    // monthly token refresh — and both are Graph calls carrying this token and
+    // nothing else. It never reads IG_APP_SECRET or IG_VERIFY_TOKEN (those
+    // belong to the webhook, which lives in the web service) and never reads
+    // IG_USER_ID. Demanding them here would be the exact mistake the note at
+    // the top of this function warns about: a boot failure with a misleading
+    // explanation, plus two secrets parked in a service with no use for them.
+    //
+    // Still required even though a refreshed token supersedes it in the IgToken
+    // row: this is the bootstrap value, and a worker that starts with neither
+    // has no way to make the first call that would create that row.
+    critical.push([
+      process.env.IG_ACCESS_TOKEN,
+      "IG_ACCESS_TOKEN is unset on the worker — Instagram profile lookups and the " +
+        "monthly token refresh would silently no-op, and once the 60-day token lapses " +
+        "it cannot be renewed at all, only re-issued through the app's login flow.",
     ]);
   }
 
