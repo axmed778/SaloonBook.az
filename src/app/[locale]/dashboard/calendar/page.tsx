@@ -8,16 +8,22 @@ import {
   BAKU_TZ,
   bakuToday,
   bakuDayBoundsUtc,
-  bakuMinutesOfDayOn,
   bakuYmd,
   bakuWeekday,
   shiftYmd,
   formatBakuDate,
 } from "@/lib/time";
+import {
+  bookingSelectForRole,
+  bookingViewerRole,
+  serializeBookingsForRole,
+  type BookingRow,
+} from "@/lib/serializers/booking";
 import { Calendar } from "../_components/calendar";
 import {
   DAY_START_MIN,
   DAY_END_MIN,
+  toCalendarBlock,
   type CalendarBlock,
   type CalendarColumn,
   type CatalogEmployee,
@@ -28,72 +34,7 @@ export const dynamic = "force-dynamic";
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Appointment fields the calendar needs, shared by the day and week queries.
-const APPT_SELECT = {
-  id: true,
-  employeeId: true,
-  startsAt: true,
-  endsAt: true,
-  status: true,
-  priceMinor: true,
-  source: true,
-  autoCompleted: true,
-  manageToken: true,
-  service: { select: { name: true } },
-  employee: { select: { name: true, position: true } },
-  customer: { select: { name: true, phone: true } },
-  attendeeName: true,
-  notes: true,
-} as const;
-
-type ApptRow = {
-  id: string;
-  employeeId: string;
-  startsAt: Date;
-  endsAt: Date;
-  status: string;
-  priceMinor: number;
-  source: string;
-  autoCompleted: boolean;
-  manageToken: string;
-  service: { name: string };
-  employee: { name: string; position: string | null };
-  customer: { name: string; phone: string };
-  attendeeName: string | null;
-  notes: string | null;
-};
-
 const MINUTES_IN_DAY = 24 * 60;
-
-function toBlock(a: ApptRow, columnId: string, dateLabel: string): CalendarBlock {
-  // Keep the REAL, unclamped minutes so labels/popup show the true times; the
-  // grid derives its visible window from the data. Both ends are measured
-  // against the START day's midnight so a booking that runs to/past midnight
-  // keeps its real height (bakuMinutesOfDay would wrap the end back to ~0).
-  const startYmd = bakuYmd(a.startsAt);
-  const startMin = bakuMinutesOfDayOn(a.startsAt, startYmd);
-  const endMin = Math.min(bakuMinutesOfDayOn(a.endsAt, startYmd), MINUTES_IN_DAY);
-  return {
-    id: a.id,
-    columnId,
-    startMin,
-    endMin,
-    title: a.service.name,
-    // Show who the booking is for; the phone stays the contact's.
-    subtitle: a.attendeeName ?? a.customer.name,
-    status: a.status as CalendarBlock["status"],
-    autoCompleted: a.autoCompleted,
-    // Past-due but still CONFIRMED → needs closing (completed / no-show).
-    overdue: a.status === "CONFIRMED" && a.endsAt.getTime() < Date.now(),
-    priceMinor: a.priceMinor,
-    customerPhone: a.customer.phone,
-    source: a.source,
-    manageToken: a.manageToken,
-    employeeName: a.employee.name,
-    dateLabel,
-    notes: a.notes,
-  };
-}
 
 function weekDayLabels(ymd: string, df: string): { weekdayLabel: string; dayLabel: string } {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -162,6 +103,10 @@ export default async function CalendarPage({
   // that as data (null employeeId = the whole salon, i.e. the owner), so every
   // query below is narrowed the same way the server actions are.
   const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
+  // Which COLUMNS the queries below may read. For a master that excludes the
+  // customer's phone and the booking note, so the blocks streamed into the RSC
+  // payload have no contact data in them to be found by View Source.
+  const role = bookingViewerRole(session);
   const { day: dayParam, view: viewParam } = await searchParams;
   const view = viewParam === "week" ? "week" : "day";
   const today = bakuToday();
@@ -213,15 +158,18 @@ export default async function CalendarPage({
     const { startUtc } = bakuDayBoundsUtc(weekStart);
     const { endUtc } = bakuDayBoundsUtc(weekEnd);
 
-    const appts = (await prisma.appointment.findMany({
-      where: {
-        ...appointmentScope(scope),
-        status: { not: "CANCELLED" },
-        startsAt: { gte: startUtc, lt: endUtc },
-      },
-      orderBy: { startsAt: "asc" },
-      select: APPT_SELECT,
-    })) as ApptRow[];
+    const appts = serializeBookingsForRole(
+      (await prisma.appointment.findMany({
+        where: {
+          ...appointmentScope(scope),
+          status: { not: "CANCELLED" },
+          startsAt: { gte: startUtc, lt: endUtc },
+        },
+        orderBy: { startsAt: "asc" },
+        select: bookingSelectForRole(role),
+      })) as BookingRow[],
+      role,
+    );
 
     const weekDays: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
       const ymd = shiftYmd(weekStart, i);
@@ -231,7 +179,7 @@ export default async function CalendarPage({
     const blocks = appts
       .map((a) => {
         const ymd = bakuYmd(a.startsAt);
-        return toBlock(a, ymd, formatBakuDate(ymd, df));
+        return toCalendarBlock(a, ymd, formatBakuDate(ymd, df));
       })
       .filter((b) => b.endMin > b.startMin);
     const win = visibleWindow(blocks);
@@ -256,18 +204,21 @@ export default async function CalendarPage({
   // --- Day view ---
   const { startUtc, endUtc } = bakuDayBoundsUtc(day);
   const dateLabel = formatBakuDate(day, df);
-  const appts = (await prisma.appointment.findMany({
-    where: {
-      ...appointmentScope(scope),
-      status: { not: "CANCELLED" },
-      startsAt: { gte: startUtc, lt: endUtc },
-    },
-    orderBy: { startsAt: "asc" },
-    select: APPT_SELECT,
-  })) as ApptRow[];
+  const appts = serializeBookingsForRole(
+    (await prisma.appointment.findMany({
+      where: {
+        ...appointmentScope(scope),
+        status: { not: "CANCELLED" },
+        startsAt: { gte: startUtc, lt: endUtc },
+      },
+      orderBy: { startsAt: "asc" },
+      select: bookingSelectForRole(role),
+    })) as BookingRow[],
+    role,
+  );
 
   const blocks = appts
-    .map((a) => toBlock(a, a.employeeId, dateLabel))
+    .map((a) => toCalendarBlock(a, a.employeeId, dateLabel))
     .filter((b) => b.endMin > b.startMin);
   const win = visibleWindow(blocks);
 
@@ -282,8 +233,8 @@ export default async function CalendarPage({
     if (!activeIds.has(a.employeeId) && !inactiveCols.has(a.employeeId)) {
       inactiveCols.set(a.employeeId, {
         id: a.employeeId,
-        name: a.employee.name,
-        position: a.employee.position,
+        name: a.employeeName,
+        position: a.employeePosition,
         inactive: true,
       });
     }
