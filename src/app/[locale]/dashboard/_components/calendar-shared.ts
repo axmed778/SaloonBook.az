@@ -2,6 +2,9 @@
 // "use client" component files so the server page can import the constants and
 // types without pulling in a client module.
 
+import { bakuMinutesOfDayOn, bakuYmd } from "@/lib/time";
+import type { SerializedBooking } from "@/lib/serializers/booking";
+
 // DEFAULT visible window. The grids expand it from the data so bookings outside
 // these hours (a barber working till 23:00) still render — these are just the
 // minimum window shown when everything falls inside.
@@ -38,13 +41,64 @@ export type CalendarBlock = {
   // (completed / no-show). Rendered distinctly so staff clear it at day's end.
   overdue: boolean;
   priceMinor: number;
-  customerPhone: string;
+  // Contact details. OWNER/ADMIN only: for a master's login these keys are
+  // ABSENT — the server never selects the columns and never serializes the
+  // keys, so the number is not in the RSC payload either (see
+  // lib/serializers/booking.ts). The popup renders a phone row and the
+  // WhatsApp buttons only when the value is actually here.
+  customerPhone?: string;
+  // The customer's wish for the service ("tünd çalar"). Shown to every role;
+  // for a master it arrives already redacted by the server serializer, so what
+  // is in this field IS what may be displayed.
+  serviceNote: string | null;
   source: string; // "PUBLIC" | "DASHBOARD"
   manageToken: string; // customer self-service link: /a/{manageToken}
   employeeName: string; // shown in the detail popup (and week-view blocks)
   dateLabel: string; // this appointment's Baku date label (for the popup)
-  notes: string | null; // customer's booking note (e.g. preferred colour)
 };
+
+const MINUTES_IN_DAY = 24 * 60;
+
+/**
+ * Serialized booking -> calendar block. The ONLY place a block is built, for
+ * both the day view (columnId = employeeId) and the week view (columnId = the
+ * booking's Baku day), so the contact fields are carried across exactly once
+ * and a master's block simply has no `customerPhone` key to leak.
+ */
+export function toCalendarBlock(
+  b: SerializedBooking,
+  columnId: string,
+  dateLabel: string,
+): CalendarBlock {
+  // Keep the REAL, unclamped minutes so labels/popup show the true times; the
+  // grid derives its visible window from the data. Both ends are measured
+  // against the START day's midnight so a booking that runs to/past midnight
+  // keeps its real height (bakuMinutesOfDay would wrap the end back to ~0).
+  const startYmd = bakuYmd(b.startsAt);
+  return {
+    id: b.id,
+    columnId,
+    startMin: bakuMinutesOfDayOn(b.startsAt, startYmd),
+    endMin: Math.min(bakuMinutesOfDayOn(b.endsAt, startYmd), MINUTES_IN_DAY),
+    title: b.serviceName,
+    subtitle: b.customerName,
+    status: b.status as CalendarBlock["status"],
+    autoCompleted: b.autoCompleted,
+    // Past-due but still CONFIRMED -> needs closing (completed / no-show).
+    overdue: b.status === "CONFIRMED" && b.endsAt.getTime() < Date.now(),
+    priceMinor: b.priceMinor,
+    source: b.source,
+    manageToken: b.manageToken,
+    employeeName: b.employeeName,
+    dateLabel,
+    serviceNote: b.serviceNote,
+    // Conditional spread, not `customerPhone: b.customerPhone`: assigning
+    // undefined would still create the key, and JSON/flight serialization of a
+    // present-but-undefined key is exactly the kind of detail that turns a
+    // redaction into a leak.
+    ...(b.customerPhone !== undefined ? { customerPhone: b.customerPhone } : {}),
+  };
+}
 
 // Catalog backing the manual-booking form: active employees and, per employee,
 // the active services they can perform.

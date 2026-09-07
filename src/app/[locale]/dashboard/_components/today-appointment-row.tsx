@@ -42,16 +42,20 @@ export function TodayAppointmentRow({
 
   // Contextual WhatsApp message: a reminder while the booking is still upcoming,
   // a thank-you/review request once it's completed (or a no-show follow-up).
-  const waHref = buildWhatsAppLink(
-    appt.clientPhone,
-    upcoming ? "reminder" : "reviewRequest",
-    {
-      salon: salonName,
-      service: appt.service,
-      client: appt.clientName,
-      when: `${dateLabel}, ${appt.time}`,
-    },
-  );
+  //
+  // Only for a login that HAS the client's number — the owner's. A master's row
+  // carries no `clientPhone` at all (the server never sends one), so there is
+  // nothing to build a wa.me link from and the button is not rendered. This is
+  // not a permission check standing in front of data that arrived anyway; the
+  // data is simply absent.
+  const waHref = appt.clientPhone
+    ? buildWhatsAppLink(appt.clientPhone, upcoming ? "reminder" : "reviewRequest", {
+        salon: salonName,
+        service: appt.service,
+        client: appt.clientName,
+        when: `${dateLabel}, ${appt.time}`,
+      })
+    : null;
 
   const statusBadge = appt.overdue
     ? { label: t("overdue"), cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
@@ -122,17 +126,19 @@ export function TodayAppointmentRow({
         )}
 
         {/* Message the client (WhatsApp) with a prefilled, contextual message. */}
-        <a
-          href={waHref}
-          target="_blank"
-          rel="noreferrer"
-          className={BTN_WA + " ml-auto"}
-        >
-          <svg className={ICON} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.2c-.24.68-1.42 1.32-1.95 1.36-.5.05-.97.23-3.27-.68-2.76-1.09-4.5-3.9-4.64-4.08-.14-.18-1.1-1.46-1.1-2.79 0-1.32.7-1.97.94-2.24.24-.27.53-.34.71-.34.18 0 .36 0 .51.01.16.01.39-.06.6.46.24.57.82 1.97.89 2.11.07.14.12.31.02.5-.09.18-.14.29-.27.45-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.27.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.27.14.43.12.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.24.09 1.55.73 1.82.86.27.14.45.2.51.32.07.11.07.66-.17 1.34Z" />
-          </svg>
-          {t("message")}
-        </a>
+        {waHref && (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className={BTN_WA + " ml-auto"}
+          >
+            <svg className={ICON} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.2c-.24.68-1.42 1.32-1.95 1.36-.5.05-.97.23-3.27-.68-2.76-1.09-4.5-3.9-4.64-4.08-.14-.18-1.1-1.46-1.1-2.79 0-1.32.7-1.97.94-2.24.24-.27.53-.34.71-.34.18 0 .36 0 .51.01.16.01.39-.06.6.46.24.57.82 1.97.89 2.11.07.14.12.31.02.5-.09.18-.14.29-.27.45-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.27.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.27.14.43.12.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.24.09 1.55.73 1.82.86.27.14.45.2.51.32.07.11.07.66-.17 1.34Z" />
+            </svg>
+            {t("message")}
+          </a>
+        )}
       </div>
     </li>
   );

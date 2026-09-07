@@ -95,24 +95,30 @@ export function AppointmentPopup({
     typeof window !== "undefined"
       ? `${window.location.origin}/a/${block.manageToken}`
       : `/a/${block.manageToken}`;
-  const waHref =
-    `https://wa.me/${block.customerPhone.replace(/[^\d]/g, "")}?text=` +
-    encodeURIComponent(t("popup.waMessage", { name: block.subtitle, url: manageUrl }));
+
+  // Everything below that needs the customer's number exists only for a login
+  // that HAS it — the owner's. A master's block carries no `customerPhone`
+  // (the server never selected the column, so it is not in the page's flight
+  // data either), which is why these are values that can be null rather than
+  // JSX hidden behind a role check: there is nothing to hide.
+  const phone = block.customerPhone;
+  const waHref = phone
+    ? `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=` +
+      encodeURIComponent(t("popup.waMessage", { name: block.subtitle, url: manageUrl }))
+    : null;
 
   // A contextual quick message (distinct from the manage-link share above): a
   // reminder while the booking is still upcoming, otherwise a thank-you/review
   // request. Opens the staff member's own WhatsApp with a prefilled AZ message.
   const upcoming = block.status === "CONFIRMED" && !block.overdue;
-  const waQuickHref = buildWhatsAppLink(
-    block.customerPhone,
-    upcoming ? "reminder" : "reviewRequest",
-    {
-      salon: salonName,
-      service: block.title,
-      client: block.subtitle,
-      when: `${block.dateLabel}, ${minutesToHHMM(block.startMin)}`,
-    },
-  );
+  const waQuickHref = phone
+    ? buildWhatsAppLink(phone, upcoming ? "reminder" : "reviewRequest", {
+        salon: salonName,
+        service: block.title,
+        client: block.subtitle,
+        when: `${block.dateLabel}, ${minutesToHHMM(block.startMin)}`,
+      })
+    : null;
   const waQuickLabel = upcoming ? t("popup.waReminder") : t("popup.waReview");
 
   function copyManageUrl() {
@@ -177,7 +183,7 @@ export function AppointmentPopup({
 
         <dl className="mt-4 space-y-3 text-sm">
           <Row label={t("popup.customer")} value={block.subtitle} />
-          <Row label={t("popup.phone")} value={block.customerPhone} mono />
+          {phone && <Row label={t("popup.phone")} value={phone} mono />}
           <Row label={t("popup.employee")} value={block.employeeName} />
           <Row label={t("popup.date")} value={block.dateLabel} />
           <Row
@@ -188,11 +194,11 @@ export function AppointmentPopup({
           <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>
 
-        {block.notes && (
+        {block.serviceNote && (
           <div className="mt-3 rounded-lg border border-border bg-muted/50 p-3">
-            <p className="text-xs font-medium text-faint-foreground">{t("popup.notes")}</p>
+            <p className="text-xs font-medium text-faint-foreground">{t("popup.serviceNote")}</p>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
-              {block.notes}
+              {block.serviceNote}
             </p>
           </div>
         )}
@@ -200,7 +206,7 @@ export function AppointmentPopup({
         {error && <p className="mt-4 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
         {/* Contextual WhatsApp quick message (reminder / thank-you+review). */}
-        {mode === "view" && (
+        {mode === "view" && waQuickHref && (
           <a
             href={waQuickHref}
             target="_blank"
@@ -235,7 +241,10 @@ export function AppointmentPopup({
             <p className="text-xs font-medium text-muted-foreground">
               {t("popup.manageLinkLabel")}
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            {/* Copy stays for everyone — the link is the appointment's own
+                capability token, not contact data. "Send via WhatsApp" needs
+                the customer's number and so exists only where there is one. */}
+            <div className={"mt-2 grid gap-2 " + (waHref ? "grid-cols-2" : "grid-cols-1")}>
               <button
                 type="button"
                 onClick={copyManageUrl}
@@ -243,14 +252,16 @@ export function AppointmentPopup({
               >
                 {copied ? t("popup.copied") : t("popup.copyLink")}
               </button>
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-800 dark:text-emerald-200 transition hover:bg-emerald-500/20"
-              >
-                {t("popup.sendViaWhatsapp")}
-              </a>
+              {waHref && (
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-800 dark:text-emerald-200 transition hover:bg-emerald-500/20"
+                >
+                  {t("popup.sendViaWhatsapp")}
+                </a>
+              )}
             </div>
           </div>
         )}

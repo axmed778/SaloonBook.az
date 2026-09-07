@@ -5,6 +5,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { matchesClientGender, type Audience } from "@/lib/audience";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { hasContact } from "@/lib/serializers/redact-notes";
 
 // Cloudflare Turnstile: only wired when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set
 // (paired with the server's TURNSTILE_SECRET_KEY). Loaded lazily so the script
@@ -84,6 +85,7 @@ const BOOKING_ERROR_KEYS: Record<string, string> = {
   SALON_NOT_FOUND: "errors.salonUnavailable",
   PLAN_LIMIT: "errors.salonUnavailable",
   SERVER: "errors.bookingFailed",
+  NOTE_CONTACT: "errors.noteContact",
 };
 
 export function BookingWidget({
@@ -164,7 +166,7 @@ export function BookingWidget({
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(prefillName ?? "");
   const [phoneDigits, setPhoneDigits] = useState(prefillPhone ?? "");
-  const [notes, setNotes] = useState("");
+  const [serviceNote, setServiceNote] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
 
@@ -369,6 +371,9 @@ export function BookingWidget({
     if (digits.length !== 9) return setError(t("errors.phoneInvalid"));
     if (!slot || !serviceId || !employeeId) return setError(t("errors.incomplete"));
     if (!dataConsent) return setError(t("errors.consentRequired"));
+    // Duplicate of the server's rule, for the round trip only: the endpoint
+    // refuses this with a 422 regardless of what the form does.
+    if (hasContact(serviceNote)) return setError(t("errors.noteContact"));
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
       return setError(t("errors.confirmHuman"));
     }
@@ -384,7 +389,7 @@ export function BookingWidget({
           startUtc: slot.startUtc,
           name: name.trim(),
           phone: "+994" + digits,
-          notes: notes.trim() || undefined,
+          serviceNote: serviceNote.trim() || undefined,
           dataConsent: true,
           waOptIn: phoneVerified && marketingConsent,
           turnstileToken: turnstileToken ?? undefined,
@@ -714,19 +719,28 @@ export function BookingWidget({
                   </div>
                   <div>
                     <label
-                      htmlFor={`${fid}-notes`}
+                      htmlFor={`${fid}-service-note`}
                       className="mb-1 block text-xs font-medium text-muted-foreground"
                     >
-                      {t("notesLabel")}
+                      {t("serviceNoteLabel")}
                     </label>
                     <textarea
-                      id={`${fid}-notes`}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                      id={`${fid}-service-note`}
+                      value={serviceNote}
+                      onChange={(e) => setServiceNote(e.target.value.slice(0, 500))}
                       rows={2}
-                      placeholder={t("notesPlaceholder")}
+                      placeholder={t("serviceNotePlaceholder")}
+                      aria-describedby={`${fid}-service-note-hint`}
                       className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
+                    {/* The number is already captured in the field above; this
+                        says so, so the customer does not repeat it here. */}
+                    <p
+                      id={`${fid}-service-note-hint`}
+                      className="mt-1 text-xs text-faint-foreground"
+                    >
+                      {t("serviceNoteHint")}
+                    </p>
                   </div>
 
                   <div className="space-y-2">

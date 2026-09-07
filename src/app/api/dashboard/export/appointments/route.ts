@@ -13,6 +13,11 @@ import {
   MAX_EXPORT_ROWS,
 } from "../_lib/csv-stream";
 import {
+  bookingSelectForRole,
+  serializeBookingsForRole,
+  type BookingRow,
+} from "@/lib/serializers/booking";
+import {
   bakuToday,
   bakuYmd,
   bakuDayBoundsUtc,
@@ -66,10 +71,18 @@ export async function GET(req: NextRequest) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
+  // Owner-only, and only the owner. A master exporting the salon's appointment
+  // history would be the same customer-contact list this product deliberately
+  // keeps out of their dashboard, just as a spreadsheet — so the export is not
+  // narrowed for them, it is refused. Platform admins have no salon here.
   if (session.isAdmin || session.isStaff || !session.salonId) {
     return new Response("Forbidden", { status: 403 });
   }
   const salonId = session.salonId;
+  // The role the rows are read and serialized under. Constant "OWNER" because
+  // of the guard above — written as the same call every other booking surface
+  // makes, so this route cannot drift into selecting columns by hand again.
+  const role = "OWNER" as const;
 
   // Plan gate — mirrors the analytics UI, enforced independently here.
   const salon = await prisma.salon.findUnique({
@@ -137,45 +150,32 @@ export async function GET(req: NextRequest) {
       // role Postgres refuses to return another salon's rows, so `where.salonId`
       // is belt-and-braces rather than the only guard. This route dumps a
       // salon's appointment history — customer names and phones included.
-      const appointments = await withTenantScope(salonId, (tx) =>
+      const rows = (await withTenantScope(salonId, (tx) =>
         tx.appointment.findMany({
           where,
           orderBy: [{ startsAt: "asc" }, { id: "asc" }],
           take: EXPORT_BATCH_SIZE,
           ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
-          select: {
-            id: true,
-            startsAt: true,
-            endsAt: true,
-            status: true,
-            source: true,
-            priceMinor: true,
-            notes: true,
-            createdAt: true,
-            attendeeName: true,
-            customer: { select: { name: true, phone: true } },
-            service: { select: { name: true } },
-            employee: { select: { name: true } },
-          },
+          select: bookingSelectForRole(role),
         }),
-      );
+      )) as BookingRow[];
 
-      if (appointments.length > 0) {
-        cursorId = appointments[appointments.length - 1].id;
+      if (rows.length > 0) {
+        cursorId = rows[rows.length - 1].id;
       }
 
-      return appointments.map((a) => [
+      return serializeBookingsForRole(rows, role).map((a) => [
         bakuYmd(a.startsAt),
         minutesToHHMM(bakuMinutesOfDay(a.startsAt)),
         minutesToHHMM(bakuMinutesOfDay(a.endsAt)),
         t(`status.${a.status}`),
         t(`source.${a.source}`),
-        a.attendeeName ?? a.customer.name,
-        a.customer.phone,
-        a.service.name,
-        a.employee.name,
+        a.customerName,
+        a.customerPhone ?? "",
+        a.serviceName,
+        a.employeeName,
         (a.priceMinor / 100).toFixed(2),
-        a.notes ?? "",
+        a.serviceNote ?? "",
         bakuYmd(a.createdAt),
       ]);
     },

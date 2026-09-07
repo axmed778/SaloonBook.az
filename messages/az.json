@@ -250,7 +250,7 @@
     "popup": {
       "customer": "Müştəri",
       "phone": "Telefon",
-      "notes": "Qeyd",
+      "serviceNote": "Xidmətə dair qeyd",
       "employee": "Mütəxəssis",
       "date": "Tarix",
       "time": "Vaxt",
@@ -286,8 +286,9 @@
       "customerName": "Müştəri adı",
       "namePlaceholder": "Ad Soyad",
       "phone": "Telefon",
-      "notes": "Qeydlər (istəyə bağlı)",
-      "notesPlaceholder": "Müştərinin xüsusi istəyi — məs. saç rəngi",
+      "serviceNote": "Xidmətə dair qeyd (istəyə bağlı)",
+      "serviceNotePlaceholder": "Müştərinin xidmətlə bağlı istəyi — məs. tünd çalar",
+      "serviceNoteHint": "Müştərinin nömrəsini bura yazmayın — o, yuxarıdakı xanadadır.",
       "create": "Görüşü yarat",
       "creating": "Yaradılır…",
       "minutesShort": "{min} dəq",
@@ -295,7 +296,8 @@
         "selectStaffService": "İşçi və xidmət seçin.",
         "selectSlot": "Boş vaxt seçin.",
         "enterCustomerName": "Müştəri adını daxil edin.",
-        "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır."
+        "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır.",
+        "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
       }
     }
   },
@@ -907,7 +909,8 @@
       "timeoff": "İşçi bu vaxt məzuniyyətdədir.",
       "overlap": "Bu vaxt artıq tutulub."
     },
-    "notYours": "Bu qeyd sizin deyil."
+    "notYours": "Bu qeyd sizin deyil.",
+    "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
   },
   "Analytics": {
     "adminTitle": "Platforma idarəetməsi",
@@ -1417,8 +1420,9 @@
     "namePlaceholder": "Ad Soyad",
     "nameHint": "Başqası üçün rezervasiya edirsinizsə, həmin şəxsin adını yazın.",
     "phoneLabel": "Telefon",
-    "notesLabel": "Qeydlər (istəyə bağlı)",
-    "notesPlaceholder": "Xüsusi istəkləriniz — məs. saç rəngi, alerginiz və s.",
+    "serviceNoteLabel": "Xidmətə dair qeyd (məsələn: tünd çalar, allergiya)",
+    "serviceNotePlaceholder": "Xidmətlə bağlı istəyinizi yazın — məs. tünd çalar",
+    "serviceNoteHint": "Telefon nömrənizi bura yazmayın — onu yuxarıda qeyd etmisiniz.",
     "consentData": "<doc>Fərdi məlumatların emalına dair Razılıq</doc> ilə tanış oldum və şəxsi məlumatlarımın emalına razıyam.",
     "consentMarketing": "Aksiya, endirim və yeniliklər barədə bildirişlər almağa razıyam (könüllü).",
     "submit": "Qeydiyyatı təsdiqlə",
@@ -1437,7 +1441,8 @@
       "rateSalon": "Salon hal-hazırda çox sorğu alır. Bir az sonra cəhd edin.",
       "tooFar": "Bu tarix çox uzaqdır. Daha yaxın bir gün seçin.",
       "serviceMismatch": "Seçilmiş usta bu xidməti göstərmir. Yenidən seçin.",
-      "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın."
+      "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın.",
+      "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",

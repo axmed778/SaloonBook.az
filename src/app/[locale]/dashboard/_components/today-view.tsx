@@ -8,20 +8,12 @@ import { PullToRefresh } from "@/components/pwa/pull-to-refresh";
 import { ErrorToast } from "./toast";
 import { TodayAppointmentRow } from "./today-appointment-row";
 import { RescheduleSheet } from "./reschedule-sheet";
+import type { TodayAppointment, TodayApptStatus } from "./today-shared";
 
-export type TodayApptStatus = "CONFIRMED" | "COMPLETED" | "NO_SHOW";
-
-export interface TodayAppointment {
-  id: string;
-  time: string; // Baku "HH:MM"
-  status: TodayApptStatus;
-  overdue: boolean; // CONFIRMED and end time already passed
-  service: string;
-  employee: string;
-  clientName: string;
-  clientPhone: string; // E.164
-  priceLabel: string; // "25 ₼"
-}
+// The row shape lives in today-shared.ts (no "use client") so the server page
+// and its tests can build rows without importing this module. Re-exported here
+// because the rest of the list imports it from its own component.
+export type { TodayAppointment, TodayApptStatus };
 
 // Transient optimistic overlay applied on top of the server list until the next
 // server refresh reconciles it.

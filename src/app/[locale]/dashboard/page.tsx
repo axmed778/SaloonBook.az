@@ -3,15 +3,15 @@ import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
 import { appointmentScope } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
+import { bakuToday, bakuDayBoundsUtc, formatBakuDate } from "@/lib/time";
 import {
-  bakuToday,
-  bakuDayBoundsUtc,
-  bakuMinutesOfDay,
-  minutesToHHMM,
-  formatBakuDate,
-} from "@/lib/time";
-import { azn } from "./_components/calendar-shared";
-import { TodayView, type TodayAppointment } from "./_components/today-view";
+  bookingSelectForRole,
+  bookingViewerRole,
+  serializeBookingsForRole,
+  type BookingRow,
+} from "@/lib/serializers/booking";
+import { TodayView } from "./_components/today-view";
+import { toTodayAppointment, type TodayAppointment } from "./_components/today-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,10 @@ export default async function DashboardTodayPage() {
   // that as data (null employeeId = the whole salon, i.e. the owner), so every
   // query below is narrowed the same way the server actions are.
   const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
+  // ...and `role` decides WHICH COLUMNS of those rows exist at all: a master's
+  // query never reads the customer's phone, so nothing downstream — this page,
+  // the RSC payload, the client component — can leak it.
+  const role = bookingViewerRole(session);
   const today = bakuToday();
   const { startUtc, endUtc } = bakuDayBoundsUtc(today);
   const now = Date.now();
@@ -49,39 +53,19 @@ export default async function DashboardTodayPage() {
   });
 
   // Today's bookings, chronological. CANCELLED are excluded (same as the calendar).
-  const appts = await prisma.appointment.findMany({
+  const appts = (await prisma.appointment.findMany({
     where: {
       ...appointmentScope(scope),
       status: { not: "CANCELLED" },
       startsAt: { gte: startUtc, lt: endUtc },
     },
     orderBy: { startsAt: "asc" },
-    select: {
-      id: true,
-      startsAt: true,
-      endsAt: true,
-      status: true,
-      priceMinor: true,
-      attendeeName: true,
-      service: { select: { name: true } },
-      employee: { select: { name: true } },
-      customer: { select: { name: true, phone: true } },
-    },
-  });
+    select: bookingSelectForRole(role),
+  })) as BookingRow[];
 
-  const items: TodayAppointment[] = appts.map((a) => ({
-    id: a.id,
-    time: minutesToHHMM(bakuMinutesOfDay(a.startsAt)),
-    status: a.status as TodayAppointment["status"],
-    // A past-but-still-CONFIRMED booking needs closing (complete / no-show).
-    overdue: a.status === "CONFIRMED" && a.endsAt.getTime() < now,
-    service: a.service.name,
-    employee: a.employee.name,
-    // Who the booking is for; the phone stays the contact's (for WhatsApp).
-    clientName: a.attendeeName ?? a.customer.name,
-    clientPhone: a.customer.phone,
-    priceLabel: `${azn(a.priceMinor)} ₼`,
-  }));
+  const items: TodayAppointment[] = serializeBookingsForRole(appts, role).map((b) =>
+    toTodayAppointment(b, now),
+  );
 
   return (
     <TodayView
