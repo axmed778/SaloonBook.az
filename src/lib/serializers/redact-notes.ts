@@ -68,6 +68,24 @@ const DIGIT_RUN = /\d{7,}/g;
  */
 const PREFIXED_NUMBER = /(?:\+?994|0(?:10|12|50|51|55|60|70|77|99))\d{3,}/g;
 
+/**
+ * A calendar date, which a service note has every right to contain:
+ * "07.09.2026", "7/9/26", "07-09-26". Its digits are excluded from the run
+ * count below, or "07.09.2026" would normalize to the eight-digit 07092026 and
+ * be cut as a phone number.
+ *
+ * The separator is captured and back-referenced, so both separators inside one
+ * date must be the same character: "07.09-2026" is not a date and stays a
+ * candidate for redaction. Neither pattern carries a lookbehind — this module
+ * also runs in the browser, and lookbehind is a parse-time syntax error on
+ * older Safari, which would take the whole booking form down. The left/right
+ * boundary is enforced in code instead, by isGluedToDigits().
+ */
+const DMY_DATE = /(\d{1,2})([./-])(\d{1,2})\2(?:\d{4}|\d{2})/g;
+
+/** The ISO form, "2026-09-07". */
+const ISO_DATE = /\d{4}-\d{1,2}-\d{1,2}/g;
+
 /** Email addresses. Matched on visible text — the dots are the point. */
 const EMAIL = /[\p{L}\p{N}][\p{L}\p{N}._%+-]*@[\p{L}\p{N}][\p{L}\p{N}.-]*\.\p{L}{2,}/gu;
 
@@ -96,18 +114,32 @@ interface Normalized {
 }
 
 /**
+ * Stands in for a character inside a protected range. Not a digit and not
+ * noise, so it breaks a digit run rather than joining one — and it occupies
+ * exactly one slot, which keeps the index map aligned with the source.
+ */
+const MASK = "\u0000";
+
+/**
  * Drops every character matching `noise`, remembering where the survivors came
  * from. Iterated per code unit rather than per code point so the map indices
  * stay usable for slicing — a surrogate pair is never noise, so both halves are
  * kept and mapped in order.
+ *
+ * Characters inside `protect` are replaced by MASK instead of being dropped, so
+ * the digits of a date take no part in the phone rules: they neither form a run
+ * of their own nor glue the runs on either side of them together.
  */
-function normalize(source: string, noise: RegExp): Normalized {
+function normalize(source: string, noise: RegExp, protect: Range[] = []): Normalized {
   let text = "";
   const map: number[] = [];
+  let p = 0;
   for (let i = 0; i < source.length; i++) {
+    while (p < protect.length && protect[p].end <= i) p++;
+    const masked = p < protect.length && i >= protect[p].start;
     const ch = source[i];
-    if (noise.test(ch)) continue;
-    text += ch;
+    if (!masked && noise.test(ch)) continue;
+    text += masked ? MASK : ch;
     map.push(i);
   }
   return { text, map };
@@ -131,6 +163,43 @@ function rangesIn(norm: Normalized, re: RegExp): Range[] {
     out.push({ start: first, end: last + 1 });
   }
   return out;
+}
+
+/**
+ * Is this span glued to more digits — i.e. is the nearest character on either
+ * side, ignoring the separators a number is written with, itself a digit?
+ *
+ * This is what keeps the date exception from becoming the way around the whole
+ * rule. Two things would otherwise slip through:
+ *
+ *   * a date pattern matched INSIDE a phone number — "0501.23.4567" contains
+ *     "1.23.4567", and protecting that would leave a harmless "050" behind;
+ *   * a number DRESSED as a date — "05.01.2345 67" is not a date anybody means,
+ *     it is ten digits with a plausible mask on the first eight.
+ *
+ * In both, the span has a digit pressed up against it. A date a human actually
+ * wrote is followed by a space and a word, or by a comma, or by nothing.
+ */
+function isGluedToDigits(text: string, r: Range): boolean {
+  let i = r.start - 1;
+  while (i >= 0 && PHONE_NOISE.test(text[i])) i--;
+  if (i >= 0 && /\d/.test(text[i])) return true;
+  let j = r.end;
+  while (j < text.length && PHONE_NOISE.test(text[j])) j++;
+  return j < text.length && /\d/.test(text[j]);
+}
+
+/**
+ * The date spans whose digits must be kept out of the phone rules. A match that
+ * is glued to further digits is NOT one — see isGluedToDigits().
+ */
+function protectedDateRanges(text: string): Range[] {
+  const whole: Normalized = { text, map: text.split("").map((_, i) => i) };
+  return merge(
+    [...rangesIn(whole, DMY_DATE), ...rangesIn(whole, ISO_DATE)].filter(
+      (r) => !isGluedToDigits(text, r),
+    ),
+  );
 }
 
 /**
@@ -167,7 +236,10 @@ function merge(ranges: Range[]): Range[] {
  */
 export function findContactRanges(text: string): Range[] {
   if (!text) return [];
-  const forPhones = normalize(text, PHONE_NOISE);
+  // Dates first, on the RAW text: a date laced with zero-width characters is
+  // not a date anyone typed, so it earns no protection.
+  const dates = protectedDateRanges(text);
+  const forPhones = normalize(text, PHONE_NOISE, dates);
   const forLinks = normalize(text, INVISIBLE);
   const phones = [
     ...rangesIn(forPhones, DIGIT_RUN),

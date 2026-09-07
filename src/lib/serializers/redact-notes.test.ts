@@ -92,6 +92,48 @@ describe("redactContacts — what it must NOT touch", () => {
   });
 });
 
+describe("redactContacts — dates are not phone numbers", () => {
+  it.each([
+    "7.09.2026 tarixinə köçürmək olar?",
+    "07.09.2026",
+    "07/09/2026",
+    "07-09-26",
+    "2026-09-07",
+    "7/9/26 tarixi uyğundur",
+    "07.09.2026, saat 18:30",
+  ])("keeps %j verbatim", (input) => {
+    expect(redactContacts(input)).toBe(input);
+    expect(hasContact(input)).toBe(false);
+  });
+
+  it("keeps the date and still cuts the number next to it", () => {
+    expect(redactContacts("07.09.2026 tarixində, zəng edin 0501234567")).toBe(
+      "07.09.2026 tarixində, zəng edin [gizli]",
+    );
+  });
+
+  it("requires ONE separator throughout — 07.09-2026 is not a date", () => {
+    // Eight digits under a mask that no calendar produces. Redacted.
+    expect(redactContacts("07.09-2026")).toBe("[gizli]");
+  });
+
+  // --- anti-bypass ---------------------------------------------------------
+  // The exception must not become the way around the rule: a phone number with
+  // dots or dashes in it does not match the date shape, and a date pattern
+  // found INSIDE a longer number is rejected for being glued to more digits.
+  it.each([
+    ["050.123.4567", "[gizli]"],
+    ["0501-234-567", "[gizli]"],
+    ["0501.23.4567", "[gizli]"],
+    ["05.01.2345 67", "[gizli]"],
+    ["Zəng edin 050.123.45.67", "Zəng edin [gizli]"],
+  ])("still redacts %j", (input, expected) => {
+    expect(redactContacts(input)).toBe(expected);
+    expect(hasContact(input)).toBe(true);
+    expect(redactContacts(input)).not.toMatch(/\d{7,}/);
+  });
+});
+
 describe("hasContact / findContactRanges", () => {
   it("agrees with redactContacts on every input", () => {
     for (const s of [
