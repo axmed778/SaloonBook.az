@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { hasContact } from "@/lib/serializers/redact-notes";
+import { localeFromCookie } from "@/i18n/request-locale";
 import {
   createBooking,
   SlotTakenError,
@@ -48,8 +51,9 @@ const bodySchema = z.object({
   // Required data-processing consent (the booking form's mandatory checkbox).
   // Enforced server-side: a booking cannot be created without it.
   dataConsent: z.literal(true),
-  // Optional free-text booking note (e.g. preferred hair colour).
-  notes: z.string().max(500).optional(),
+  // Optional free-text note about the SERVICE (e.g. preferred hair colour).
+  // Contacts are rejected below, not silently stripped — see the 422.
+  serviceNote: z.string().max(500).optional(),
   // CAPTCHA: Cloudflare Turnstile token from the public form. Required only when
   // TURNSTILE_SECRET_KEY is configured (see src/lib/turnstile.ts).
   turnstileToken: z.string().max(2048).optional(),
@@ -95,6 +99,24 @@ export async function POST(
     return NextResponse.json(
       { error: "That date is too far ahead.", code: "TOO_FAR" },
       { status: 400 },
+    );
+  }
+
+  // The note field is for the SERVICE, not for reaching the customer — their
+  // number is already captured, structured, in `phone`. A number typed here
+  // instead ends up in front of every master who opens the booking, which is
+  // exactly what the dashboard's contact rules exist to prevent. Refuse it at
+  // the source and say why, rather than quietly mangling the customer's text.
+  // (The serializer still redacts on read: rows written before this rule, and
+  // anything that gets past it.)
+  if (hasContact(parsed.data.serviceNote)) {
+    const t = await getTranslations({
+      locale: await localeFromCookie(),
+      namespace: "Booking.errors",
+    });
+    return NextResponse.json(
+      { error: t("noteContact"), code: "NOTE_CONTACT" },
+      { status: 422 },
     );
   }
 
@@ -185,7 +207,7 @@ export async function POST(
       employeeId: parsed.data.employeeId,
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: marketingOptIn },
-      notes: parsed.data.notes,
+      serviceNote: parsed.data.serviceNote,
       consent: { version: LEGAL_VERSIONS.clientConsent },
       source: "PUBLIC",
     });

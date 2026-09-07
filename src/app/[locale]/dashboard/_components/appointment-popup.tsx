@@ -194,11 +194,11 @@ export function AppointmentPopup({
           <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>
 
-        {block.notes && (
+        {block.serviceNote && (
           <div className="mt-3 rounded-lg border border-border bg-muted/50 p-3">
-            <p className="text-xs font-medium text-faint-foreground">{t("popup.notes")}</p>
+            <p className="text-xs font-medium text-faint-foreground">{t("popup.serviceNote")}</p>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
-              {block.notes}
+              {block.serviceNote}
             </p>
           </div>
         )}

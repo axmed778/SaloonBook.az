@@ -347,7 +347,14 @@ model Appointment {
   autoCompleted Boolean           @default(false)
   priceMinor    Int // snapshot at booking time
   source        BookingSource     @default(PUBLIC)
-  notes         String?
+  // What the customer wants from the SERVICE — "tünd çalar", "allergiya var".
+  // Written by the customer on the public form and by staff on a manual entry,
+  // and read by the master doing the work, which is why the booking endpoints
+  // refuse a note containing a phone/email/handle (src/lib/serializers/
+  // redact-notes.ts) and the serializer redacts one in an older row before it
+  // reaches a master. Still the "notes" column: the name is a code/UI change,
+  // there is nothing to migrate.
+  serviceNote   String?           @map("notes")
   // Who this booking is actually for. The Customer is keyed by phone (the
   // contact), so when someone books from one number for a family member
   // (self, grandma, …) this holds the attendee's name. Null → use Customer.name.

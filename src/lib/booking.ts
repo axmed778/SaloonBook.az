@@ -71,7 +71,9 @@ export interface CreateBookingInput {
   customer: { name: string; phone: string; waOptIn?: boolean };
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
-  notes?: string;
+  /** The customer's wish for the SERVICE. Callers validate it with
+   *  hasContact() first — a contact never reaches this far. */
+  serviceNote?: string;
   /** Customer's data-processing consent (public self-booking). Records the
    *  document version accepted; absent for staff-entered bookings. */
   consent?: { version: string };
@@ -109,9 +111,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // Sanitize the client-supplied name once: it is stored and later flows into
   // the owner's WhatsApp alert (and, eventually, the dashboard).
   const safeName = sanitizeTemplateParam(input.customer.name);
-  // Booking note is dashboard-only (never a WhatsApp param), so it just needs
-  // trimming + a length cap; React escapes it on display.
-  const safeNotes = input.notes?.trim().slice(0, 500) || null;
+  // The service note is dashboard-only (never a WhatsApp param), so it just
+  // needs trimming + a length cap; React escapes it on display.
+  const safeNote = input.serviceNote?.trim().slice(0, 500) || null;
 
   const result = await withTenantScope(input.salonId, async (tx) => {
     const salon = await tx.salon.findUnique({
@@ -183,7 +185,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           // The name entered for THIS booking — may differ from the contact's
           // (Customer) name when one phone books for several people.
           attendeeName: safeName,
-          notes: safeNotes,
+          serviceNote: safeNote,
           consentAt: input.consent ? new Date() : null,
           consentVersion: input.consent?.version ?? null,
           startsAt: input.startUtc,

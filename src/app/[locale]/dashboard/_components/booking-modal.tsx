@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import type { Slot } from "@/lib/availability";
+import { hasContact } from "@/lib/serializers/redact-notes";
 import { availableSlots, createManualBooking } from "../actions";
 import {
   inputCls,
@@ -46,7 +47,7 @@ export function BookingModal({
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(initialName);
   const [phoneDigits, setPhoneDigits] = useState(initialPhoneDigits);
-  const [notes, setNotes] = useState("");
+  const [serviceNote, setServiceNote] = useState("");
 
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -89,6 +90,9 @@ export function BookingModal({
     if (!slot) return setError(t("modal.errors.selectSlot"));
     if (!name.trim()) return setError(t("modal.errors.enterCustomerName"));
     if (digits.length !== 9) return setError(t("modal.errors.phoneInvalid"));
+    // Duplicate of the server action's rule, for the round trip only — the
+    // action refuses a note with a contact in it whatever this form does.
+    if (hasContact(serviceNote)) return setError(t("modal.errors.noteContact"));
 
     startSubmit(async () => {
       const res = await createManualBooking({
@@ -97,7 +101,7 @@ export function BookingModal({
         startUtc: slot.startUtc,
         name: name.trim(),
         phone: "+994" + digits,
-        notes: notes.trim() || undefined,
+        serviceNote: serviceNote.trim() || undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -281,17 +285,21 @@ export function BookingModal({
             </div>
           </div>
           <div>
-            <label className={labelCls} htmlFor={`${fid}-notes`}>
-              {t("modal.notes")}
+            <label className={labelCls} htmlFor={`${fid}-service-note`}>
+              {t("modal.serviceNote")}
             </label>
             <textarea
-              id={`${fid}-notes`}
+              id={`${fid}-service-note`}
               className={inputCls + " w-full resize-y"}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+              value={serviceNote}
+              onChange={(e) => setServiceNote(e.target.value.slice(0, 500))}
               rows={2}
-              placeholder={t("modal.notesPlaceholder")}
+              placeholder={t("modal.serviceNotePlaceholder")}
+              aria-describedby={`${fid}-service-note-hint`}
             />
+            <p id={`${fid}-service-note-hint`} className="mt-1 text-xs text-faint-foreground">
+              {t("modal.serviceNoteHint")}
+            </p>
           </div>
 
           {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}

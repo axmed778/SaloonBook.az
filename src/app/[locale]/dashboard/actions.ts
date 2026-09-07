@@ -7,6 +7,7 @@ import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { requireScope } from "@/lib/auth/guards";
 import { appointmentScope, canActForEmployee } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
+import { hasContact } from "@/lib/serializers/redact-notes";
 import { acceptSalonConsents } from "@/lib/legal-consent";
 import { bestEffortEnqueue, enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, isSlotBookable, type Slot } from "@/lib/availability";
@@ -96,7 +97,7 @@ const bookingSchema = z.object({
   phone: z
     .string()
     .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
-  notes: z.string().max(500).optional(),
+  serviceNote: z.string().max(500).optional(),
 });
 
 export async function createManualBooking(input: unknown): Promise<ActionResult> {
@@ -111,6 +112,13 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
 
   // A master books into their own column, never a colleague's.
   if (!canActForEmployee(scope, d.employeeId)) return { ok: false, error: t("notYours") };
+
+  // Same rule as the public form: the note describes the SERVICE. A phone typed
+  // there would be read by every master who opens the booking, and the contact
+  // already has a structured home. Server actions carry no HTTP status, so this
+  // is the equivalent of the public route's 422 — the write does not happen and
+  // the reason is shown in the operator's language.
+  if (hasContact(d.serviceNote)) return { ok: false, error: t("noteContact") };
 
   if (!(await assertServiceLink(salonId, d.serviceId, d.employeeId))) {
     return { ok: false, error: t("serviceNotOffered") };
@@ -127,7 +135,7 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
       employeeId: d.employeeId,
       startUtc: new Date(d.startUtc),
       customer: { name: d.name, phone: d.phone },
-      notes: d.notes,
+      serviceNote: d.serviceNote,
       source: "DASHBOARD",
     });
   } catch (e) {

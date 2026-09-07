@@ -47,7 +47,10 @@ export type CalendarBlock = {
   // lib/serializers/booking.ts). The popup renders a phone row and the
   // WhatsApp buttons only when the value is actually here.
   customerPhone?: string;
-  notes?: string | null; // customer's booking note (e.g. preferred colour)
+  // The customer's wish for the service ("tünd çalar"). Shown to every role;
+  // for a master it arrives already redacted by the server serializer, so what
+  // is in this field IS what may be displayed.
+  serviceNote: string | null;
   source: string; // "PUBLIC" | "DASHBOARD"
   manageToken: string; // customer self-service link: /a/{manageToken}
   employeeName: string; // shown in the detail popup (and week-view blocks)
@@ -60,7 +63,7 @@ const MINUTES_IN_DAY = 24 * 60;
  * Serialized booking -> calendar block. The ONLY place a block is built, for
  * both the day view (columnId = employeeId) and the week view (columnId = the
  * booking's Baku day), so the contact fields are carried across exactly once
- * and a master's block simply has no `customerPhone`/`notes` key to leak.
+ * and a master's block simply has no `customerPhone` key to leak.
  */
 export function toCalendarBlock(
   b: SerializedBooking,
@@ -88,12 +91,12 @@ export function toCalendarBlock(
     manageToken: b.manageToken,
     employeeName: b.employeeName,
     dateLabel,
+    serviceNote: b.serviceNote,
     // Conditional spread, not `customerPhone: b.customerPhone`: assigning
     // undefined would still create the key, and JSON/flight serialization of a
     // present-but-undefined key is exactly the kind of detail that turns a
     // redaction into a leak.
     ...(b.customerPhone !== undefined ? { customerPhone: b.customerPhone } : {}),
-    ...(b.notes !== undefined ? { notes: b.notes } : {}),
   };
 }
 

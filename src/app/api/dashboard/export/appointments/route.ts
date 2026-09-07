@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
         a.serviceName,
         a.employeeName,
         (a.priceMinor / 100).toFixed(2),
-        a.notes ?? "",
+        a.serviceNote ?? "",
         bakuYmd(a.createdAt),
       ]);
     },

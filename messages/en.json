@@ -250,7 +250,7 @@
     "popup": {
       "customer": "Customer",
       "phone": "Phone",
-      "notes": "Note",
+      "serviceNote": "Service note",
       "employee": "Specialist",
       "date": "Date",
       "time": "Time",
@@ -286,8 +286,9 @@
       "customerName": "Customer name",
       "namePlaceholder": "Full name",
       "phone": "Phone",
-      "notes": "Notes (optional)",
-      "notesPlaceholder": "Customer's special request — e.g. hair colour",
+      "serviceNote": "Note about the service (optional)",
+      "serviceNotePlaceholder": "What the customer wants from the service — e.g. a dark shade",
+      "serviceNoteHint": "Don't put the customer's number here — it belongs in the field above.",
       "create": "Create booking",
       "creating": "Creating…",
       "minutesShort": "{min} min",
@@ -295,7 +296,8 @@
         "selectStaffService": "Select a staff member and a service.",
         "selectSlot": "Select a free slot.",
         "enterCustomerName": "Enter the customer's name.",
-        "phoneInvalid": "Phone must be +994 followed by 9 digits."
+        "phoneInvalid": "Phone must be +994 followed by 9 digits.",
+        "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
       }
     }
   },
@@ -907,7 +909,8 @@
       "timeoff": "The staff member is on time off then.",
       "overlap": "This time is already taken."
     },
-    "notYours": "That booking isn't yours."
+    "notYours": "That booking isn't yours.",
+    "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
   },
   "Analytics": {
     "adminTitle": "Platform management",
@@ -1417,8 +1420,9 @@
     "namePlaceholder": "Full name",
     "nameHint": "Booking for someone else? Enter their name.",
     "phoneLabel": "Phone",
-    "notesLabel": "Notes (optional)",
-    "notesPlaceholder": "Any special requests — e.g. hair colour, allergies…",
+    "serviceNoteLabel": "Note about the service (e.g. dark shade, allergy)",
+    "serviceNotePlaceholder": "What you'd like from the service — e.g. a dark shade",
+    "serviceNoteHint": "Don't write your phone number here — you've given it above.",
     "consentData": "I have read and agree to the <doc>Personal Data Processing Consent</doc>.",
     "consentMarketing": "I agree to receive news, offers and promotions (optional).",
     "submit": "Confirm booking",
@@ -1437,7 +1441,8 @@
       "rateSalon": "This salon is receiving a lot of requests. Please try again shortly.",
       "tooFar": "That date is too far ahead. Please pick a nearer day.",
       "serviceMismatch": "That specialist doesn't offer this service. Please choose again.",
-      "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly."
+      "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly.",
+      "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
     },
     "success": {
       "title": "Booking confirmed!",

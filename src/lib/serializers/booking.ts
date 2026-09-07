@@ -26,6 +26,7 @@
 // It is a property of the role.
 
 import type { Role } from "@prisma/client";
+import { redactContactsOrNull } from "./redact-notes";
 
 /**
  * Who is looking. Prisma's Role plus the platform admin, who has no membership
@@ -49,17 +50,20 @@ export function bookingViewerRole(session: {
 }
 
 /**
- * May this role see the customer's contact details (phone) and the free-text
- * booking note? The note is in here because it is customer-typed prose on the
- * public booking form — "zəng edin 0501234567" lands in it often enough that
- * shipping it to a master would reopen the very hole the phone rule closes.
+ * May this role see the customer's contact details? Only the phone hangs off
+ * this now: the service note is shown to a master too, but redacted — see
+ * serializeBookingForRole().
  */
 export function canSeeCustomerContact(role: BookingViewerRole): boolean {
   return role !== "STAFF";
 }
 
-/** Keys that must never appear in anything a master receives. */
-export const CONTACT_KEYS = ["customerPhone", "phone", "notes"] as const;
+/**
+ * Keys that must never appear in anything a master receives. The service note
+ * is NOT one of them — a master needs it to do the job, and it arrives with any
+ * contact inside it already cut out (redact-notes.ts).
+ */
+export const CONTACT_KEYS = ["customerPhone", "phone", "clientPhone", "tel", "whatsapp", "email"] as const;
 
 // --- Prisma selects ---------------------------------------------------------
 
@@ -82,7 +86,6 @@ export function bookingCustomerSelect(role: BookingViewerRole) {
  * free.
  */
 export function bookingSelectForRole(role: BookingViewerRole) {
-  const contact = canSeeCustomerContact(role);
   return {
     id: true,
     employeeId: true,
@@ -98,9 +101,10 @@ export function bookingSelectForRole(role: BookingViewerRole) {
     service: { select: { name: true } },
     employee: { select: { name: true, position: true } },
     customer: { select: bookingCustomerSelect(role) },
-    // Spread rather than `notes: false`: for a master the key is not in the
-    // select at all, which is the same shape the row has in memory.
-    ...(contact ? { notes: true } : {}),
+    // Read for every role. A master sees the service note — it is how they know
+    // the customer wants a dark shade — and serializeBookingForRole() strips any
+    // contact out of it on the way to them.
+    serviceNote: true,
   };
 }
 
@@ -122,7 +126,7 @@ export interface BookingRow {
   service: { name: string };
   employee: { name: string; position: string | null };
   customer: { id: string; name: string; phone?: string };
-  notes?: string | null;
+  serviceNote: string | null;
 }
 
 export type BookingStatus = "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
@@ -155,8 +159,13 @@ export interface SerializedBooking {
   customerName: string;
   /** OWNER/ADMIN only. Absent — not null, not masked — for a master. */
   customerPhone?: string;
-  /** OWNER/ADMIN only. Absent for a master (customer-typed prose, see above). */
-  notes?: string | null;
+  /**
+   * The customer's wish for the service ("tünd çalar", "allergiya var").
+   * Present for every role, but for a master any phone/email/handle inside it
+   * has been replaced with [gizli] here, on the server, before it could reach
+   * the RSC payload. The owner and the platform admin get it verbatim.
+   */
+  serviceNote: string | null;
 }
 
 /**
@@ -184,6 +193,13 @@ export function serializeBookingForRole(
     employeePosition: booking.employee.position,
     customerId: booking.customer.id,
     customerName: booking.attendeeName ?? booking.customer.name,
+    // Redacted for a master, verbatim for the owner and the platform admin.
+    // Booking endpoints already refuse a note with a contact in it, so in
+    // practice this only fires on rows written before that rule existed — and
+    // on anything that gets past it. Two locks, not one.
+    serviceNote: canSeeCustomerContact(role)
+      ? (booking.serviceNote ?? null)
+      : redactContactsOrNull(booking.serviceNote),
   };
   if (!canSeeCustomerContact(role)) return base;
   // Owner/admin. The phone is still only added when the query actually read it,
@@ -192,7 +208,6 @@ export function serializeBookingForRole(
   return {
     ...base,
     ...(booking.customer.phone !== undefined ? { customerPhone: booking.customer.phone } : {}),
-    notes: booking.notes ?? null,
   };
 }
 
