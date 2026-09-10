@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
+import { bakuToday, bakuYmd, daysBetweenYmd, formatBakuDate } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
@@ -24,7 +24,8 @@ export default async function AdminPage() {
   const t = await getTranslations("Admin");
   const df = intlLocale(await getLocale());
 
-  const periodYm = bakuToday().slice(0, 7);
+  const today = bakuToday();
+  const periodYm = today.slice(0, 7);
   // Notification health. Until now an undelivered message was invisible
   // everywhere: the row went FAILED, nothing retried it, and no screen counted
   // it — the first signal was a salon asking why customers get nothing. The
@@ -68,10 +69,11 @@ export default async function AdminPage() {
         _count: {
           select: { salons: { where: { status: { not: "DELETED" } } } },
         },
+        // Every member, not just the owner: "when was this account last used"
+        // is answered by whoever signed in most recently, and on a Pro salon
+        // that is often a staff member rather than the owner.
         memberships: {
-          where: { role: "OWNER" },
-          take: 1,
-          select: { user: { select: { email: true } } },
+          select: { role: true, user: { select: { email: true, lastLoginAt: true } } },
         },
       },
     }),
@@ -120,6 +122,11 @@ export default async function AdminPage() {
     // anything else to the paid period's. Sorting must key off the same one, or
     // the arrow would order by a date the row isn't displaying.
     const endsAt = sub?.status === "TRIALING" ? sub.trialEndsAt : (sub?.currentPeriodEnd ?? null);
+    // Whoever signed in last speaks for the account.
+    const lastLoginAt = a.memberships.reduce<Date | null>((latest, m) => {
+      const at = m.user.lastLoginAt;
+      return at && (!latest || at > latest) ? at : latest;
+    }, null);
     return {
       accountId: a.id,
       accountName: a.name,
@@ -131,7 +138,7 @@ export default async function AdminPage() {
       senderVerifiedName: salon?.whatsAppSender?.verifiedName ?? null,
       senderPhoneMasked: maskPhone(salon?.whatsAppSender?.displayPhone),
       ownNumberEligible: featuresFor(effective).ownWhatsappNumber,
-      ownerEmail: a.memberships[0]?.user.email ?? "—",
+      ownerEmail: a.memberships.find((m) => m.role === "OWNER")?.user.email ?? "—",
       createdLabel: formatBakuDate(bakuYmd(a.createdAt), df),
       plan: sub?.plan ?? "FREE",
       effective,
@@ -155,6 +162,13 @@ export default async function AdminPage() {
       createdAtMs: a.createdAt.getTime(),
       endsAtMs: endsAt?.getTime() ?? null,
       lastPaidAtMs: paid?._max.paidAt?.getTime() ?? null,
+      lastLoginAtMs: lastLoginAt?.getTime() ?? null,
+      // "3 days ago" reads faster than a date when you are scanning for salons
+      // that went quiet. Formatted here rather than in the browser so server
+      // and client can't disagree about what "today" is mid-hydration; the
+      // exact date rides along for the cell's tooltip.
+      lastLoginAgoDays: lastLoginAt ? daysBetweenYmd(bakuYmd(lastLoginAt), today) : null,
+      lastLoginLabel: lastLoginAt ? formatBakuDate(bakuYmd(lastLoginAt), df) : null,
       payments: (sub?.payments ?? []).map((p) => ({
         id: p.id,
         label: t("paymentLabel", {

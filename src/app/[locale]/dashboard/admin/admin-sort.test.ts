@@ -17,6 +17,7 @@ function row(partial: Partial<SortableRow> & { salonName: string }): SortableRow
     endsAtMs: T0 + 30 * DAY,
     totalPaidMinor: 0,
     bookingsThisMonth: 0,
+    lastLoginAtMs: T0,
     ...partial,
   };
 }
@@ -121,6 +122,35 @@ describe("sortRows", () => {
     }
   });
 
+  it("orders by last sign-in, quietest first", () => {
+    const rows = [
+      row({ salonName: "today", lastLoginAtMs: T0 + 30 * DAY }),
+      row({ salonName: "a-month-ago", lastLoginAtMs: T0 }),
+      row({ salonName: "last-week", lastLoginAtMs: T0 + 23 * DAY }),
+    ];
+    expect(names(sortRows(rows, "lastLogin", "asc", "ru"))).toEqual([
+      "a-month-ago",
+      "last-week",
+      "today",
+    ]);
+  });
+
+  it("keeps accounts with no recorded sign-in at the bottom either way", () => {
+    const rows = [
+      row({ salonName: "unknown", lastLoginAtMs: null }),
+      row({ salonName: "quiet", lastLoginAtMs: T0 }),
+      row({ salonName: "active", lastLoginAtMs: T0 + 30 * DAY }),
+    ];
+    // "Never signed in" is not the same claim as "signed in longest ago", so it
+    // must not win the top slot when hunting for dormant accounts.
+    expect(names(sortRows(rows, "lastLogin", "asc", "ru"))).toEqual([
+      "quiet",
+      "active",
+      "unknown",
+    ]);
+    expect(names(sortRows(rows, "lastLogin", "desc", "ru")).at(-1)).toBe("unknown");
+  });
+
   it("does not mutate the array it was given", () => {
     const rows = [
       row({ salonName: "b", createdAtMs: T0 }),
@@ -149,5 +179,6 @@ describe("nextSort", () => {
     expect(nextSort(from, "ends")).toEqual({ key: "ends", dir: "asc" }); // expiring soonest
     expect(nextSort(from, "paid")).toEqual({ key: "paid", dir: "desc" }); // biggest payers
     expect(nextSort(from, "salon")).toEqual({ key: "salon", dir: "asc" }); // A→Z
+    expect(nextSort(from, "lastLogin")).toEqual({ key: "lastLogin", dir: "asc" }); // quietest
   });
 });

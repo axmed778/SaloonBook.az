@@ -183,6 +183,11 @@ function Body({ d }: { d: AdminSalonDetails }) {
                 ) : (
                   <span className="text-faint-foreground">{t("details.noPhone")}</span>
                 )}
+                <span className="text-xs text-faint-foreground">
+                  {o.lastLoginLabel
+                    ? t("details.lastLoginAt", { date: o.lastLoginLabel })
+                    : t("lastLoginUnknown")}
+                </span>
               </li>
             ))}
           </ul>

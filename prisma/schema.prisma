@@ -43,6 +43,13 @@ model User {
   // Session cutoff: cookies issued before this instant are rejected (see
   // getSession). Bumped on password reset so a stolen session can't outlive it.
   sessionsValidFrom DateTime?          @db.Timestamptz(6)
+  // Last time this user was GRANTED a session by proving who they are: a
+  // password login, a registration, or a completed password reset. Never
+  // written by a session read, which is what makes it mean "came back and
+  // signed in" rather than "still holds a valid cookie". Null for users who
+  // have not signed in since the column was added — the admin panel shows that
+  // as "unknown", not as "never".
+  lastLoginAt       DateTime?          @db.Timestamptz(6)
 }
 
 // Single-use, expiring password-reset tokens. Only the SHA-256 of the raw token

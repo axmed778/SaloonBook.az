@@ -337,7 +337,13 @@ export type AdminSalonDetails = {
     paymentsCount: number;
     totalPaidMinor: number;
   };
-  owners: { email: string; name: string | null; phone: string | null }[];
+  owners: {
+    email: string;
+    name: string | null;
+    phone: string | null;
+    /** When this owner last signed in; null if they have not since it was tracked. */
+    lastLoginLabel: string | null;
+  }[];
   branches: {
     id: string;
     name: string;
@@ -401,7 +407,9 @@ export async function getAccountDetails(input: unknown): Promise<DetailsResult> 
       },
       memberships: {
         where: { role: "OWNER" },
-        select: { user: { select: { email: true, fullName: true, phone: true } } },
+        select: {
+          user: { select: { email: true, fullName: true, phone: true, lastLoginAt: true } },
+        },
       },
       salons: {
         where: { status: { not: "DELETED" } },
@@ -493,6 +501,7 @@ export async function getAccountDetails(input: unknown): Promise<DetailsResult> 
         email: m.user.email,
         name: m.user.fullName,
         phone: m.user.phone,
+        lastLoginLabel: m.user.lastLoginAt ? day(m.user.lastLoginAt) : null,
       })),
       branches: account.salons.map((s) => ({
         id: s.id,

@@ -112,18 +112,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: t("api.accountSuspended") }, { status: 403 });
   }
 
-  // Opportunistic upgrade to today's hashing cost, now that we hold the
-  // plaintext. Best-effort on purpose: the credentials are already proven, so a
-  // write failure must never turn a valid login into an error.
+  // Stamp the sign-in, and opportunistically upgrade to today's hashing cost
+  // while we still hold the plaintext — one write rather than two. Only a real
+  // password login lands here, which is what makes lastLoginAt mean "came back
+  // and signed in" rather than "still holds a cookie". Best-effort on purpose:
+  // the credentials are already proven, so a write failure must never turn a
+  // valid login into an error.
   try {
-    if (needsRehash(user.passwordHash)) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: await hashPassword(parsed.data.password) },
-      });
-    }
+    const rehash = needsRehash(user.passwordHash);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        ...(rehash ? { passwordHash: await hashPassword(parsed.data.password) } : {}),
+      },
+    });
   } catch (e) {
-    console.error("[auth/login] password rehash failed", e);
+    console.error("[auth/login] post-login update failed", e);
   }
 
   await setSession(user.id);
