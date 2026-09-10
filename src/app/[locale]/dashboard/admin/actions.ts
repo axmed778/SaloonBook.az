@@ -2,11 +2,13 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { PLAN_LIMITS, EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
-import { addMonths } from "@/lib/time";
+import { intlLocale } from "@/i18n/format";
+import { PLAN_LIMITS, EXTRA_BRANCH_PRICE_MINOR, featuresFor, limitsFor } from "@/lib/plans";
+import { addMonths, bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
+import { effectivePlan, subscriptionWindow } from "@/lib/subscription";
 import { encryptSecret, hasEncryptionKey } from "@/lib/crypto";
 import { fetchWhatsAppNumberInfo } from "@/lib/whatsapp";
 
@@ -298,4 +300,219 @@ export async function setExtraBranches(input: unknown): Promise<ActionResult> {
 
   revalidatePath("/dashboard/admin");
   return { ok: true };
+}
+
+// --- Salon card (read-only) --------------------------------------------------
+// Everything an admin asks about a salon on the phone — when the subscription
+// started, how many days are left, how many staff, which address, who to call —
+// in one payload. Loaded on demand rather than folded into the table query:
+// the list renders every account, and pulling each one's branches and staff
+// eagerly would make the page pay for a modal most rows never open.
+
+export type AdminSalonDetails = {
+  account: {
+    name: string;
+    status: string;
+    createdLabel: string;
+    legalAcceptedLabel: string | null;
+    marketingOptIn: boolean;
+  };
+  subscription: {
+    plan: string;
+    /** What the account is entitled to right now (may differ from `plan`). */
+    effective: string;
+    status: string | null;
+    /** When the subscription row was created — i.e. when the account signed up. */
+    startedLabel: string | null;
+    /** Start of the period currently paid for = the last payment's date. */
+    periodStartLabel: string | null;
+    basis: "trial" | "period" | "open" | "none";
+    endsLabel: string | null;
+    daysLeft: number | null;
+    inGrace: boolean;
+    graceDaysLeft: number;
+    extraBranches: number;
+    branchCount: number;
+    branchLimit: number;
+    paymentsCount: number;
+    totalPaidMinor: number;
+  };
+  owners: { email: string; name: string | null; phone: string | null }[];
+  branches: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    audience: string;
+    address: string | null;
+    district: string | null;
+    phone: string | null;
+    /** Map link for the owner-dropped pin; null until they place one. */
+    mapUrl: string | null;
+    createdLabel: string;
+    bookingsThisMonth: number;
+    employees: {
+      id: string;
+      name: string;
+      position: string | null;
+      phone: string | null;
+      isActive: boolean;
+    }[];
+  }[];
+  employeesTotal: number;
+  employeesActive: number;
+};
+
+export type DetailsResult =
+  | { ok: true; details: AdminSalonDetails }
+  | { ok: false; error: string };
+
+const detailsSchema = z.object({ accountId: z.string().uuid() });
+
+export async function getAccountDetails(input: unknown): Promise<DetailsResult> {
+  const t = await getTranslations("Admin.errors");
+  try {
+    await requireAdmin();
+  } catch {
+    return { ok: false, error: t("unauthorized") };
+  }
+  const parsed = detailsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  const account = await prisma.account.findUnique({
+    where: { id: parsed.data.accountId },
+    select: {
+      name: true,
+      status: true,
+      createdAt: true,
+      legalAcceptedAt: true,
+      marketingOptIn: true,
+      subscription: {
+        select: {
+          plan: true,
+          status: true,
+          trialEndsAt: true,
+          currentPeriodEnd: true,
+          extraBranches: true,
+          createdAt: true,
+          _count: { select: { payments: true } },
+          payments: { orderBy: { paidAt: "desc" }, take: 1, select: { paidAt: true } },
+        },
+      },
+      memberships: {
+        where: { role: "OWNER" },
+        select: { user: { select: { email: true, fullName: true, phone: true } } },
+      },
+      salons: {
+        where: { status: { not: "DELETED" } },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          audience: true,
+          address: true,
+          district: true,
+          phone: true,
+          latitude: true,
+          longitude: true,
+          createdAt: true,
+          employees: {
+            orderBy: [{ isActive: "desc" }, { name: "asc" }],
+            select: { id: true, name: true, position: true, phone: true, isActive: true },
+          },
+        },
+      },
+    },
+  });
+  if (!account) return { ok: false, error: t("accountNotFound") };
+
+  const df = intlLocale(await getLocale());
+  const day = (d: Date) => formatBakuDate(bakuYmd(d), df);
+  const sub = account.subscription;
+  const effective = effectivePlan(sub ?? null);
+  const window = subscriptionWindow(sub ?? null);
+
+  // Per-branch usage for the current month, in one query rather than N.
+  const salonIds = account.salons.map((s) => s.id);
+  const [usage, paid] = await Promise.all([
+    salonIds.length
+      ? prisma.usageCounter.findMany({
+          where: { periodYm: bakuToday().slice(0, 7), salonId: { in: salonIds } },
+          select: { salonId: true, bookings: true },
+        })
+      : Promise.resolve([]),
+    sub
+      ? prisma.payment.aggregate({
+          where: { subscription: { accountId: parsed.data.accountId } },
+          _sum: { amountMinor: true },
+        })
+      : Promise.resolve(null),
+  ]);
+  const bookingsBySalon = new Map(usage.map((u) => [u.salonId, u.bookings]));
+
+  const employeesTotal = account.salons.reduce((n, s) => n + s.employees.length, 0);
+  const employeesActive = account.salons.reduce(
+    (n, s) => n + s.employees.filter((e) => e.isActive).length,
+    0,
+  );
+
+  return {
+    ok: true,
+    details: {
+      account: {
+        name: account.name,
+        status: account.status,
+        createdLabel: day(account.createdAt),
+        legalAcceptedLabel: account.legalAcceptedAt ? day(account.legalAcceptedAt) : null,
+        marketingOptIn: account.marketingOptIn,
+      },
+      subscription: {
+        plan: sub?.plan ?? "FREE",
+        effective,
+        status: sub?.status ?? null,
+        startedLabel: sub ? day(sub.createdAt) : null,
+        periodStartLabel: sub?.payments[0] ? day(sub.payments[0].paidAt) : null,
+        basis: window.basis,
+        endsLabel: window.endsAt ? day(window.endsAt) : null,
+        daysLeft: window.daysLeft,
+        inGrace: window.inGrace,
+        graceDaysLeft: window.graceDaysLeft,
+        extraBranches: sub?.extraBranches ?? 0,
+        branchCount: account.salons.length,
+        // Same rule as the session and the table: extras only count while the
+        // effective plan actually has multi-branch.
+        branchLimit:
+          limitsFor(effective).maxBranches +
+          (featuresFor(effective).multiBranch ? (sub?.extraBranches ?? 0) : 0),
+        paymentsCount: sub?._count.payments ?? 0,
+        totalPaidMinor: paid?._sum.amountMinor ?? 0,
+      },
+      owners: account.memberships.map((m) => ({
+        email: m.user.email,
+        name: m.user.fullName,
+        phone: m.user.phone,
+      })),
+      branches: account.salons.map((s) => ({
+        id: s.id,
+        name: s.name,
+        slug: s.slug,
+        status: s.status,
+        audience: s.audience,
+        address: s.address,
+        district: s.district,
+        phone: s.phone,
+        mapUrl:
+          s.latitude != null && s.longitude != null
+            ? `https://www.google.com/maps?q=${s.latitude},${s.longitude}`
+            : null,
+        createdLabel: day(s.createdAt),
+        bookingsThisMonth: bookingsBySalon.get(s.id) ?? 0,
+        employees: s.employees,
+      })),
+      employeesTotal,
+      employeesActive,
+    },
+  };
 }

@@ -811,6 +811,53 @@
       "disable": "Söndür (ümumi nömrəyə qaytar)",
       "errRequired": "Phone number ID və token tələb olunur."
     },
+    "details": {
+      "open": "Salon kartını aç",
+      "title": "Salon kartı — {name}",
+      "loading": "Yüklənir…",
+      "sectionSubscription": "Abunəlik",
+      "sectionAccount": "Hesab və əlaqə",
+      "sectionBranches": "Filiallar ({count})",
+      "remaining": "Qalıb",
+      "subStarted": "Abunəlik başlayıb",
+      "periodStart": "Cari dövrün başlanğıcı",
+      "endsAt": "Bitmə tarixi",
+      "branches": "Filiallar",
+      "extras": "(+{count} əlavə)",
+      "paid": "Ümumi ödəniş",
+      "paidValue": "{amount} ₼ · ödəniş: {count}",
+      "staff": "İşçilər",
+      "staffValue": "{total} işçidən {active} aktiv",
+      "noSub": "Abunəlik yoxdur",
+      "openEnded": "Müddətsiz",
+      "daysLeft": "{days} gün",
+      "endsToday": "Bu gün bitir",
+      "inGrace": "Gecikib · güzəşt dövrü daha {days} gün",
+      "expired": "{days} gün gecikib",
+      "accountName": "Hesab",
+      "accountCreated": "Hesab yaradılıb",
+      "accountStatus": "Hesabın statusu",
+      "accStatus": {
+        "ACTIVE": "Aktiv",
+        "SUSPENDED": "Dayandırılıb"
+      },
+      "legalAccepted": "Razılıqlar qəbul edilib",
+      "noOwner": "Sahib tapılmadı.",
+      "ownerNoName": "Adsız",
+      "noPhone": "nömrə yoxdur",
+      "noBranches": "Filial yoxdur.",
+      "salonStatus": {
+        "ACTIVE": "Aktiv",
+        "SUSPENDED": "Dayandırılıb",
+        "DELETED": "Silinib"
+      },
+      "phone": "Salonun nömrəsi",
+      "address": "Ünvan",
+      "pin": "Xəritədə nişan",
+      "openMap": "Xəritədə aç",
+      "noPin": "qeyd edilməyib",
+      "created": "Filial yaradılıb"
+    },
     "subStatus": {
       "ACTIVE": "Aktiv",
       "TRIALING": "Sınaq",
@@ -825,7 +872,8 @@
       "encKeyMissing": "Şifrələmə açarı təyin edilməyib (WHATSAPP_ENCRYPTION_KEY).",
       "salonNotFound": "Salon tapılmadı.",
       "senderPending": "Məlumatlar saxlandı, amma Meta yoxlaması alınmadı — nömrə gözləmədədir.",
-      "senderNotFound": "WhatsApp nömrəsi tapılmadı."
+      "senderNotFound": "WhatsApp nömrəsi tapılmadı.",
+      "accountNotFound": "Hesab tapılmadı."
     }
   },
   "Payroll": {

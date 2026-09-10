@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
 import { useModalA11y } from "@/components/use-modal-a11y";
+import { SalonCardModal } from "./admin-salon-card";
 import {
   activateSubscription,
   setExtraBranches,
@@ -54,6 +55,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
   const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
   const [senderFor, setSenderFor] = useState<AccountRow | null>(null);
+  const [cardFor, setCardFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
@@ -95,6 +97,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                   onActivate={() => setActivateFor(r)}
                   onBranches={() => setBranchesFor(r)}
                   onSender={() => setSenderFor(r)}
+                  onCard={() => setCardFor(r)}
                 />
               ))}
             </tbody>
@@ -111,6 +114,13 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
       {senderFor && (
         <WhatsAppSenderModal row={senderFor} onClose={() => setSenderFor(null)} />
       )}
+      {cardFor && (
+        <SalonCardModal
+          accountId={cardFor.accountId}
+          name={r_name(cardFor)}
+          onClose={() => setCardFor(null)}
+        />
+      )}
     </div>
   );
 }
@@ -122,6 +132,7 @@ function RowGroup({
   onActivate,
   onBranches,
   onSender,
+  onCard,
 }: {
   row: AccountRow;
   expanded: boolean;
@@ -129,13 +140,23 @@ function RowGroup({
   onActivate: () => void;
   onBranches: () => void;
   onSender: () => void;
+  onCard: () => void;
 }) {
   const t = useTranslations("Admin");
   return (
     <>
       <tr className="border-b border-border last:border-0 hover:bg-hover">
         <td className="px-4 py-3">
-          <p className="font-medium text-foreground">{r.salonName}</p>
+          {/* The name is the way in: everything read-only about this salon —
+              subscription countdown, branches, staff, contacts — is one click
+              deep instead of spread across four action modals. */}
+          <button
+            onClick={onCard}
+            title={t("details.open")}
+            className="text-left font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            {r.salonName}
+          </button>
           <p className="mt-0.5 text-xs text-faint-foreground">
             {r.slug ? (
               <a href={`/${r.slug}`} target="_blank" className="hover:text-secondary-foreground">
