@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useId, useMemo, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import { SalonCardModal } from "./admin-salon-card";
+import { nextSort, sortRows, type SortDir, type SortKey } from "./admin-sort";
 import {
   activateSubscription,
   setExtraBranches,
@@ -39,6 +40,14 @@ export type AccountRow = {
   senderPhoneMasked: string | null;
   /** Whether the effective plan (Pro) entitles this salon to its own number. */
   ownNumberEligible: boolean;
+  /** Lifetime revenue from this account, in qəpik. */
+  totalPaidMinor: number;
+  paymentsCount: number;
+  /** Sort keys as epoch ms — the labels above are locale-formatted text. */
+  createdAtMs: number;
+  /** The instant behind the "ends" column (trial end, or paid period end). */
+  endsAtMs: number | null;
+  lastPaidAtMs: number | null;
   payments: { id: string; label: string }[];
 };
 
@@ -50,13 +59,37 @@ const STATUS_CHIP: Record<string, string> = {
   FREE_DOWNGRADED: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 };
 
+
 export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const t = useTranslations("Admin");
+  const locale = useLocale();
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
   const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
   const [senderFor, setSenderFor] = useState<AccountRow | null>(null);
   const [cardFor, setCardFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Matches the server's default order, so the first paint doesn't reshuffle.
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
+    key: "created",
+    dir: "desc",
+  });
+
+  const sorted = useMemo(
+    () => sortRows(rows, sort.key, sort.dir, locale),
+    [rows, sort, locale],
+  );
+
+  const th = (key: SortKey, label: string, align?: "right") => (
+    <SortableTh
+      label={label}
+      sortKey={key}
+      align={align}
+      active={sort.key === key}
+      dir={sort.dir}
+      onSort={(k) => setSort((s) => nextSort(s, k))}
+      hint={t("sortHint")}
+    />
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
@@ -73,20 +106,22 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full min-w-[900px] text-left text-sm">
+          <table className="w-full min-w-[1100px] text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-faint-foreground">
-                <th className="px-4 py-3 font-medium">{t("colSalon")}</th>
-                <th className="px-4 py-3 font-medium">{t("colOwner")}</th>
-                <th className="px-4 py-3 font-medium">{t("colPlan")}</th>
-                <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
-                <th className="px-4 py-3 font-medium">{t("colEnds")}</th>
-                <th className="px-4 py-3 text-right font-medium">{t("colBookings")}</th>
+                {th("salon", t("colSalon"))}
+                {th("created", t("colCreated"))}
+                {th("owner", t("colOwner"))}
+                {th("plan", t("colPlan"))}
+                {th("status", t("colStatus"))}
+                {th("ends", t("colEnds"))}
+                {th("paid", t("colPaid"), "right")}
+                {th("bookings", t("colBookings"), "right")}
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {sorted.map((r) => (
                 <RowGroup
                   key={r.accountId}
                   row={r}
@@ -122,6 +157,53 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * A column header that sorts. The arrow is the state: a dimmed ↕ on every
+ * sortable column says "this one moves", and the active column shows which way.
+ * `aria-sort` carries the same to a screen reader, which otherwise hears eight
+ * identical buttons.
+ */
+function SortableTh({
+  label,
+  sortKey,
+  align,
+  active,
+  dir,
+  onSort,
+  hint,
+}: {
+  label: string;
+  sortKey: SortKey;
+  align?: "right";
+  active: boolean;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  hint: string;
+}) {
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      className={"px-4 py-3 font-medium " + (align === "right" ? "text-right" : "")}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        title={hint}
+        className={
+          "inline-flex items-center gap-1 transition hover:text-secondary-foreground " +
+          (active ? "text-secondary-foreground" : "")
+        }
+      >
+        {label}
+        <span aria-hidden className={active ? "" : "opacity-30"}>
+          {active ? (dir === "asc" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
   );
 }
 
@@ -165,10 +247,9 @@ function RowGroup({
             ) : (
               "—"
             )}
-            {" · "}
-            {r.createdLabel}
           </p>
         </td>
+        <td className="px-4 py-3 text-muted-foreground">{r.createdLabel}</td>
         <td className="px-4 py-3 text-secondary-foreground">{r.ownerEmail}</td>
         <td className="px-4 py-3">
           <span className="text-secondary-foreground">{r.plan}</span>
@@ -192,7 +273,22 @@ function RowGroup({
         <td className="px-4 py-3 text-muted-foreground">
           {r.status === "TRIALING" ? (r.trialEndsLabel ?? "—") : (r.periodEndLabel ?? "—")}
         </td>
-        <td className="px-4 py-3 text-right text-secondary-foreground">{r.bookingsThisMonth}</td>
+        <td
+          className="px-4 py-3 text-right tabular-nums text-secondary-foreground"
+          title={t("details.paidValue", {
+            amount: (r.totalPaidMinor / 100).toFixed(2),
+            count: r.paymentsCount,
+          })}
+        >
+          {r.totalPaidMinor === 0 ? (
+            <span className="text-faint-foreground">—</span>
+          ) : (
+            t("paidCell", { amount: (r.totalPaidMinor / 100).toFixed(0) })
+          )}
+        </td>
+        <td className="px-4 py-3 text-right tabular-nums text-secondary-foreground">
+          {r.bookingsThisMonth}
+        </td>
         <td className="px-4 py-3">
           <div className="flex justify-end gap-2">
             <button
@@ -234,7 +330,7 @@ function RowGroup({
       </tr>
       {expanded && (
         <tr className="border-b border-border bg-muted">
-          <td colSpan={7} className="px-4 py-3">
+          <td colSpan={9} className="px-4 py-3">
             <p className="text-xs font-medium text-faint-foreground">{t("recentPayments")}</p>
             {r.payments.length === 0 ? (
               <p className="mt-1 text-sm text-faint-foreground">{t("noPayments")}</p>
