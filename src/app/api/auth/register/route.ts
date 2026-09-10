@@ -151,6 +151,10 @@ export async function POST(req: NextRequest) {
           email: normalizedEmail,
           fullName: fullName?.trim() || null,
           passwordHash,
+          // Registering signs you straight in, so it counts as the first visit.
+          // Leaving it null would show a salon that signed up an hour ago as
+          // never having been in — the one thing the admin panel reads this for.
+          lastLoginAt: new Date(),
         },
         select: { id: true },
       });

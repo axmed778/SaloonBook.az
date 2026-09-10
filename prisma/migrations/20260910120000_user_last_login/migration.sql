@@ -1,0 +1,13 @@
+-- When each user last got into their account.
+--
+-- Nothing recorded this, so the admin panel could show what an account is
+-- entitled to but not whether anyone still uses it — the difference between a
+-- salon worth calling about a renewal and one that has quietly stopped showing
+-- up. Written wherever a session is granted against proof of identity (login,
+-- registration, completed password reset) and never by a session read, so it
+-- measures a real sign-in rather than a still-valid cookie.
+--
+-- Nullable with no backfill on purpose: there is no login history to derive a
+-- value from, and inventing one (createdAt, say) would read as a sign-in that
+-- never happened. Null means "unknown", and the panel shows it as such.
+ALTER TABLE "User" ADD COLUMN "lastLoginAt" TIMESTAMPTZ(6);

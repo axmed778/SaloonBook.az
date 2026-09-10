@@ -12,7 +12,8 @@ export type SortKey =
   | "status"
   | "ends"
   | "paid"
-  | "bookings";
+  | "bookings"
+  | "lastLogin";
 
 export type SortDir = "asc" | "desc";
 
@@ -27,6 +28,8 @@ export type SortableRow = {
   endsAtMs: number | null;
   totalPaidMinor: number;
   bookingsThisMonth: number;
+  /** Last sign-in by anyone on the account; null when nobody has since it was tracked. */
+  lastLoginAtMs: number | null;
 };
 
 // Plans compare by rank, not by name: "BASIC < PRO" is what sorting by plan
@@ -54,6 +57,7 @@ export const FIRST_DIR: Record<SortKey, SortDir> = {
   ends: "asc", // expiring soonest first — the rows you act on today
   paid: "desc", // biggest payers first
   bookings: "desc",
+  lastLogin: "asc", // quietest first — same idea as `ends`, these are the ones to chase
 };
 
 /**
@@ -96,6 +100,8 @@ export function compareRows(
       return sign * (a.totalPaidMinor - b.totalPaidMinor);
     case "bookings":
       return sign * (a.bookingsThisMonth - b.bookingsThisMonth);
+    case "lastLogin":
+      return nullsLast(a.lastLoginAtMs, b.lastLoginAtMs, sign);
   }
 }
 

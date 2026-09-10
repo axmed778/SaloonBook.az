@@ -75,7 +75,10 @@ export async function POST(req: NextRequest) {
     // survives.
     prisma.user.update({
       where: { id: token.userId },
-      data: { passwordHash, sessionsValidFrom: new Date() },
+      // lastLoginAt too: a completed reset hands out a session, so someone is
+      // in the account. Counting it keeps the admin panel's "last seen" from
+      // reporting a salon as dormant while it is actively recovering access.
+      data: { passwordHash, sessionsValidFrom: new Date(), lastLoginAt: new Date() },
     }),
     prisma.passwordResetToken.update({
       where: { id: token.id },

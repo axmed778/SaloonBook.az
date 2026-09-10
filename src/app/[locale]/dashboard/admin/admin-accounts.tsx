@@ -7,6 +7,7 @@ import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import { SalonCardModal } from "./admin-salon-card";
 import { nextSort, sortRows, type SortDir, type SortKey } from "./admin-sort";
+import { filterRows } from "./admin-search";
 import {
   activateSubscription,
   setExtraBranches,
@@ -48,6 +49,12 @@ export type AccountRow = {
   /** The instant behind the "ends" column (trial end, or paid period end). */
   endsAtMs: number | null;
   lastPaidAtMs: number | null;
+  /** Most recent sign-in by anyone on the account; null when never/unknown. */
+  lastLoginAtMs: number | null;
+  /** Whole Baku days since that sign-in — 0 is today. Null alongside the above. */
+  lastLoginAgoDays: number | null;
+  /** Exact date of that sign-in, for the cell's tooltip. */
+  lastLoginLabel: string | null;
   payments: { id: string; label: string }[];
 };
 
@@ -74,9 +81,13 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
     dir: "desc",
   });
 
-  const sorted = useMemo(
-    () => sortRows(rows, sort.key, sort.dir, locale),
-    [rows, sort, locale],
+  const [query, setQuery] = useState("");
+
+  // Filter first, then order: sorting the rows that were thrown away is work
+  // nobody sees.
+  const visible = useMemo(
+    () => sortRows(filterRows(rows, query), sort.key, sort.dir, locale),
+    [rows, query, sort, locale],
   );
 
   const th = (key: SortKey, label: string, align?: "right") => (
@@ -93,20 +104,40 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
-        <p className="mt-0.5 text-sm text-faint-foreground">
-          {t("subtitle", { count: rows.length })}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-faint-foreground">
+            {query.trim()
+              ? t("searchCount", { found: visible.length, total: rows.length })
+              : t("subtitle", { count: rows.length })}
+          </p>
+        </div>
+        {/* type="search" for the browser's own clear affordance; the label is
+            visually hidden rather than absent so the field is still named. */}
+        <label className="w-full sm:w-72">
+          <span className="sr-only">{t("searchLabel")}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none"
+          />
+        </label>
       </div>
 
       {rows.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-faint-foreground">
           {t("noAccounts")}
         </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-faint-foreground">
+          {t("searchEmpty", { query: query.trim() })}
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full min-w-[1100px] text-left text-sm">
+          <table className="w-full min-w-[1250px] text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-faint-foreground">
                 {th("salon", t("colSalon"))}
@@ -115,13 +146,14 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                 {th("plan", t("colPlan"))}
                 {th("status", t("colStatus"))}
                 {th("ends", t("colEnds"))}
+                {th("lastLogin", t("colLastLogin"))}
                 {th("paid", t("colPaid"), "right")}
                 {th("bookings", t("colBookings"), "right")}
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody>
-              {sorted.map((r) => (
+              {visible.map((r) => (
                 <RowGroup
                   key={r.accountId}
                   row={r}
@@ -158,6 +190,25 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
       )}
     </div>
   );
+}
+
+/**
+ * How long ago someone was last in the account, coloured by how quiet it has
+ * gone: a salon nobody has opened in a month is the one to call, and that
+ * should be visible while scanning rather than only after reading the number.
+ */
+function LastLogin({ days }: { days: number | null }) {
+  const t = useTranslations("Admin");
+  if (days === null) {
+    return <span className="text-faint-foreground">{t("lastLoginUnknown")}</span>;
+  }
+  const tone =
+    days >= 30
+      ? "text-rose-700 dark:text-rose-400"
+      : days >= 7
+        ? "text-amber-700 dark:text-amber-400"
+        : "text-secondary-foreground";
+  return <span className={tone}>{t("lastLoginAgo", { days })}</span>;
 }
 
 /**
@@ -273,6 +324,9 @@ function RowGroup({
         <td className="px-4 py-3 text-muted-foreground">
           {r.status === "TRIALING" ? (r.trialEndsLabel ?? "—") : (r.periodEndLabel ?? "—")}
         </td>
+        <td className="px-4 py-3" title={r.lastLoginLabel ?? undefined}>
+          <LastLogin days={r.lastLoginAgoDays} />
+        </td>
         <td
           className="px-4 py-3 text-right tabular-nums text-secondary-foreground"
           title={t("details.paidValue", {
@@ -330,7 +384,7 @@ function RowGroup({
       </tr>
       {expanded && (
         <tr className="border-b border-border bg-muted">
-          <td colSpan={9} className="px-4 py-3">
+          <td colSpan={10} className="px-4 py-3">
             <p className="text-xs font-medium text-faint-foreground">{t("recentPayments")}</p>
             {r.payments.length === 0 ? (
               <p className="mt-1 text-sm text-faint-foreground">{t("noPayments")}</p>
