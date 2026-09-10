@@ -31,7 +31,7 @@ export default async function AdminPage() {
   // sweep now revives FAILED rows, so what still matters is what it has GIVEN UP
   // on (attempts past the cap): those are dead letters that need a human.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60_000);
-  const [accounts, usage, notifByStatus, deadLetters, worker] = await Promise.all([
+  const [accounts, usage, paidBySub, notifByStatus, deadLetters, worker] = await Promise.all([
     prisma.account.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -40,6 +40,7 @@ export default async function AdminPage() {
         createdAt: true,
         subscription: {
           select: {
+            id: true,
             plan: true,
             status: true,
             trialEndsAt: true,
@@ -78,6 +79,15 @@ export default async function AdminPage() {
       where: { periodYm },
       select: { salonId: true, bookings: true },
     }),
+    // Lifetime revenue per subscription, in one grouped query rather than a
+    // per-row aggregate. The table can sort by it, which is how "who actually
+    // pays us" gets answered without exporting anything.
+    prisma.payment.groupBy({
+      by: ["subscriptionId"],
+      _sum: { amountMinor: true },
+      _count: { _all: true },
+      _max: { paidAt: true },
+    }),
     prisma.notification.groupBy({
       by: ["status"],
       where: { createdAt: { gte: since } },
@@ -98,12 +108,18 @@ export default async function AdminPage() {
   const notifFailed = notifCount("FAILED");
 
   const bookingsBySalon = new Map(usage.map((u) => [u.salonId, u.bookings]));
+  const paidBySubId = new Map(paidBySub.map((p) => [p.subscriptionId, p]));
 
   const rows: AccountRow[] = accounts.map((a) => {
     const sub = a.subscription;
     const salon = a.salons[0] ?? null;
     const effective = effectivePlan(sub ?? null);
     const extraBranches = sub?.extraBranches ?? 0;
+    const paid = sub ? paidBySubId.get(sub.id) : undefined;
+    // The date the "ends" column shows — a trial counts down to its own end,
+    // anything else to the paid period's. Sorting must key off the same one, or
+    // the arrow would order by a date the row isn't displaying.
+    const endsAt = sub?.status === "TRIALING" ? sub.trialEndsAt : (sub?.currentPeriodEnd ?? null);
     return {
       accountId: a.id,
       accountName: a.name,
@@ -131,6 +147,14 @@ export default async function AdminPage() {
         ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
         : null,
       bookingsThisMonth: salon ? (bookingsBySalon.get(salon.id) ?? 0) : 0,
+      totalPaidMinor: paid?._sum.amountMinor ?? 0,
+      paymentsCount: paid?._count._all ?? 0,
+      // Raw sort keys as epoch ms. The labels above are locale-formatted for
+      // display and would sort as text ("1 iyul" before "9 mart"), so ordering
+      // reads the instant instead.
+      createdAtMs: a.createdAt.getTime(),
+      endsAtMs: endsAt?.getTime() ?? null,
+      lastPaidAtMs: paid?._max.paidAt?.getTime() ?? null,
       payments: (sub?.payments ?? []).map((p) => ({
         id: p.id,
         label: t("paymentLabel", {
