@@ -808,6 +808,53 @@
       "disable": "Отключить (вернуть общий номер)",
       "errRequired": "Нужны Phone number ID и токен."
     },
+    "details": {
+      "open": "Открыть карточку салона",
+      "title": "Карточка — {name}",
+      "loading": "Загрузка…",
+      "sectionSubscription": "Подписка",
+      "sectionAccount": "Аккаунт и контакты",
+      "sectionBranches": "Филиалы ({count})",
+      "remaining": "Осталось",
+      "subStarted": "Подписка с",
+      "periodStart": "Текущий период с",
+      "endsAt": "Действует до",
+      "branches": "Филиалы",
+      "extras": "(+{count} доп.)",
+      "paid": "Оплачено всего",
+      "paidValue": "{amount} ₼ · платежей: {count}",
+      "staff": "Сотрудники",
+      "staffValue": "{active} из {total} активны",
+      "noSub": "Подписки нет",
+      "openEnded": "Бессрочно",
+      "daysLeft": "{days} дн.",
+      "endsToday": "Заканчивается сегодня",
+      "inGrace": "Просрочено · льготный период ещё {days} дн.",
+      "expired": "Просрочено на {days} дн.",
+      "accountName": "Аккаунт",
+      "accountCreated": "Аккаунт создан",
+      "accountStatus": "Статус аккаунта",
+      "accStatus": {
+        "ACTIVE": "Активен",
+        "SUSPENDED": "Заблокирован"
+      },
+      "legalAccepted": "Согласия приняты",
+      "noOwner": "Владелец не найден.",
+      "ownerNoName": "Без имени",
+      "noPhone": "телефон не указан",
+      "noBranches": "Филиалов нет.",
+      "salonStatus": {
+        "ACTIVE": "Активен",
+        "SUSPENDED": "Приостановлен",
+        "DELETED": "Удалён"
+      },
+      "phone": "Телефон салона",
+      "address": "Адрес",
+      "pin": "Точка на карте",
+      "openMap": "Открыть на карте",
+      "noPin": "не отмечена",
+      "created": "Филиал создан"
+    },
     "paymentLabel": "{amount} ₼ · {months} мес. · {date}",
     "errMonthsRange": "Месяцев должно быть от 1 до 24.",
     "errAmountInvalid": "Некорректная сумма.",
@@ -825,7 +872,8 @@
       "encKeyMissing": "Не задан ключ шифрования (WHATSAPP_ENCRYPTION_KEY).",
       "salonNotFound": "Салон не найден.",
       "senderPending": "Данные сохранены, но проверка Meta не прошла — номер в ожидании.",
-      "senderNotFound": "Номер WhatsApp не найден."
+      "senderNotFound": "Номер WhatsApp не найден.",
+      "accountNotFound": "Аккаунт не найден."
     }
   },
   "Payroll": {

@@ -808,6 +808,53 @@
       "disable": "Disable (revert to shared number)",
       "errRequired": "Phone number ID and token are required."
     },
+    "details": {
+      "open": "Open salon card",
+      "title": "Salon card — {name}",
+      "loading": "Loading…",
+      "sectionSubscription": "Subscription",
+      "sectionAccount": "Account & contacts",
+      "sectionBranches": "Branches ({count})",
+      "remaining": "Remaining",
+      "subStarted": "Subscribed since",
+      "periodStart": "Current period from",
+      "endsAt": "Valid until",
+      "branches": "Branches",
+      "extras": "(+{count} extra)",
+      "paid": "Paid in total",
+      "paidValue": "{amount} ₼ · payments: {count}",
+      "staff": "Staff",
+      "staffValue": "{active} of {total} active",
+      "noSub": "No subscription",
+      "openEnded": "Open-ended",
+      "daysLeft": "{days} days",
+      "endsToday": "Ends today",
+      "inGrace": "Overdue · {days} grace days left",
+      "expired": "Overdue by {days} days",
+      "accountName": "Account",
+      "accountCreated": "Account created",
+      "accountStatus": "Account status",
+      "accStatus": {
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended"
+      },
+      "legalAccepted": "Terms accepted",
+      "noOwner": "No owner found.",
+      "ownerNoName": "No name",
+      "noPhone": "no phone",
+      "noBranches": "No branches.",
+      "salonStatus": {
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended",
+        "DELETED": "Deleted"
+      },
+      "phone": "Salon phone",
+      "address": "Address",
+      "pin": "Map pin",
+      "openMap": "Open in maps",
+      "noPin": "not set",
+      "created": "Branch created"
+    },
     "paymentLabel": "{amount} ₼ · {months} mo · {date}",
     "errMonthsRange": "Months must be between 1 and 24.",
     "errAmountInvalid": "The amount is invalid.",
@@ -825,7 +872,8 @@
       "encKeyMissing": "Encryption key is not set (WHATSAPP_ENCRYPTION_KEY).",
       "salonNotFound": "Salon not found.",
       "senderPending": "Credentials saved, but Meta validation failed — the number is pending.",
-      "senderNotFound": "WhatsApp number not found."
+      "senderNotFound": "WhatsApp number not found.",
+      "accountNotFound": "Account not found."
     }
   },
   "Payroll": {

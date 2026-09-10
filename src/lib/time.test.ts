@@ -8,6 +8,7 @@ import {
   bakuDayBoundsUtc,
   shiftYmd,
   addMonths,
+  daysBetweenYmd,
 } from "./time";
 
 // Baku is UTC+4 year-round (no DST) — every helper leans on that invariant.
@@ -100,5 +101,30 @@ describe("addMonths", () => {
   it("preserves the time of day", () => {
     const d = addMonths(new Date(2026, 0, 31, 9, 45, 12), 1);
     expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([9, 45, 12]);
+  });
+});
+
+describe("daysBetweenYmd", () => {
+  it("is zero on the same day and symmetric around it", () => {
+    expect(daysBetweenYmd("2026-07-07", "2026-07-07")).toBe(0);
+    expect(daysBetweenYmd("2026-07-07", "2026-07-08")).toBe(1);
+    expect(daysBetweenYmd("2026-07-08", "2026-07-07")).toBe(-1);
+  });
+
+  it("crosses months and years", () => {
+    expect(daysBetweenYmd("2026-07-31", "2026-08-01")).toBe(1);
+    expect(daysBetweenYmd("2026-12-31", "2027-01-01")).toBe(1);
+    expect(daysBetweenYmd("2026-01-01", "2026-12-31")).toBe(364);
+  });
+
+  it("counts the leap day", () => {
+    expect(daysBetweenYmd("2028-02-28", "2028-03-01")).toBe(2); // 2028 is a leap year
+    expect(daysBetweenYmd("2026-02-28", "2026-03-01")).toBe(1);
+  });
+
+  it("agrees with shiftYmd for any offset", () => {
+    for (const delta of [-400, -31, -1, 0, 1, 45, 365]) {
+      expect(daysBetweenYmd("2026-07-07", shiftYmd("2026-07-07", delta))).toBe(delta);
+    }
   });
 });

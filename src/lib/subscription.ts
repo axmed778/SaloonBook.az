@@ -1,6 +1,7 @@
 import type { Plan, Prisma, SubStatus } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { PLAN_LIMITS, type PlanLimits } from "./plans";
+import { bakuYmd, daysBetweenYmd } from "./time";
 
 // Centralized subscription resolution. Every enforcement point (booking limit,
 // employee seats, future branch limits) and any UI that gates features must go
@@ -52,6 +53,72 @@ export function effectiveLimits(
   now: Date = new Date(),
 ): PlanLimits {
   return PLAN_LIMITS[effectivePlan(sub, now)];
+}
+
+/**
+ * Which date a subscription is counting down to, and how far off it is. Same
+ * dates effectivePlan() judges by — expressed for a human instead of as a plan
+ * name, so an admin looking at a salon sees WHY it is entitled (or isn't).
+ */
+export type SubscriptionWindow = {
+  /**
+   * What the countdown measures against:
+   *   trial  — the free trial's end,
+   *   period — a paid period's end,
+   *   open   — manually activated with no end date (never expires),
+   *   none   — nothing is running (no subscription, or already cancelled /
+   *            past due, where `endsAt` is only the historical last date).
+   */
+  basis: "trial" | "period" | "open" | "none";
+  /** When the current entitlement runs out; null when open-ended or absent. */
+  endsAt: Date | null;
+  /** Whole Baku days until `endsAt`; negative inside grace. Null if no countdown. */
+  daysLeft: number | null;
+  /** Past `endsAt` but still entitled because GRACE_DAYS hasn't run out. */
+  inGrace: boolean;
+  /** Grace days still left (0 outside grace). */
+  graceDaysLeft: number;
+};
+
+export function subscriptionWindow(
+  sub: SubscriptionLike | null | undefined,
+  now: Date = new Date(),
+): SubscriptionWindow {
+  const none: SubscriptionWindow = {
+    basis: "none",
+    endsAt: null,
+    daysLeft: null,
+    inGrace: false,
+    graceDaysLeft: 0,
+  };
+  if (!sub) return none;
+  const today = bakuYmd(now);
+  const until = (d: Date) => daysBetweenYmd(today, bakuYmd(d));
+
+  switch (sub.status) {
+    case "TRIALING":
+      if (!sub.trialEndsAt) return none;
+      return { ...none, basis: "trial", endsAt: sub.trialEndsAt, daysLeft: until(sub.trialEndsAt) };
+    case "ACTIVE": {
+      if (!sub.currentPeriodEnd) return { ...none, basis: "open" };
+      const end = sub.currentPeriodEnd;
+      const graceEnd = new Date(end.getTime() + GRACE_DAYS * 86_400_000);
+      const inGrace = now > end && now <= graceEnd;
+      return {
+        basis: "period",
+        endsAt: end,
+        daysLeft: until(end),
+        inGrace,
+        graceDaysLeft: inGrace ? Math.max(0, until(graceEnd)) : 0,
+      };
+    }
+    case "PAST_DUE":
+    case "CANCELLED":
+    case "FREE_DOWNGRADED":
+      // Entitlement is already gone, so there is nothing to count down — but
+      // the date it ran out is what an admin needs to see.
+      return { ...none, endsAt: sub.currentPeriodEnd ?? sub.trialEndsAt };
+  }
 }
 
 /**

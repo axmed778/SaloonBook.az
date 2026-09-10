@@ -106,6 +106,20 @@ export function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);
 }
 
+/**
+ * Whole Baku calendar days from `fromYmd` to `toYmd`; negative once `toYmd` has
+ * passed. Calendar days, not 24-hour spans, on purpose: "3 days left" must read
+ * the same at 09:00 and at 23:50 of the same day, which is how a human counts a
+ * subscription down.
+ */
+export function daysBetweenYmd(fromYmd: string, toYmd: string): number {
+  const at = (ymd: string) => {
+    const [y, m, d] = ymd.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((at(toYmd) - at(fromYmd)) / 86_400_000);
+}
+
 export function minutesToHHMM(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
