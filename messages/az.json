@@ -254,6 +254,7 @@
       "employee": "Mütəxəssis",
       "date": "Tarix",
       "time": "Vaxt",
+      "addons": "Əlavələr",
       "price": "Qiymət",
       "source": "Mənbə",
       "manageLinkLabel": "Müştəri linki — vaxtı dəyişmək / ləğv etmək üçün",
@@ -292,6 +293,8 @@
       "create": "Görüşü yarat",
       "creating": "Yaradılır…",
       "minutesShort": "{min} dəq",
+      "addons": "Əlavə xidmətlər",
+      "total": "Cəmi: {price} ₼ · {min} dəq",
       "errors": {
         "selectStaffService": "İşçi və xidmət seçin.",
         "selectSlot": "Boş vaxt seçin.",
@@ -330,6 +333,30 @@
     "delete": "Sil",
     "deleteTitle": "Xidməti sil",
     "deleteConfirm": "<b>{name}</b> xidməti silinsin? Bu əməliyyat geri qaytarıla bilməz.",
+    "addons": {
+      "title": "Əlavə xidmətlər",
+      "subtitle": "Müştəri onları əsas xidmətlə birlikdə seçir — qiyməti və vaxtı rezervasiyaya avtomatik əlavə olunur.",
+      "new": "Yeni əlavə xidmət",
+      "edit": "Əlavə xidməti redaktə et",
+      "namePlaceholder": "French",
+      "price": "Əlavə qiymət (₼)",
+      "duration": "Əlavə vaxt (dəq)",
+      "durationHint": "Əsas xidmətin müddətinə əlavə olunur. Vaxt artmırsa, 0 saxlayın.",
+      "services": "Hansı xidmətlərlə təklif olunsun?",
+      "extraTime": "+{min} dəq",
+      "noExtraTime": "Əlavə vaxt tələb etmir",
+      "linkedTo": "Xidmətlər: {names}",
+      "notLinked": "Heç bir xidmətə bağlı deyil — müştərilər görmür",
+      "withAddons": "Əlavələr: {names}",
+      "noServices": "Əlavə xidmət yaratmaq üçün əvvəlcə yuxarıda əsas xidmət əlavə edin.",
+      "emptyTitle": "Hələ əlavə xidmət yoxdur",
+      "emptyBody": "Məsələn: French +5 ₼, Ombre +5 ₼, Nail art +3 ₼. Müştəri onları əsas xidmətlə birlikdə seçəcək.",
+      "deleteTitle": "Əlavə xidməti sil",
+      "deleteConfirm": "<b>{name}</b> silinsin? Keçmiş rezervasiyalarda olduğu kimi qalacaq.",
+      "errors": {
+        "servicesRequired": "Ən azı bir xidmət seçin."
+      }
+    },
     "errors": {
       "nameRequired": "Ad tələb olunur.",
       "priceInvalid": "Qiymət düzgün deyil.",
@@ -958,6 +985,7 @@
     "slotTaken": "Bu vaxt artıq tutulub. Başqa vaxt seçin.",
     "slotUnavailable": "Bu vaxt uyğun deyil.",
     "planLimit": "Aylıq qeydiyyat limitinə çatmısınız.",
+    "addonUnavailable": "Seçilmiş əlavə xidmət bu xidmət üçün artıq mövcud deyil.",
     "bookingFailed": "Görüş yaradıla bilmədi. Yenidən cəhd edin.",
     "apptNotFound": "Görüş tapılmadı.",
     "futureStatus": "Gələcək görüşü hələ tamamlanmış və ya gəlmədi kimi qeyd etmək olmaz.",
@@ -1059,6 +1087,7 @@
         "customer": "Müştəri",
         "phone": "Telefon",
         "service": "Xidmət",
+        "addons": "Əlavələr",
         "employee": "Usta",
         "price": "Qiymət (AZN)",
         "notes": "Qeyd",
@@ -1464,6 +1493,7 @@
     "steps": {
       "gender": "Kim üçün?",
       "service": "Xidmət seçin",
+      "addons": "Əlavə xidmətlər",
       "employee": "Mütəxəssis seçin",
       "date": "Tarix seçin",
       "time": "Vaxt seçin",
@@ -1471,6 +1501,11 @@
     },
     "noServices": "Uyğun xidmət yoxdur.",
     "noEmployees": "Bu xidmət üçün mütəxəssis yoxdur.",
+    "addonsHint": "İstəsəniz, əlavə seçin — məbləğ avtomatik hesablanır.",
+    "addonsNone": "Əlavəsiz",
+    "total": "Cəmi",
+    "continue": "Davam et",
+    "continueWithoutAddons": "Əlavəsiz davam et",
     "noSlots": "Bu gün üçün boş vaxt yoxdur.",
     "pickAnotherDay": "Başqa gün seçin",
     "slotsLoadError": "Vaxtları yükləmək alınmadı.",
@@ -1502,7 +1537,8 @@
       "tooFar": "Bu tarix çox uzaqdır. Daha yaxın bir gün seçin.",
       "serviceMismatch": "Seçilmiş usta bu xidməti göstərmir. Yenidən seçin.",
       "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın.",
-      "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
+      "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın.",
+      "addonUnavailable": "Seçdiyiniz əlavə xidmət artıq mövcud deyil. Səhifəni yeniləyib yenidən seçin."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",
@@ -1520,6 +1556,7 @@
     "rows": {
       "customer": "Müştəri",
       "service": "Xidmət",
+      "addons": "Əlavələr",
       "employee": "Mütəxəssis",
       "date": "Tarix",
       "price": "Qiymət"

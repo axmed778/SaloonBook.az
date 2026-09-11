@@ -5,7 +5,12 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate, formatBakuDateTime } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
-import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { serviceWithAddons } from "@/lib/addons";
+import {
+  CATALOG_SERVICE_SELECT,
+  toCatalogService,
+  type CatalogEmployee,
+} from "@/app/[locale]/dashboard/_components/calendar-shared";
 import {
   ClientProfile,
   type AppointmentItem,
@@ -90,6 +95,7 @@ export default async function ClientProfilePage({
         source: true,
         createdAt: true,
         service: { select: { name: true } },
+        addons: { select: { name: true }, orderBy: { name: "asc" } },
         employee: { select: { name: true } },
       },
     }),
@@ -122,9 +128,7 @@ export default async function ClientProfilePage({
         name: true,
         services: {
           where: { service: { isActive: true } },
-          select: {
-            service: { select: { id: true, name: true, priceMinor: true, durationMin: true } },
-          },
+          select: { service: { select: CATALOG_SERVICE_SELECT } },
         },
       },
     }),
@@ -212,7 +216,10 @@ export default async function ClientProfilePage({
   const toItem = (h: (typeof history)[number]): AppointmentItem => ({
     id: h.id,
     whenLabel: formatBakuDateTime(h.startsAt, df),
-    service: h.service.name,
+    service: serviceWithAddons(
+      h.service.name,
+      h.addons.map((a) => a.name),
+    ),
     employee: h.employee.name,
     priceMinor: h.priceMinor,
     status: h.status,
@@ -236,7 +243,7 @@ export default async function ClientProfilePage({
   const catalog: CatalogEmployee[] = employees.map((e) => ({
     id: e.id,
     name: e.name,
-    services: e.services.map((s) => s.service),
+    services: e.services.map((s) => toCatalogService(s.service)),
   }));
 
   return (

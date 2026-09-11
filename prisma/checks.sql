@@ -27,6 +27,8 @@
 --
 -- Deliberately NOT constrained (see the report / git history for the reasoning):
 --   * Review."rating" — already has Review_rating_check from its migration.
+--   * ServiceAddon / AppointmentAddon price and minutes — created with their
+--     CHECKs in migration 20260911120000_service_addons.
 --   * Invite."usedCount" <= "maxUses" — an admin lowering maxUses on a partly
 --     redeemed invite is legitimate; only the negative side is nonsense.
 --   * Upper bounds on money — Zod caps them per surface; a hard ceiling in the

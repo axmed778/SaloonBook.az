@@ -4,6 +4,12 @@ import { consumeBookingQuota } from "./quota";
 import { withTenantScope } from "./tenant";
 import { isSlotBookable, type SlotRejectReason } from "./availability";
 import { sanitizeTemplateParam } from "./whatsapp";
+import {
+  AddonUnavailableError,
+  addonTotals,
+  resolveAddons,
+  serviceWithAddons,
+} from "./addons";
 
 /**
  * How far ahead a PUBLIC booking may land. Bounds calendar-stuffing abuse via
@@ -33,6 +39,7 @@ export class SlotUnavailableError extends Error {
 // counter. Re-exported here because both are part of the booking surface every
 // existing caller imports from.
 export { PlanLimitError, releaseBookingQuota } from "./quota";
+export { AddonUnavailableError } from "./addons";
 
 /**
  * How long after an appointment ends its manage token (/a/{token}) keeps
@@ -62,6 +69,9 @@ export function isManageTokenActive(
 export interface CreateBookingInput {
   salonId: string;
   serviceId: string;
+  /** Optional extras on top of the service. Re-validated here against the
+   *  catalog; their prices and minutes are added to the booking's. */
+  addonIds?: string[];
   employeeId: string;
   startUtc: Date;
   /** `waOptIn` is MARKETING consent only (news/offers), never the gate for this
@@ -128,6 +138,21 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     });
     if (!service) throw new Error("Service not found");
 
+    // Add-ons are priced and timed from the catalog as it stands NOW, inside
+    // this transaction — never from anything the client sent — so the total
+    // below is the one the slot check and the snapshot rows agree on.
+    const addons = await resolveAddons(tx, {
+      salonId: input.salonId,
+      serviceId: service.id,
+      addonIds: input.addonIds,
+    });
+    if (!addons) throw new AddonUnavailableError();
+    const extra = addonTotals(addons);
+    const serviceLabel = serviceWithAddons(
+      service.name,
+      addons.map((a) => a.name),
+    );
+
     // --- Re-validate the requested slot on the write side (parity with the
     // availability read path). The overlap exclusion constraint only blocks
     // collisions with other CONFIRMED appointments; this also rejects past,
@@ -137,6 +162,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       employeeId: input.employeeId,
       serviceId: service.id,
       startUtc: input.startUtc,
+      extraMin: extra.durationMin,
     });
     if (!check.ok) {
       if (check.reason === "overlap") throw new SlotTakenError();
@@ -191,7 +217,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           startsAt: input.startUtc,
           endsAt: endUtc,
           status: "CONFIRMED",
-          priceMinor: service.priceMinor,
+          priceMinor: service.priceMinor + extra.priceMinor,
           source,
         },
         select: { id: true, manageToken: true, startsAt: true, endsAt: true },
@@ -199,6 +225,19 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     } catch (e) {
       if (isOverlapError(e)) throw new SlotTakenError();
       throw e;
+    }
+
+    if (addons.length > 0) {
+      await tx.appointmentAddon.createMany({
+        data: addons.map((a) => ({
+          salonId: input.salonId,
+          appointmentId: appointment.id,
+          addonId: a.id,
+          name: a.name,
+          priceMinor: a.priceMinor,
+          durationMin: a.durationMin,
+        })),
+      });
     }
 
     // Two different consents, previously conflated into one flag.
@@ -231,7 +270,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           toPhone: input.customer.phone,
           payload: {
             salon: salon.name,
-            service: service.name,
+            service: serviceLabel,
             startsAt: appointment.startsAt.toISOString(),
           } satisfies Prisma.InputJsonValue,
         },
@@ -249,7 +288,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
             sendAfter: reminderAt,
             payload: {
               salon: salon.name,
-              service: service.name,
+              service: serviceLabel,
               startsAt: appointment.startsAt.toISOString(),
             } satisfies Prisma.InputJsonValue,
           },
@@ -269,7 +308,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           toPhone: salon.phone,
           payload: {
             customer: safeName,
-            service: service.name,
+            service: serviceLabel,
             startsAt: appointment.startsAt.toISOString(),
           } satisfies Prisma.InputJsonValue,
         },

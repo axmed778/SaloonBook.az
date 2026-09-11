@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { matchesClientGender, type Audience } from "@/lib/audience";
+import { addonTotals, serviceWithAddons } from "@/lib/addons";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { hasContact } from "@/lib/serializers/redact-notes";
 
@@ -42,6 +43,14 @@ type Service = {
   priceMinor: number;
   durationMin: number;
   audience: Audience;
+};
+/** An optional extra, offered only with the services in `serviceIds`. */
+type Addon = {
+  id: string;
+  name: string;
+  priceMinor: number;
+  durationMin: number;
+  serviceIds: string[];
 };
 type Employee = {
   id: string;
@@ -86,12 +95,14 @@ const BOOKING_ERROR_KEYS: Record<string, string> = {
   PLAN_LIMIT: "errors.salonUnavailable",
   SERVER: "errors.bookingFailed",
   NOTE_CONTACT: "errors.noteContact",
+  ADDON_UNAVAILABLE: "errors.addonUnavailable",
 };
 
 export function BookingWidget({
   slug,
   salonAudience,
   services,
+  addons,
   employees,
   days,
   initialServiceId,
@@ -103,6 +114,7 @@ export function BookingWidget({
   slug: string;
   salonAudience: Audience;
   services: Service[];
+  addons: Addon[];
   employees: Employee[];
   days: Day[];
   // "Book again": preselect the same service/master (validated by the salon page).
@@ -117,15 +129,19 @@ export function BookingWidget({
   const t = useTranslations("Booking");
   const tGender = useTranslations("Audience");
   const needGender = salonAudience === "ALL";
-  const stepKeys = [
+  // The add-ons offered with a service. A service without any skips the
+  // "addons" step entirely, so a salon that never set one up sees no change.
+  const addonsFor = (svcId: string | null) =>
+    svcId ? addons.filter((a) => a.serviceIds.includes(svcId)) : [];
+  const stepsFor = (svcId: string | null) => [
     ...(needGender ? ["gender"] : []),
     "service",
+    ...(addonsFor(svcId).length > 0 ? ["addons"] : []),
     "employee",
     "date",
     "time",
     "contact",
   ];
-  const idx = (k: string) => stepKeys.indexOf(k);
 
   // "Book again" preselect. Only honored when the initial service exists AND the
   // gender gate can be satisfied consistently: a gendered salon (fixed gender) or
@@ -146,7 +162,14 @@ export function BookingWidget({
           (e) => e.id === initialEmployeeId && e.serviceIds.includes(presetService!.id),
         ) ?? null)
       : null;
-  const presetStep = canPreset ? (presetEmployee ? idx("date") : idx("employee")) : 0;
+  // A preset service that has add-ons opens on them: "book again" should still
+  // let the customer choose this visit's extras.
+  const presetSteps = stepsFor(canPreset ? presetService!.id : null);
+  const presetStep = !canPreset
+    ? 0
+    : presetSteps.includes("addons")
+      ? presetSteps.indexOf("addons")
+      : presetSteps.indexOf(presetEmployee ? "date" : "employee");
 
   // Prefix for the contact-step field ids: a salon page can embed the widget
   // more than once (page + "book" button), and duplicate ids would point every
@@ -159,6 +182,7 @@ export function BookingWidget({
   const [serviceId, setServiceId] = useState<string | null>(
     canPreset ? presetService!.id : null,
   );
+  const [addonIds, setAddonIds] = useState<string[]>([]);
   const [employeeId, setEmployeeId] = useState<string | null>(
     presetEmployee ? presetEmployee.id : null,
   );
@@ -196,9 +220,19 @@ export function BookingWidget({
   } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  const stepKeys = stepsFor(serviceId);
+  const idx = (k: string) => stepKeys.indexOf(k);
+
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
   const selectedEmployee = employees.find((e) => e.id === employeeId) ?? null;
   const selectedDay = days.find((d) => d.ymd === day) ?? null;
+  const serviceAddons = addonsFor(serviceId);
+  const chosenAddons = serviceAddons.filter((a) => addonIds.includes(a.id));
+  const extra = addonTotals(chosenAddons);
+  const totalMinor = (selectedService?.priceMinor ?? 0) + extra.priceMinor;
+  const totalMin = (selectedService?.durationMin ?? 0) + extra.durationMin;
+  // A stable dependency for the slots effect: add-ons lengthen the booking.
+  const addonKey = chosenAddons.map((a) => a.id).join(",");
 
   const visibleServices = services.filter(
     (s) => gender && matchesClientGender(s.audience, gender),
@@ -230,9 +264,25 @@ export function BookingWidget({
   }
   function pickService(id: string) {
     setServiceId(id);
+    setAddonIds([]);
     setEmployeeId(null);
     setDay(null);
     setSlot(null);
+    setError(null);
+    // The step list depends on the service (the add-ons step comes and goes),
+    // so the next index is read from the NEW service's steps, not this render's.
+    const next = stepsFor(id);
+    setCurrent(next.indexOf(next.includes("addons") ? "addons" : "employee"));
+  }
+  function toggleAddon(id: string) {
+    setAddonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+    // The booking just got longer (or shorter): a chosen day/time may no longer
+    // fit, so they are picked again against the new length.
+    setDay(null);
+    setSlot(null);
+    setError(null);
+  }
+  function confirmAddons() {
     setError(null);
     setCurrent(idx("employee"));
   }
@@ -262,7 +312,10 @@ export function BookingWidget({
     setSlotsLoading(true);
     setSlots(null);
     setSlotsError(false);
-    fetch(`/api/public/${slug}/availability?serviceId=${serviceId}&employeeId=${employeeId}&date=${day}`)
+    const addonParam = addonKey ? `&addonIds=${addonKey}` : "";
+    fetch(
+      `/api/public/${slug}/availability?serviceId=${serviceId}&employeeId=${employeeId}&date=${day}${addonParam}`,
+    )
       .then(async (r) => {
         // A non-2xx (e.g. a transient 500) must NOT read as "no free slots" —
         // treat it as a load error so the customer sees a retry, not a dead end.
@@ -282,7 +335,7 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [activeKey, serviceId, employeeId, day, slug, slotsReload]);
+  }, [activeKey, serviceId, addonKey, employeeId, day, slug, slotsReload]);
 
   // Render the Turnstile widget while the contact step is active (only when a
   // site key is configured). Tearing it down on step change keeps the token
@@ -385,6 +438,7 @@ export function BookingWidget({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           serviceId,
+          addonIds: chosenAddons.map((a) => a.id),
           employeeId,
           startUtc: slot.startUtc,
           name: name.trim(),
@@ -442,7 +496,13 @@ export function BookingWidget({
           </span>
           <h3 className="mt-4 text-lg font-semibold text-foreground">{t("success.title")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {selectedService?.name} · {selectedEmployee?.name}
+            {selectedService
+              ? serviceWithAddons(
+                  selectedService.name,
+                  chosenAddons.map((a) => a.name),
+                )
+              : ""}{" "}
+            · {selectedEmployee?.name}
             <br />
             {done.dayLabel}, {done.time}
           </p>
@@ -491,6 +551,7 @@ export function BookingWidget({
   const stepTitle: Record<string, string> = {
     gender: t("steps.gender"),
     service: t("steps.service"),
+    addons: t("steps.addons"),
     employee: t("steps.employee"),
     date: t("steps.date"),
     time: t("steps.time"),
@@ -506,6 +567,10 @@ export function BookingWidget({
         return selectedService
           ? `${selectedService.name} · ${azn(selectedService.priceMinor)} ₼`
           : "";
+      case "addons":
+        return chosenAddons.length > 0
+          ? `${chosenAddons.map((a) => a.name).join(", ")} · +${azn(extra.priceMinor)} ₼`
+          : t("addonsNone");
       case "employee":
         return selectedEmployee?.name ?? "";
       case "date":
@@ -582,6 +647,67 @@ export function BookingWidget({
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+
+              {key === "addons" && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{t("addonsHint")}</p>
+                  {serviceAddons.map((a) => {
+                    const on = addonIds.includes(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={on}
+                        onClick={() => toggleAddon(a.id)}
+                        className={optionCls(on)}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span
+                              className={
+                                "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition " +
+                                (on
+                                  ? "border-accent bg-accent text-accent-foreground"
+                                  : "border-border-strong bg-background")
+                              }
+                            >
+                              {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-foreground">{a.name}</p>
+                              {a.durationMin > 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                  +{t("minutesShort", { min: a.durationMin })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span className="shrink-0 font-medium text-foreground">
+                            +{azn(a.priceMinor)} ₼
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t("total")}:{" "}
+                      <span className="font-semibold text-foreground">{azn(totalMinor)} ₼</span>
+                      {" · "}
+                      {t("minutesShort", { min: totalMin })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={confirmAddons}
+                      className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground shadow-sm shadow-accent/20 transition hover:bg-accent-hover"
+                    >
+                      {chosenAddons.length > 0 ? t("continue") : t("continueWithoutAddons")}
+                      <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -674,9 +800,14 @@ export function BookingWidget({
                 <div className="space-y-4">
                   <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm">
                     <p className="font-medium text-foreground">{selectedService?.name}</p>
+                    {chosenAddons.length > 0 && (
+                      <p className="text-muted-foreground">
+                        + {chosenAddons.map((a) => a.name).join(", ")}
+                      </p>
+                    )}
                     <p className="text-muted-foreground">
                       {selectedEmployee?.name} · {selectedDay?.label} · {slot?.time} ·{" "}
-                      {selectedService ? azn(selectedService.priceMinor) : ""} ₼
+                      {selectedService ? azn(totalMinor) : ""} ₼
                     </p>
                   </div>
                   <div>

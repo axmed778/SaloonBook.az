@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots } from "@/lib/availability";
+import { addonTotals, resolveAddons, MAX_ADDONS_PER_BOOKING } from "@/lib/addons";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ const querySchema = z.object({
   serviceId: z.string().uuid(),
   employeeId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Baku calendar day
+  // Chosen add-ons, comma-separated. They lengthen the booking, so the slots
+  // offered must be the ones the longer booking actually fits.
+  addonIds: z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING),
 });
 
 export async function GET(
@@ -34,6 +38,7 @@ export async function GET(
     serviceId: req.nextUrl.searchParams.get("serviceId"),
     employeeId: req.nextUrl.searchParams.get("employeeId"),
     date: req.nextUrl.searchParams.get("date"),
+    addonIds: (req.nextUrl.searchParams.get("addonIds") ?? "").split(",").filter(Boolean),
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid query", issues: parsed.error.issues }, { status: 400 });
@@ -62,10 +67,25 @@ export async function GET(
     );
   }
 
+  // Same tenant rule as above: an add-on counts only if it is this salon's,
+  // active, and offered with this service.
+  const addons = await resolveAddons(prisma, {
+    salonId: salon.id,
+    serviceId: parsed.data.serviceId,
+    addonIds: parsed.data.addonIds,
+  });
+  if (!addons) {
+    return NextResponse.json(
+      { error: "Invalid add-ons for this service", code: "ADDON_UNAVAILABLE" },
+      { status: 422 },
+    );
+  }
+
   const slots = await getAvailableSlots({
     employeeId: parsed.data.employeeId,
     serviceId: parsed.data.serviceId,
     dayYmd: parsed.data.date,
+    extraMin: addonTotals(addons).durationMin,
   });
 
   return NextResponse.json({ date: parsed.data.date, slots });

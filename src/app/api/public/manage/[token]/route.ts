@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots, isSlotBookable } from "@/lib/availability";
+import { addonTotals, serviceWithAddons } from "@/lib/addons";
 import { isOverlapError, isManageTokenActive, MAX_BOOKING_AHEAD_DAYS } from "@/lib/booking";
 import { consumeBookingQuota, PlanLimitError } from "@/lib/quota";
 import { enqueueNotification, enqueuePush } from "@/lib/queue";
@@ -34,6 +35,12 @@ async function loadByToken(token: string) {
       salon: { select: { name: true, phone: true, status: true } },
       service: { select: { name: true } },
       customer: { select: { name: true, phone: true } },
+      // The add-ons as BOOKED (snapshots): a move keeps their minutes, and the
+      // messages it triggers name them.
+      addons: {
+        select: { name: true, priceMinor: true, durationMin: true },
+        orderBy: { name: "asc" },
+      },
     },
   });
   // The link is forwarded, quoted and archived in WhatsApp threads forever, so
@@ -42,7 +49,14 @@ async function loadByToken(token: string) {
   // into a plain 404, identical to a token that never existed (see
   // isManageTokenActive).
   if (!appt || !isManageTokenActive(appt)) return null;
-  return appt;
+  return {
+    ...appt,
+    addonMin: addonTotals(appt.addons).durationMin,
+    serviceLabel: serviceWithAddons(
+      appt.service.name,
+      appt.addons.map((a) => a.name),
+    ),
+  };
 }
 
 // --- GET: free slots for a day (reschedule picker) ---------------------------
@@ -73,6 +87,7 @@ export async function GET(
     employeeId: appt.employeeId,
     serviceId: appt.serviceId,
     dayYmd: date,
+    extraMin: appt.addonMin,
     // The appointment's own interval must not block its own reschedule.
     excludeAppointmentId: appt.id,
   });
@@ -152,7 +167,7 @@ export async function POST(
           toPhone: appt.salon.phone,
           payload: {
             customer: appt.customer.name,
-            service: appt.service.name,
+            service: appt.serviceLabel,
             startsAt: appt.startsAt.toISOString(),
           },
         },
@@ -196,6 +211,7 @@ export async function POST(
     employeeId: appt.employeeId,
     serviceId: appt.serviceId,
     startUtc,
+    extraMin: appt.addonMin,
     excludeAppointmentId: appt.id,
   });
   if (!check.ok) {
@@ -235,7 +251,7 @@ export async function POST(
       // Fresh confirmation (new time) + fresh T-24h reminder.
       const payload = {
         salon: appt.salon.name,
-        service: appt.service.name,
+        service: appt.serviceLabel,
         startsAt: startUtc.toISOString(),
       };
       const confirmation = await tx.notification.create({
@@ -279,7 +295,7 @@ export async function POST(
             toPhone: appt.salon.phone,
             payload: {
               customer: appt.customer.name,
-              service: appt.service.name,
+              service: appt.serviceLabel,
               startsAt: startUtc.toISOString(),
             },
           },

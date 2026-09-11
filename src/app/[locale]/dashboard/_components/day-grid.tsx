@@ -130,6 +130,7 @@ export function DayGrid({
                       )}
                       <p className="truncate text-xs font-semibold">
                         {minutesToHHMM(b.startMin)} · {b.title}
+                        {b.addons.length > 0 && ` +${b.addons.length}`}
                       </p>
                       <p className="truncate text-[11px] opacity-80">{b.subtitle}</p>
                     </button>

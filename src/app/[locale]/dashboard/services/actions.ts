@@ -76,6 +76,95 @@ export async function setServiceActive(id: string, isActive: boolean): Promise<A
   return { ok: true };
 }
 
+// --- Add-ons ("French +5 ₼") ---------------------------------------------------
+// Optional extras a customer adds to a main service while booking. Each is
+// linked to the services it is offered with; the booking flow adds its price
+// and minutes to the booking's (src/lib/addons.ts).
+
+const addonInput = z.object({
+  name: z.string().trim().min(1).max(120),
+  priceAzn: z.number().nonnegative().max(100_000),
+  durationMin: z.number().int().min(0).max(1440),
+  // At least one: an add-on linked to nothing is offered nowhere, which is
+  // never what the owner meant.
+  serviceIds: z.array(z.string().uuid()).min(1).max(500),
+});
+
+/** True when every id is one of this salon's services. A link to anything
+ *  else is refused outright, never silently dropped. */
+async function ownsServices(salonId: string, ids: string[]): Promise<boolean> {
+  const count = await prisma.service.count({ where: { id: { in: ids }, salonId } });
+  return count === ids.length;
+}
+
+export async function createAddon(input: unknown): Promise<ActionResult> {
+  const salonId = await requireOwnerSalonId();
+  const t = await getTranslations("Services.errors");
+  const parsed = addonInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const { name, priceAzn, durationMin } = parsed.data;
+  const serviceIds = [...new Set(parsed.data.serviceIds)];
+  if (!(await ownsServices(salonId, serviceIds))) return { ok: false, error: t("invalidData") };
+
+  await prisma.$transaction(async (tx) => {
+    const addon = await tx.serviceAddon.create({
+      data: { salonId, name, priceMinor: toMinor(priceAzn), durationMin },
+      select: { id: true },
+    });
+    await tx.serviceAddonLink.createMany({
+      data: serviceIds.map((serviceId) => ({ serviceId, addonId: addon.id })),
+    });
+  });
+  revalidatePath("/dashboard/services");
+  return { ok: true };
+}
+
+export async function updateAddon(id: string, input: unknown): Promise<ActionResult> {
+  const salonId = await requireOwnerSalonId();
+  const t = await getTranslations("Services.errors");
+  const parsed = addonInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const { name, priceAzn, durationMin } = parsed.data;
+  const serviceIds = [...new Set(parsed.data.serviceIds)];
+  if (!(await ownsServices(salonId, serviceIds))) return { ok: false, error: t("invalidData") };
+
+  // Existing bookings keep their own copy (AppointmentAddon), so a new price or
+  // length only applies from the next booking on.
+  const found = await prisma.$transaction(async (tx) => {
+    const res = await tx.serviceAddon.updateMany({
+      where: { id, salonId }, // salonId in the filter = tenant guard
+      data: { name, priceMinor: toMinor(priceAzn), durationMin },
+    });
+    if (res.count === 0) return false;
+    await tx.serviceAddonLink.deleteMany({ where: { addonId: id } });
+    await tx.serviceAddonLink.createMany({
+      data: serviceIds.map((serviceId) => ({ serviceId, addonId: id })),
+    });
+    return true;
+  });
+  if (!found) return { ok: false, error: t("notFound") };
+  revalidatePath("/dashboard/services");
+  return { ok: true };
+}
+
+export async function setAddonActive(id: string, isActive: boolean): Promise<ActionResult> {
+  const salonId = await requireOwnerSalonId();
+  await prisma.serviceAddon.updateMany({ where: { id, salonId }, data: { isActive } });
+  revalidatePath("/dashboard/services");
+  return { ok: true };
+}
+
+export async function deleteAddon(id: string): Promise<ActionResult> {
+  const salonId = await requireOwnerSalonId();
+  const t = await getTranslations("Services.errors");
+  // Unlike a service, an add-on can always go: its links cascade, and the
+  // bookings that used it keep their copy (AppointmentAddon.addonId → null).
+  const res = await prisma.serviceAddon.deleteMany({ where: { id, salonId } });
+  if (res.count === 0) return { ok: false, error: t("notFound") };
+  revalidatePath("/dashboard/services");
+  return { ok: true };
+}
+
 export async function deleteService(id: string): Promise<ActionResult> {
   const salonId = await requireOwnerSalonId();
   const t = await getTranslations("Services.errors");

@@ -69,7 +69,7 @@ DO $$
 DECLARE
   t text;
   -- Every table carrying tenant data. Salon is keyed by its own id, most of the
-  -- rest by salonId, and the last three through their parent employee/service.
+  -- rest by salonId, and the last four through their parent employee/service.
   -- Keep in sync with the schema when a new salon-scoped table is
   -- added — the drift assertion in src/lib/tenant.rls.test.ts fails CI if you
   -- forget.
@@ -88,11 +88,13 @@ DECLARE
   tenant_tables text[] := ARRAY[
     'Salon', 'Employee', 'Service', 'Customer', 'Appointment',
     'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review',
-    'WorkingHour', 'TimeOff', 'ServiceEmployee'
+    'ServiceAddon', 'AppointmentAddon',
+    'WorkingHour', 'TimeOff', 'ServiceEmployee', 'ServiceAddonLink'
   ];
   salon_id_tables text[] := ARRAY[
     'Employee', 'Service', 'Customer', 'Appointment',
-    'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review'
+    'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review',
+    'ServiceAddon', 'AppointmentAddon'
   ];
   -- No salonId column of their own: they hang off an employee. Scoped one hop
   -- away instead of via a denormalizing migration + backfill.
@@ -168,6 +170,27 @@ BEGIN
                          AND e."salonId" = (SELECT app_current_salon()))
               AND EXISTS (SELECT 1 FROM "Service" s
                            WHERE s.id = "ServiceEmployee"."serviceId"
+                             AND s."salonId" = (SELECT app_current_salon())))
+             OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))
+  $p$;
+
+  -- ServiceAddonLink: the same two-parent rule as ServiceEmployee, for the same
+  -- reason — a scoped caller must not attach its own add-on to another salon's
+  -- service, or another salon's add-on to its own.
+  EXECUTE $p$
+    CREATE POLICY tenant_isolation ON "ServiceAddonLink"
+      USING ((EXISTS (SELECT 1 FROM "ServiceAddon" a
+                       WHERE a.id = "ServiceAddonLink"."addonId"
+                         AND a."salonId" = (SELECT app_current_salon()))
+              AND EXISTS (SELECT 1 FROM "Service" s
+                           WHERE s.id = "ServiceAddonLink"."serviceId"
+                             AND s."salonId" = (SELECT app_current_salon())))
+             OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))
+      WITH CHECK ((EXISTS (SELECT 1 FROM "ServiceAddon" a
+                       WHERE a.id = "ServiceAddonLink"."addonId"
+                         AND a."salonId" = (SELECT app_current_salon()))
+              AND EXISTS (SELECT 1 FROM "Service" s
+                           WHERE s.id = "ServiceAddonLink"."serviceId"
                              AND s."salonId" = (SELECT app_current_salon())))
              OR ((SELECT app_current_salon()) IS NULL AND NOT (SELECT app_rls_strict())))
   $p$;

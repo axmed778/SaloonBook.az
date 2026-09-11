@@ -21,9 +21,11 @@ import {
 } from "@/lib/serializers/booking";
 import { Calendar } from "../_components/calendar";
 import {
+  CATALOG_SERVICE_SELECT,
   DAY_START_MIN,
   DAY_END_MIN,
   toCalendarBlock,
+  toCatalogService,
   type CalendarBlock,
   type CalendarColumn,
   type CatalogEmployee,
@@ -132,11 +134,7 @@ export default async function CalendarPage({
       position: true,
       services: {
         where: { service: { isActive: true } },
-        select: {
-          service: {
-            select: { id: true, name: true, priceMinor: true, durationMin: true },
-          },
-        },
+        select: { service: { select: CATALOG_SERVICE_SELECT } },
       },
     },
   });
@@ -149,7 +147,7 @@ export default async function CalendarPage({
   const catalog: CatalogEmployee[] = employees.map((e) => ({
     id: e.id,
     name: e.name,
-    services: e.services.map((s) => s.service),
+    services: e.services.map((s) => toCatalogService(s.service)),
   }));
 
   if (view === "week") {

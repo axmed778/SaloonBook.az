@@ -25,6 +25,8 @@ export type ServiceRow = {
   isActive: boolean;
   audience: Audience;
   category: ServiceCategory;
+  /** Active add-ons offered with this service (managed in AddonsManager). */
+  addonNames: string[];
 };
 
 const CATEGORIES: ServiceCategory[] = [
@@ -287,6 +289,11 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                   {t("minutesShort", { min: s.durationMin })}
                   {s.bufferMin > 0 && <span className="text-faint-foreground"> {t("bufferSuffix", { min: s.bufferMin })}</span>}
                 </p>
+                {s.addonNames.length > 0 && (
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {t("addons.withAddons", { names: s.addonNames.join(", ") })}
+                  </p>
+                )}
               </div>
 
               <div className="flex shrink-0 items-center gap-3">

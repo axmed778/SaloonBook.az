@@ -12,11 +12,18 @@ import { acceptSalonConsents } from "@/lib/legal-consent";
 import { bestEffortEnqueue, enqueueNotification } from "@/lib/queue";
 import { getAvailableSlots, isSlotBookable, type Slot } from "@/lib/availability";
 import {
+  addonTotals,
+  resolveAddons,
+  serviceWithAddons,
+  MAX_ADDONS_PER_BOOKING,
+} from "@/lib/addons";
+import {
   createBooking,
   isOverlapError,
   SlotTakenError,
   SlotUnavailableError,
   PlanLimitError,
+  AddonUnavailableError,
   releaseBookingQuota,
 } from "@/lib/booking";
 
@@ -52,9 +59,12 @@ async function assertServiceLink(
 
 // --- Available slots for the manual-booking form ---------------------------
 
+const addonIdsSchema = z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING).optional();
+
 const slotsSchema = z.object({
   employeeId: z.string().uuid(),
   serviceId: z.string().uuid(),
+  addonIds: addonIdsSchema,
   day: z.string().regex(YMD_RE),
 });
 
@@ -67,7 +77,7 @@ export async function availableSlots(input: unknown): Promise<SlotsResult> {
   const t = await getTranslations("Actions");
   const parsed = slotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
-  const { employeeId, serviceId, day } = parsed.data;
+  const { employeeId, serviceId, addonIds, day } = parsed.data;
 
   // A master may only ever look at their own diary — including through a
   // hand-crafted request carrying a colleague's id.
@@ -78,7 +88,16 @@ export async function availableSlots(input: unknown): Promise<SlotsResult> {
     return { ok: false, error: t("serviceNotOffered") };
   }
 
-  const slots = await getAvailableSlots({ employeeId, serviceId, dayYmd: day });
+  // The add-ons lengthen the booking, so they decide which slots still fit.
+  const addons = await resolveAddons(prisma, { salonId: scope.salonId, serviceId, addonIds });
+  if (!addons) return { ok: false, error: t("addonUnavailable") };
+
+  const slots = await getAvailableSlots({
+    employeeId,
+    serviceId,
+    dayYmd: day,
+    extraMin: addonTotals(addons).durationMin,
+  });
   return { ok: true, slots };
 }
 
@@ -87,6 +106,7 @@ export async function availableSlots(input: unknown): Promise<SlotsResult> {
 const bookingSchema = z.object({
   employeeId: z.string().uuid(),
   serviceId: z.string().uuid(),
+  addonIds: addonIdsSchema,
   startUtc: z.string().datetime(), // ISO instant from the availableSlots response
   name: z
     .string()
@@ -132,6 +152,7 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
     await createBooking({
       salonId,
       serviceId: d.serviceId,
+      addonIds: d.addonIds,
       employeeId: d.employeeId,
       startUtc: new Date(d.startUtc),
       customer: { name: d.name, phone: d.phone },
@@ -150,6 +171,9 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
     }
     if (e instanceof PlanLimitError) {
       return { ok: false, error: t("planLimit") };
+    }
+    if (e instanceof AddonUnavailableError) {
+      return { ok: false, error: t("addonUnavailable") };
     }
     console.error("[manual-booking] error", e);
     return { ok: false, error: t("bookingFailed") };
@@ -215,6 +239,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       createdAt: true,
       customer: { select: { phone: true, waOptIn: true } },
       service: { select: { name: true } },
+      addons: { select: { name: true }, orderBy: { name: "asc" } },
       salon: { select: { name: true } },
     },
   });
@@ -275,7 +300,10 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
         toPhone: appt.customer.phone,
         payload: {
           salon: appt.salon.name,
-          service: appt.service.name,
+          service: serviceWithAddons(
+            appt.service.name,
+            appt.addons.map((a) => a.name),
+          ),
           startsAt: appt.startsAt.toISOString(),
         },
       },
@@ -304,7 +332,7 @@ const rescheduleSlotsSchema = z.object({
 });
 
 /** Free slots for the reschedule picker: the appointment's own (employee,
- *  service) on the given day, excluding its current interval. */
+ *  service, booked add-ons) on the given day, excluding its current interval. */
 export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
   const scope = await requireScope();
   const t = await getTranslations("Actions");
@@ -313,7 +341,11 @@ export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
 
   const appt = await prisma.appointment.findFirst({
     where: { id: parsed.data.id, ...appointmentScope(scope) },
-    select: { employeeId: true, serviceId: true },
+    select: {
+      employeeId: true,
+      serviceId: true,
+      addons: { select: { priceMinor: true, durationMin: true } },
+    },
   });
   if (!appt) return { ok: false, error: t("apptNotFound") };
 
@@ -321,6 +353,7 @@ export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
     employeeId: appt.employeeId,
     serviceId: appt.serviceId,
     dayYmd: parsed.data.day,
+    extraMin: addonTotals(appt.addons).durationMin,
     excludeAppointmentId: parsed.data.id,
   });
   return { ok: true, slots };
@@ -347,6 +380,12 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
       serviceId: true,
       salon: { select: { name: true } },
       service: { select: { name: true } },
+      // As booked: the move keeps the add-ons' minutes, and the fresh
+      // confirmation names them.
+      addons: {
+        select: { name: true, priceMinor: true, durationMin: true },
+        orderBy: { name: "asc" },
+      },
       customer: { select: { phone: true, waOptIn: true } },
     },
   });
@@ -359,6 +398,7 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
     employeeId: appt.employeeId,
     serviceId: appt.serviceId,
     startUtc,
+    extraMin: addonTotals(appt.addons).durationMin,
     excludeAppointmentId: parsed.data.id,
   });
   if (!check.ok) {
@@ -390,7 +430,10 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
       if (appt.customer.waOptIn) {
         const payload = {
           salon: appt.salon.name,
-          service: appt.service.name,
+          service: serviceWithAddons(
+            appt.service.name,
+            appt.addons.map((a) => a.name),
+          ),
           startsAt: startUtc.toISOString(),
         };
         const confirmation = await tx.notification.create({

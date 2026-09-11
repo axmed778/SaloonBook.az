@@ -254,6 +254,7 @@
       "employee": "Specialist",
       "date": "Date",
       "time": "Time",
+      "addons": "Add-ons",
       "price": "Price",
       "source": "Source",
       "manageLinkLabel": "Customer link — to reschedule / cancel",
@@ -292,6 +293,8 @@
       "create": "Create booking",
       "creating": "Creating…",
       "minutesShort": "{min} min",
+      "addons": "Add-ons",
+      "total": "Total: {price} ₼ · {min} min",
       "errors": {
         "selectStaffService": "Select a staff member and a service.",
         "selectSlot": "Select a free slot.",
@@ -330,6 +333,30 @@
     "delete": "Delete",
     "deleteTitle": "Delete service",
     "deleteConfirm": "Delete the <b>{name}</b> service? This action cannot be undone.",
+    "addons": {
+      "title": "Add-ons",
+      "subtitle": "Customers pick them together with a main service — the price and time are added to the booking automatically.",
+      "new": "New add-on",
+      "edit": "Edit add-on",
+      "namePlaceholder": "French tips",
+      "price": "Extra price (₼)",
+      "duration": "Extra time (min)",
+      "durationHint": "Added to the main service's length. Leave 0 if it takes no extra time.",
+      "services": "Offer with which services?",
+      "extraTime": "+{min} min",
+      "noExtraTime": "No extra time",
+      "linkedTo": "Services: {names}",
+      "notLinked": "Not linked to any service — customers don't see it",
+      "withAddons": "Add-ons: {names}",
+      "noServices": "Add a main service above first, then create add-ons for it.",
+      "emptyTitle": "No add-ons yet",
+      "emptyBody": "For example: French +5 ₼, Ombre +5 ₼, Nail art +3 ₼. Customers choose them together with the main service.",
+      "deleteTitle": "Delete add-on",
+      "deleteConfirm": "Delete <b>{name}</b>? Past bookings keep it as it was.",
+      "errors": {
+        "servicesRequired": "Choose at least one service."
+      }
+    },
     "errors": {
       "nameRequired": "Name is required.",
       "priceInvalid": "The price is invalid.",
@@ -958,6 +985,7 @@
     "slotTaken": "This time is already taken. Choose another time.",
     "slotUnavailable": "This time isn't available.",
     "planLimit": "You've reached the monthly booking limit.",
+    "addonUnavailable": "The selected add-on is no longer available for this service.",
     "bookingFailed": "The appointment couldn't be created. Please try again.",
     "apptNotFound": "Appointment not found.",
     "futureStatus": "A future appointment can't be marked completed or no-show yet.",
@@ -1059,6 +1087,7 @@
         "customer": "Customer",
         "phone": "Phone",
         "service": "Service",
+        "addons": "Add-ons",
         "employee": "Staff",
         "price": "Price (AZN)",
         "notes": "Notes",
@@ -1464,6 +1493,7 @@
     "steps": {
       "gender": "Who is it for?",
       "service": "Choose a service",
+      "addons": "Add-ons",
       "employee": "Choose a specialist",
       "date": "Choose a date",
       "time": "Choose a time",
@@ -1471,6 +1501,11 @@
     },
     "noServices": "No matching services.",
     "noEmployees": "No specialist for this service.",
+    "addonsHint": "Add extras if you like — the total is calculated automatically.",
+    "addonsNone": "No add-ons",
+    "total": "Total",
+    "continue": "Continue",
+    "continueWithoutAddons": "Continue without add-ons",
     "noSlots": "No free slots for this day.",
     "pickAnotherDay": "Pick another day",
     "slotsLoadError": "Couldn't load times.",
@@ -1502,7 +1537,8 @@
       "tooFar": "That date is too far ahead. Please pick a nearer day.",
       "serviceMismatch": "That specialist doesn't offer this service. Please choose again.",
       "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly.",
-      "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
+      "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words.",
+      "addonUnavailable": "One of the add-ons you chose is no longer available. Refresh the page and choose again."
     },
     "success": {
       "title": "Booking confirmed!",
@@ -1520,6 +1556,7 @@
     "rows": {
       "customer": "Customer",
       "service": "Service",
+      "addons": "Add-ons",
       "employee": "Specialist",
       "date": "Date",
       "price": "Price"

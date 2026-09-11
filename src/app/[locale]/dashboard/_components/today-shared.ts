@@ -3,6 +3,7 @@
 // a row without pulling in a client module.
 
 import { bakuMinutesOfDay, minutesToHHMM } from "@/lib/time";
+import { serviceWithAddons } from "@/lib/addons";
 import type { SerializedBooking } from "@/lib/serializers/booking";
 import { azn } from "./calendar-shared";
 
@@ -13,7 +14,7 @@ export interface TodayAppointment {
   time: string; // Baku "HH:MM"
   status: TodayApptStatus;
   overdue: boolean; // CONFIRMED and end time already passed
-  service: string;
+  service: string; // service + booked add-ons, one line
   employee: string;
   clientName: string;
   /**
@@ -40,7 +41,7 @@ export function toTodayAppointment(
     status: b.status as TodayApptStatus,
     // A past-but-still-CONFIRMED booking needs closing (complete / no-show).
     overdue: b.status === "CONFIRMED" && b.endsAt.getTime() < now,
-    service: b.serviceName,
+    service: serviceWithAddons(b.serviceName, b.addonNames),
     employee: b.employeeName,
     clientName: b.customerName,
     priceLabel: `${azn(b.priceMinor)} ₼`,

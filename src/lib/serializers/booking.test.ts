@@ -41,6 +41,7 @@ function row(overrides: Partial<BookingRow> = {}): BookingRow {
     manageToken: "3f2b9c11-6a4d-4e0b-9c1f-2d7e5a8b4c60",
     attendeeName: null,
     service: { name: "Saç kəsimi" },
+    addons: [],
     employee: { name: "Aysel", position: "Usta" },
     customer: { id: "cust-1", name: "Nigar", phone: PHONE },
     serviceNote: NOTE,
@@ -131,6 +132,14 @@ describe("serializeBookingForRole", () => {
     expect(b.customerName).toBe("Leyla");
   });
 
+  it("carries the booked add-ons to every role — they are part of the job", () => {
+    const withAddons = row({ addons: [{ name: "French" }, { name: "Nail art" }] });
+    for (const role of ["STAFF", "OWNER", "ADMIN"] as const) {
+      expect(serializeBookingForRole(withAddons, role).addonNames).toEqual(["French", "Nail art"]);
+    }
+    expect(serializeBookingForRole(row(), "STAFF").addonNames).toEqual([]);
+  });
+
   it("keeps the phone and the raw note for the owner and the platform admin", () => {
     for (const role of ["OWNER", "ADMIN"] as const) {
       const b = serializeBookingForRole(row(), role);
@@ -214,6 +223,20 @@ describe("the props the dashboard streams into its RSC payload", () => {
     expect(block("OWNER").customerPhone).toBe(PHONE);
     expect(block("OWNER").serviceNote).toBe(NOTE);
     expect(todayRow("OWNER").clientPhone).toBe(PHONE);
+  });
+
+  it("shows the booked add-ons in the calendar block and the today row", () => {
+    const b = serializeBookingForRole(
+      row({ addons: [{ name: "French" }], priceMinor: 3000 }),
+      "STAFF",
+    );
+    const cal = toCalendarBlock(b, "emp-1", dateLabel);
+    expect(cal.title).toBe("Saç kəsimi");
+    expect(cal.addons).toEqual(["French"]);
+    const today = toTodayAppointment(b);
+    expect(today.service).toBe("Saç kəsimi + French");
+    // priceMinor is the booking's total, add-ons included.
+    expect(today.priceLabel).toBe("30 ₼");
   });
 });
 
