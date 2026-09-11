@@ -20,6 +20,7 @@ export function ManageWidget({
   salonSlug,
   customerName,
   service,
+  addons,
   durationMin,
   employee,
   whenLabel,
@@ -33,6 +34,9 @@ export function ManageWidget({
   salonSlug: string;
   customerName: string;
   service: string;
+  /** Add-ons booked on top of the service; may be empty. */
+  addons: string[];
+  /** Service + add-ons, minutes. */
   durationMin: number;
   employee: string;
   whenLabel: string;
@@ -170,6 +174,7 @@ export function ManageWidget({
         <dl className="space-y-2.5 text-sm">
           <Row label={t("rows.customer")} value={customerName} />
           <Row label={t("rows.service")} value={`${service} · ${t("minutesShort", { min: durationMin })}`} />
+          {addons.length > 0 && <Row label={t("rows.addons")} value={addons.join(", ")} />}
           <Row label={t("rows.employee")} value={employee} />
           <Row label={t("rows.date")} value={whenLabel} />
           <Row label={t("rows.price")} value={`${azn(priceMinor)} ₼`} />

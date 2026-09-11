@@ -7,6 +7,7 @@ import { useModalA11y } from "@/components/use-modal-a11y";
 import { minutesToHHMM } from "@/lib/time";
 import { setAppointmentStatus, rescheduleSlots, rescheduleAppointment } from "../actions";
 import { buildWhatsAppLink } from "@/lib/whatsapp-link";
+import { serviceWithAddons } from "@/lib/addons";
 import type { Slot } from "@/lib/availability";
 import {
   blockBadge,
@@ -114,7 +115,7 @@ export function AppointmentPopup({
   const waQuickHref = phone
     ? buildWhatsAppLink(phone, upcoming ? "reminder" : "reviewRequest", {
         salon: salonName,
-        service: block.title,
+        service: serviceWithAddons(block.title, block.addons),
         client: block.subtitle,
         when: `${block.dateLabel}, ${minutesToHHMM(block.startMin)}`,
       })
@@ -190,6 +191,9 @@ export function AppointmentPopup({
             label={t("popup.time")}
             value={`${minutesToHHMM(block.startMin)} – ${minutesToHHMM(block.endMin)}`}
           />
+          {block.addons.length > 0 && (
+            <Row label={t("popup.addons")} value={block.addons.join(", ")} />
+          )}
           <Row label={t("popup.price")} value={`${azn(block.priceMinor)} ₼`} />
           <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>

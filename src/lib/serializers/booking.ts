@@ -99,6 +99,9 @@ export function bookingSelectForRole(role: BookingViewerRole) {
     manageToken: true,
     attendeeName: true,
     service: { select: { name: true } },
+    // The add-ons as booked (snapshots). Part of the job, so every role reads
+    // them; priceMinor above already includes their prices.
+    addons: { select: { name: true }, orderBy: { name: "asc" as const } },
     employee: { select: { name: true, position: true } },
     customer: { select: bookingCustomerSelect(role) },
     // Read for every role. A master sees the service note — it is how they know
@@ -124,6 +127,7 @@ export interface BookingRow {
   manageToken: string;
   attendeeName: string | null;
   service: { name: string };
+  addons: { name: string }[];
   employee: { name: string; position: string | null };
   customer: { id: string; name: string; phone?: string };
   serviceNote: string | null;
@@ -151,6 +155,8 @@ export interface SerializedBooking {
    *  that page and its API expose the appointment, never the phone. */
   manageToken: string;
   serviceName: string;
+  /** Add-ons booked on top of the service ("French", "Nail art"); may be empty. */
+  addonNames: string[];
   employeeName: string;
   employeePosition: string | null;
   customerId: string;
@@ -189,6 +195,7 @@ export function serializeBookingForRole(
     priceMinor: booking.priceMinor,
     manageToken: booking.manageToken,
     serviceName: booking.service.name,
+    addonNames: booking.addons.map((a) => a.name),
     employeeName: booking.employee.name,
     employeePosition: booking.employee.position,
     customerId: booking.customer.id,

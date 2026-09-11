@@ -152,11 +152,24 @@ export default async function BookingPage({
 
   // Catalog of the SELECTED branch (each branch has its own staff + services),
   // plus its rating aggregate and recent reviews (public; no client identity).
-  const [services, employees, reviewAgg, salonReviews] = await Promise.all([
+  const [services, addons, employees, reviewAgg, salonReviews] = await Promise.all([
     prisma.service.findMany({
       where: { salonId: selected.id, isActive: true },
       select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
       orderBy: { name: "asc" },
+    }),
+    // Optional extras, each with the services it is offered with. Creation
+    // order, so the salon controls the order customers see them in.
+    prisma.serviceAddon.findMany({
+      where: { salonId: selected.id, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        priceMinor: true,
+        durationMin: true,
+        services: { select: { serviceId: true } },
+      },
+      orderBy: { createdAt: "asc" },
     }),
     prisma.employee.findMany({
       where: { salonId: selected.id, isActive: true },
@@ -227,6 +240,13 @@ export default async function BookingPage({
     priceMinor: s.priceMinor,
     durationMin: s.durationMin,
     audience: s.audience as Audience,
+  }));
+  const bookingAddons = addons.map((a) => ({
+    id: a.id,
+    name: a.name,
+    priceMinor: a.priceMinor,
+    durationMin: a.durationMin,
+    serviceIds: a.services.map((l) => l.serviceId),
   }));
   const bookingEmployees = employees.map((e) => ({
     id: e.id,
@@ -356,6 +376,7 @@ export default async function BookingPage({
           slug={selected.slug}
           salonAudience={selected.audience as Audience}
           services={bookingServices}
+          addons={bookingAddons}
           employees={bookingEmployees}
           days={days}
           initialServiceId={initialServiceId}

@@ -9,8 +9,10 @@ import {
   SlotTakenError,
   SlotUnavailableError,
   PlanLimitError,
+  AddonUnavailableError,
   MAX_BOOKING_AHEAD_DAYS,
 } from "@/lib/booking";
+import { MAX_ADDONS_PER_BOOKING } from "@/lib/addons";
 import { rateLimit, peekOutboundQuota, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
 import { getClientSession } from "@/lib/auth/client-session";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -33,6 +35,9 @@ const LIMITS = {
 
 const bodySchema = z.object({
   serviceId: z.string().uuid(),
+  // Optional extras on top of the service. Only ids: createBooking prices and
+  // times them from the catalog, so a client cannot name its own price.
+  addonIds: z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING).optional(),
   employeeId: z.string().uuid(),
   startUtc: z.string().datetime(), // ISO instant from the availability response
   name: z
@@ -204,6 +209,7 @@ export async function POST(
     const result = await createBooking({
       salonId: salon.id,
       serviceId: parsed.data.serviceId,
+      addonIds: parsed.data.addonIds,
       employeeId: parsed.data.employeeId,
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: marketingOptIn },
@@ -234,6 +240,11 @@ export async function POST(
     }
     if (e instanceof SlotUnavailableError) {
       return NextResponse.json({ error: e.message, code: "SLOT_UNAVAILABLE" }, { status: 409 });
+    }
+    if (e instanceof AddonUnavailableError) {
+      // The salon changed its add-ons while this page was open. Not a 409: the
+      // widget sends those back to the time step, and the slot is not the issue.
+      return NextResponse.json({ error: e.message, code: "ADDON_UNAVAILABLE" }, { status: 422 });
     }
     if (e instanceof PlanLimitError) {
       // e.message names the plan and its quota. That is useful in a log and

@@ -151,8 +151,10 @@ model Salon {
   account      Account       @relation(fields: [accountId], references: [id])
   employees    Employee[]
   services     Service[]
+  serviceAddons ServiceAddon[]
   customers    Customer[]
   appointments Appointment[]
+  appointmentAddons AppointmentAddon[]
   memberships  Membership[]
   payouts      Payout[]
   customerNotes CustomerNote[]
@@ -256,10 +258,42 @@ model Service {
   audience     Audience          @default(ALL)
   salon        Salon             @relation(fields: [salonId], references: [id])
   employees    ServiceEmployee[]
+  addons       ServiceAddonLink[]
   appointments Appointment[]
   createdAt    DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([salonId])
+}
+
+// An optional extra the customer can add to a main service while booking
+// ("French +5 ₼", "Nail art +3 ₼"). Never bookable on its own: it is offered only
+// with the services it is linked to, and its price and extra time are added to
+// that booking's. One choice at several price points (nail art 3/5/10 ₼) is
+// several add-ons.
+model ServiceAddon {
+  id          String             @id @default(uuid())
+  salonId     String
+  name        String
+  priceMinor  Int // qəpik, added to the main service's price
+  durationMin Int                @default(0) // added to the main service's length
+  isActive    Boolean            @default(true)
+  salon       Salon              @relation(fields: [salonId], references: [id])
+  services    ServiceAddonLink[]
+  bookings    AppointmentAddon[]
+  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([salonId])
+}
+
+// Which add-ons are offered with which main service.
+model ServiceAddonLink {
+  serviceId String
+  addonId   String
+  service   Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  addon     ServiceAddon @relation(fields: [addonId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, addonId])
+  @@index([addonId])
 }
 
 // Which staff can perform which service.
@@ -352,7 +386,9 @@ model Appointment {
   // (→ COMPLETED) that staff never marked. Surfaced as "unconfirmed" so a
   // no-show can still be corrected by hand. See worker/processors/reconcile.ts.
   autoCompleted Boolean           @default(false)
-  priceMinor    Int // snapshot at booking time
+  // Snapshot at booking time: the service's price plus every chosen add-on's
+  // (itemised in `addons`). Revenue, payroll and the ROI dashboard sum this.
+  priceMinor    Int
   source        BookingSource     @default(PUBLIC)
   // What the customer wants from the SERVICE — "tünd çalar", "allergiya var".
   // Written by the customer on the public form and by staff on a manual entry,
@@ -378,6 +414,7 @@ model Appointment {
   employee      Employee          @relation(fields: [employeeId], references: [id])
   service       Service           @relation(fields: [serviceId], references: [id])
   customer      Customer          @relation(fields: [customerId], references: [id])
+  addons        AppointmentAddon[]
   notifications Notification[]
   review        Review?
   createdAt     DateTime          @default(now()) @db.Timestamptz(3)
@@ -390,6 +427,27 @@ model Appointment {
   @@index([customerId, startsAt(sort: Desc)])
   // Service deletion checks and the per-service analytics breakdown.
   @@index([serviceId])
+}
+
+// The add-ons chosen for one appointment, copied at booking time for the same
+// reason Appointment.priceMinor is: renaming, repricing or deleting the add-on
+// later must not rewrite what this customer booked. durationMin is kept so a
+// reschedule re-checks the slot with the length that was actually booked.
+model AppointmentAddon {
+  id            String        @id @default(uuid())
+  salonId       String
+  appointmentId String
+  addonId       String? // null once the add-on itself is deleted; the copy stays
+  name          String
+  priceMinor    Int
+  durationMin   Int
+  salon         Salon         @relation(fields: [salonId], references: [id])
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  addon         ServiceAddon? @relation(fields: [addonId], references: [id], onDelete: SetNull)
+
+  @@index([appointmentId])
+  @@index([addonId])
+  @@index([salonId])
 }
 
 enum AppointmentStatus {

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import type { Slot } from "@/lib/availability";
+import { addonTotals } from "@/lib/addons";
 import { hasContact } from "@/lib/serializers/redact-notes";
 import { availableSlots, createManualBooking } from "../actions";
 import {
@@ -14,9 +15,10 @@ import {
   type CatalogEmployee,
 } from "./calendar-shared";
 
-// Staff-entered ("manual") booking: pick master → service → day → free slot,
-// then the customer's name and phone. Slots come from the same availability
-// engine the public flow uses, so a manual booking can't double-book either.
+// Staff-entered ("manual") booking: pick master → service (+ add-ons) → day →
+// free slot, then the customer's name and phone. Slots come from the same
+// availability engine the public flow uses, so a manual booking can't
+// double-book either.
 
 export function BookingModal({
   catalog,
@@ -43,6 +45,7 @@ export function BookingModal({
   const fid = useId();
   const [employeeId, setEmployeeId] = useState("");
   const [serviceId, setServiceId] = useState("");
+  const [addonIds, setAddonIds] = useState<string[]>([]);
   const [day, setDay] = useState(defaultDay);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(initialName);
@@ -55,7 +58,19 @@ export function BookingModal({
   const [submitting, startSubmit] = useTransition();
 
   const services = catalog.find((e) => e.id === employeeId)?.services ?? [];
+  const selectedService = services.find((s) => s.id === serviceId) ?? null;
+  const serviceAddons = selectedService?.addons ?? [];
+  const extra = addonTotals(serviceAddons.filter((a) => addonIds.includes(a.id)));
   const ready = employeeId && serviceId && day;
+  // A stable dependency for the slots effect: the add-ons lengthen the booking.
+  const addonKey = addonIds.join(",");
+
+  function toggleAddon(id: string) {
+    setAddonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+    // A longer (or shorter) booking fits different slots.
+    setSlot(null);
+    setError(null);
+  }
 
   // Load free slots whenever the (employee, service, day) triple is complete.
   useEffect(() => {
@@ -66,7 +81,12 @@ export function BookingModal({
     let cancelled = false;
     setSlotsLoading(true);
     setSlots(null);
-    availableSlots({ employeeId, serviceId, day })
+    availableSlots({
+      employeeId,
+      serviceId,
+      addonIds: addonKey ? addonKey.split(",") : [],
+      day,
+    })
       .then((res) => {
         if (cancelled) return;
         if (res.ok) setSlots(res.slots);
@@ -81,7 +101,7 @@ export function BookingModal({
     return () => {
       cancelled = true;
     };
-  }, [employeeId, serviceId, day]);
+  }, [employeeId, serviceId, addonKey, day]);
 
   function submit() {
     setError(null);
@@ -98,6 +118,7 @@ export function BookingModal({
       const res = await createManualBooking({
         employeeId,
         serviceId,
+        addonIds,
         startUtc: slot.startUtc,
         name: name.trim(),
         phone: "+994" + digits,
@@ -150,6 +171,7 @@ export function BookingModal({
               onChange={(e) => {
                 setEmployeeId(e.target.value);
                 setServiceId("");
+                setAddonIds([]);
                 setSlot(null);
                 setError(null);
               }}
@@ -175,6 +197,7 @@ export function BookingModal({
               disabled={!employeeId}
               onChange={(e) => {
                 setServiceId(e.target.value);
+                setAddonIds([]);
                 setSlot(null);
                 setError(null);
               }}
@@ -194,6 +217,44 @@ export function BookingModal({
               </p>
             )}
           </div>
+
+          {/* Add-ons offered with this service: their price and minutes are
+              added to the booking (the slots below already account for them). */}
+          {selectedService && serviceAddons.length > 0 && (
+            <div role="group" aria-labelledby={`${fid}-addons`}>
+              <span id={`${fid}-addons`} className={labelCls}>
+                {t("modal.addons")}
+              </span>
+              <div className="space-y-1.5">
+                {serviceAddons.map((a) => (
+                  <label
+                    key={a.id}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-hover"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={addonIds.includes(a.id)}
+                        onChange={() => toggleAddon(a.id)}
+                        className="h-4 w-4 shrink-0 accent-rose-600"
+                      />
+                      <span className="truncate">{a.name}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      +{azn(a.priceMinor)} ₼
+                      {a.durationMin > 0 && ` · +${t("modal.minutesShort", { min: a.durationMin })}`}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {t("modal.total", {
+                  price: azn(selectedService.priceMinor + extra.priceMinor),
+                  min: selectedService.durationMin + extra.durationMin,
+                })}
+              </p>
+            </div>
+          )}
 
           {/* Date */}
           <div>

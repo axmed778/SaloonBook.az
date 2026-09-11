@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import { prisma } from "../../src/lib/prisma";
 import { sendWebPush } from "../../src/lib/push";
 import { formatBakuDateTime } from "../../src/lib/time";
+import { serviceWithAddons } from "../../src/lib/addons";
 import type { PushJob } from "../../src/lib/queue";
 
 const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -20,6 +21,7 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
       startsAt: true,
       attendeeName: true,
       service: { select: { name: true } },
+      addons: { select: { name: true }, orderBy: { name: "asc" } },
       customer: { select: { name: true } },
     },
   });
@@ -35,7 +37,11 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
 
   const who = appt.attendeeName ?? appt.customer.name;
   const when = formatBakuDateTime(appt.startsAt);
-  const detail = `${who} · ${appt.service.name} · ${when}`;
+  const service = serviceWithAddons(
+    appt.service.name,
+    appt.addons.map((a) => a.name),
+  );
+  const detail = `${who} · ${service} · ${when}`;
 
   let title: string;
   switch (type) {

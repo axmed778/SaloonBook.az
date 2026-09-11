@@ -2,6 +2,7 @@
 // "use client" component files so the server page can import the constants and
 // types without pulling in a client module.
 
+import type { Prisma } from "@prisma/client";
 import { bakuMinutesOfDayOn, bakuYmd } from "@/lib/time";
 import type { SerializedBooking } from "@/lib/serializers/booking";
 
@@ -32,6 +33,7 @@ export type CalendarBlock = {
   startMin: number; // real minutes from the start day's Baku midnight (unclamped)
   endMin: number; // includes service buffer; capped at 1440 if it runs to midnight
   title: string; // service name
+  addons: string[]; // add-ons booked on top of the service (may be empty)
   subtitle: string; // customer name
   status: "CONFIRMED" | "COMPLETED" | "NO_SHOW";
   // True when the 48h reconcile sweep auto-closed this (→ COMPLETED) rather than
@@ -81,6 +83,7 @@ export function toCalendarBlock(
     startMin: bakuMinutesOfDayOn(b.startsAt, startYmd),
     endMin: Math.min(bakuMinutesOfDayOn(b.endsAt, startYmd), MINUTES_IN_DAY),
     title: b.serviceName,
+    addons: b.addonNames,
     subtitle: b.customerName,
     status: b.status as CalendarBlock["status"],
     autoCompleted: b.autoCompleted,
@@ -101,18 +104,49 @@ export function toCalendarBlock(
 }
 
 // Catalog backing the manual-booking form: active employees and, per employee,
-// the active services they can perform.
+// the active services they can perform, each with its active add-ons.
+export type CatalogAddon = {
+  id: string;
+  name: string;
+  priceMinor: number;
+  durationMin: number;
+};
 export type CatalogService = {
   id: string;
   name: string;
   priceMinor: number;
   durationMin: number;
+  addons: CatalogAddon[];
 };
 export type CatalogEmployee = {
   id: string;
   name: string;
   services: CatalogService[];
 };
+
+/** The Prisma select for one catalog service; pair with toCatalogService(). */
+export const CATALOG_SERVICE_SELECT = {
+  id: true,
+  name: true,
+  priceMinor: true,
+  durationMin: true,
+  addons: {
+    where: { addon: { isActive: true } },
+    orderBy: { addon: { createdAt: "asc" } },
+    select: { addon: { select: { id: true, name: true, priceMinor: true, durationMin: true } } },
+  },
+} satisfies Prisma.ServiceSelect;
+
+/** A service row read with CATALOG_SERVICE_SELECT -> the catalog shape. */
+export function toCatalogService(s: {
+  id: string;
+  name: string;
+  priceMinor: number;
+  durationMin: number;
+  addons: { addon: CatalogAddon }[];
+}): CatalogService {
+  return { ...s, addons: s.addons.map((l) => l.addon) };
+}
 
 // Per-status presentation, shared by the grids and the detail popup.
 export const STATUS_STYLES: Record<CalendarBlock["status"], string> = {

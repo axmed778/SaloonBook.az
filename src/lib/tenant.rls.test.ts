@@ -36,13 +36,15 @@ const SALON_ID_MODELS = [
   "customerNote",
   "usageCounter",
   "review",
+  "serviceAddon",
+  "appointmentAddon",
 ] as const;
 
 /**
  * Tables with no salonId of their own: rls.sql scopes them through their parent
  * employee, so the isolation assertions key on employeeId instead.
- * ServiceEmployee is handled separately — it is a junction with two parents and
- * no scalar id.
+ * ServiceEmployee and ServiceAddonLink are handled separately — junctions with
+ * two parents and no scalar id.
  */
 const EMPLOYEE_REF_MODELS = ["workingHour", "timeOff"] as const;
 
@@ -56,6 +58,7 @@ type Tenant = {
   clientId: string;
   workingHourId: string;
   timeOffId: string;
+  addonId: string;
 };
 
 async function seedTenant(db: PrismaClient, tag: string, dayOffset: number): Promise<Tenant> {
@@ -85,6 +88,10 @@ async function seedTenant(db: PrismaClient, tag: string, dayOffset: number): Pro
     },
   });
   await db.serviceEmployee.create({ data: { serviceId: service.id, employeeId: employee.id } });
+  const addon = await db.serviceAddon.create({
+    data: { salonId: salon.id, name: `French ${tag}`, priceMinor: 500 },
+  });
+  await db.serviceAddonLink.create({ data: { serviceId: service.id, addonId: addon.id } });
 
   // Distinct windows per tenant so the overlap EXCLUDE constraint can never fire.
   const startsAt = new Date(Date.UTC(2030, 0, 1 + dayOffset, 9, 0, 0));
@@ -97,8 +104,18 @@ async function seedTenant(db: PrismaClient, tag: string, dayOffset: number): Pro
       customerId: customer.id,
       startsAt,
       endsAt,
-      priceMinor: 1000,
+      priceMinor: 1500,
       status: "COMPLETED",
+    },
+  });
+  await db.appointmentAddon.create({
+    data: {
+      salonId: salon.id,
+      appointmentId: appointment.id,
+      addonId: addon.id,
+      name: addon.name,
+      priceMinor: 500,
+      durationMin: 0,
     },
   });
 
@@ -130,6 +147,7 @@ async function seedTenant(db: PrismaClient, tag: string, dayOffset: number): Pro
     clientId: client.id,
     workingHourId: workingHour.id,
     timeOffId: timeOff.id,
+    addonId: addon.id,
   };
 }
 
@@ -140,11 +158,14 @@ async function destroyTenant(db: PrismaClient, t: Tenant): Promise<void> {
   await db.notification.deleteMany({ where: { salonId: t.salonId } });
   await db.payout.deleteMany({ where: { salonId: t.salonId } });
   await db.customerNote.deleteMany({ where: { salonId: t.salonId } });
+  await db.appointmentAddon.deleteMany({ where: { salonId: t.salonId } });
   await db.appointment.deleteMany({ where: { salonId: t.salonId } });
   await db.customer.deleteMany({ where: { salonId: t.salonId } });
   await db.serviceEmployee.deleteMany({ where: { employeeId: t.employeeId } });
+  await db.serviceAddonLink.deleteMany({ where: { serviceId: t.serviceId } });
   await db.workingHour.deleteMany({ where: { employeeId: t.employeeId } });
   await db.timeOff.deleteMany({ where: { employeeId: t.employeeId } });
+  await db.serviceAddon.deleteMany({ where: { salonId: t.salonId } });
   await db.service.deleteMany({ where: { salonId: t.salonId } });
   await db.employee.deleteMany({ where: { salonId: t.salonId } });
   await db.salon.deleteMany({ where: { id: t.salonId } });
@@ -200,6 +221,10 @@ describe.skipIf(!OWNER_URL || !APP_URL)("RLS tenant isolation", () => {
       where: { employeeId: { in: [A.employeeId, B.employeeId] } },
     });
     expect(links.length).toBe(2);
+    const addonLinks = await owner.serviceAddonLink.findMany({
+      where: { addonId: { in: [A.addonId, B.addonId] } },
+    });
+    expect(addonLinks.length).toBe(2);
     const salons = await owner.salon.findMany({ where: { id: { in: [A.salonId, B.salonId] } } });
     expect(salons.length).toBe(2);
   });
@@ -226,6 +251,8 @@ describe.skipIf(!OWNER_URL || !APP_URL)("RLS tenant isolation", () => {
       }
       const links = await tx.serviceEmployee.findMany({});
       expect(links).toEqual([{ serviceId: A.serviceId, employeeId: A.employeeId }]);
+      const addonLinks = await tx.serviceAddonLink.findMany({});
+      expect(addonLinks).toEqual([{ serviceId: A.serviceId, addonId: A.addonId }]);
 
       const salons = await tx.salon.findMany({});
       expect(salons.map((s) => s.id)).toEqual([A.salonId]);
@@ -241,6 +268,12 @@ describe.skipIf(!OWNER_URL || !APP_URL)("RLS tenant isolation", () => {
       expect(
         await tx.serviceEmployee.findUnique({
           where: { serviceId_employeeId: { serviceId: B.serviceId, employeeId: B.employeeId } },
+        }),
+      ).toBeNull();
+      expect(await tx.serviceAddon.findUnique({ where: { id: B.addonId } })).toBeNull();
+      expect(
+        await tx.serviceAddonLink.findUnique({
+          where: { serviceId_addonId: { serviceId: B.serviceId, addonId: B.addonId } },
         }),
       ).toBeNull();
     });
@@ -289,6 +322,19 @@ describe.skipIf(!OWNER_URL || !APP_URL)("RLS tenant isolation", () => {
     await expect(
       withTenantScope(A.salonId, (tx) =>
         tx.serviceEmployee.create({ data: { serviceId: A.serviceId, employeeId: B.employeeId } }),
+      ),
+    ).rejects.toThrow();
+
+    // Same two-parent rule for add-ons, in both directions: A's add-on onto B's
+    // service, and B's add-on onto A's service.
+    await expect(
+      withTenantScope(A.salonId, (tx) =>
+        tx.serviceAddonLink.create({ data: { serviceId: B.serviceId, addonId: A.addonId } }),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      withTenantScope(A.salonId, (tx) =>
+        tx.serviceAddonLink.create({ data: { serviceId: A.serviceId, addonId: B.addonId } }),
       ),
     ).rejects.toThrow();
 
