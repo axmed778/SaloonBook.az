@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
-import { requireOwnerSalonId } from "@/lib/auth/guards";
+import { requirePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuPeriodYm } from "@/lib/time";
 import { deleteCustomerReviews } from "../../_lib/salon-rating";
@@ -37,7 +37,7 @@ const customerSchema = z.object({
 });
 
 export async function updateCustomer(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("clients.write");
   const t = await getTranslations("Clients.errors");
   const parsed = customerSchema.safeParse(input);
   if (!parsed.success) {
@@ -92,7 +92,7 @@ export type CreateCustomerResult =
  * number returns a clear "already exists" error rather than a 500.
  */
 export async function createCustomer(input: unknown): Promise<CreateCustomerResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("clients.write");
   const t = await getTranslations("Clients.errors");
   const parsed = newCustomerSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -128,7 +128,7 @@ const noteSchema = z.object({
 });
 
 export async function addCustomerNote(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("clients.write");
   const t = await getTranslations("Clients.errors");
   const parsed = noteSchema.safeParse(input);
   if (!parsed.success) {
@@ -152,7 +152,7 @@ export async function addCustomerNote(input: unknown): Promise<ActionResult> {
 }
 
 export async function deleteCustomerNote(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("clients.write");
   const t = await getTranslations("Clients.errors");
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
@@ -178,7 +178,7 @@ export async function deleteCustomerNote(id: string): Promise<ActionResult> {
  * commission that was already paid out.
  */
 export async function deleteCustomer(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("clients.delete");
   const t = await getTranslations("Clients.errors");
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 

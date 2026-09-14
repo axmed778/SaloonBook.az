@@ -9,6 +9,7 @@ import { SidebarNav } from "./sidebar-nav";
 import { BottomTabBar } from "./bottom-tab-bar";
 import { BranchSwitcher, type BranchOption } from "./branch-switcher";
 import { LogoutButton } from "../logout-button";
+import type { Permission } from "@/lib/auth/permissions";
 
 type User = { name: string; role: string; initial: string };
 type BranchData = { branches: BranchOption[]; activeId: string };
@@ -20,15 +21,15 @@ const STORAGE_KEY = "sb_sidebar_collapsed";
 export function DashboardShell({
   user,
   isAdmin = false,
-  isStaff = false,
+  permissions = [],
   branch = null,
   installDismissed = false,
   children,
 }: {
   user: User;
   isAdmin?: boolean;
-  /** A master's own login: the salon-management sections are not theirs. */
-  isStaff?: boolean;
+  /** What the signed-in role may do; decides which sections the menus offer. */
+  permissions?: readonly Permission[];
   branch?: BranchData | null;
   installDismissed?: boolean;
   children: React.ReactNode;
@@ -70,7 +71,7 @@ export function DashboardShell({
         <SidebarContent
           user={user}
           isAdmin={isAdmin}
-          isStaff={isStaff}
+          permissions={permissions}
           branch={branch}
           collapsed={collapsed}
           onToggleCollapse={toggleCollapse}
@@ -95,7 +96,7 @@ export function DashboardShell({
           <SidebarContent
             user={user}
             isAdmin={isAdmin}
-            isStaff={isStaff}
+            permissions={permissions}
             branch={branch}
             collapsed={false}
             onNavigate={() => setMobileOpen(false)}
@@ -137,7 +138,7 @@ export function DashboardShell({
       </div>
 
       {/* Phone-only bottom navigation (hidden on lg, which keeps the sidebar). */}
-      <BottomTabBar isStaff={isStaff} />
+      <BottomTabBar permissions={permissions} />
 
       {/* Installable-PWA prompt (Android beforeinstallprompt / iOS instructions).
           Client-side; renders nothing when already installed or dismissed. */}
@@ -149,7 +150,7 @@ export function DashboardShell({
 function SidebarContent({
   user,
   isAdmin,
-  isStaff,
+  permissions,
   branch,
   collapsed,
   onToggleCollapse,
@@ -158,7 +159,7 @@ function SidebarContent({
 }: {
   user: User;
   isAdmin: boolean;
-  isStaff: boolean;
+  permissions: readonly Permission[];
   branch?: BranchData | null;
   collapsed: boolean;
   onToggleCollapse?: () => void;
@@ -227,7 +228,7 @@ function SidebarContent({
           collapsed={collapsed}
           onNavigate={onNavigate}
           isAdmin={isAdmin}
-          isStaff={isStaff}
+          permissions={permissions}
         />
       </div>
 

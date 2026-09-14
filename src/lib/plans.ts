@@ -48,8 +48,20 @@ export interface PlanFeatures {
    * non-Pro plan always falls back to the platform number.
    */
   ownWhatsappNumber: boolean;
+  /** Record payments on bookings: take, edit, void, refund. Every paid tier. */
+  payments: boolean;
+  /** Close the day's shift against the till. Salon and Pro. */
+  shiftClose: boolean;
+  /** Payout schemes, adjustments and statements. Salon and Pro. */
+  payoutStatements: boolean;
+  /** Expenses and recurring-expense reminders. Salon and Pro. */
+  expenses: boolean;
+  /** Finance reports and the finance CSV/XLSX exports. Pro only. */
+  financeReports: boolean;
 }
 
+// The finance flags are mapped to permissions in src/lib/auth/permissions.ts
+// (PERMISSION_PLAN_FEATURE), which is where a gate is asked for.
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   // staffRoles is the one advanced-sounding flag every PAID tier carries: a
   // two-chair salon on Start is exactly who needs a login per master. FREE keeps
@@ -63,9 +75,15 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     deposits: false,
     payroll: false,
     ownWhatsappNumber: false,
+    payments: false,
+    shiftClose: false,
+    payoutStatements: false,
+    expenses: false,
+    financeReports: false,
   },
-  // Start = same feature floor as Basic (no advanced features); it differs only
-  // in enforcement limits (2 staff / 1 branch, see PLAN_LIMITS).
+  // Start = same feature floor as Basic (no advanced features); it differs in
+  // enforcement limits (2 staff / 1 branch, see PLAN_LIMITS) and in finance,
+  // where it gets payments only.
   START: {
     multiBranch: false,
     advancedAnalytics: false,
@@ -74,6 +92,11 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     deposits: false,
     payroll: false,
     ownWhatsappNumber: false,
+    payments: true,
+    shiftClose: false,
+    payoutStatements: false,
+    expenses: false,
+    financeReports: false,
   },
   BASIC: {
     multiBranch: false,
@@ -83,6 +106,11 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     deposits: false,
     payroll: false,
     ownWhatsappNumber: false,
+    payments: true,
+    shiftClose: true,
+    payoutStatements: true,
+    expenses: true,
+    financeReports: false,
   },
   PRO: {
     multiBranch: true,
@@ -92,6 +120,11 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     deposits: true,
     payroll: true,
     ownWhatsappNumber: true,
+    payments: true,
+    shiftClose: true,
+    payoutStatements: true,
+    expenses: true,
+    financeReports: true,
   },
 };
 

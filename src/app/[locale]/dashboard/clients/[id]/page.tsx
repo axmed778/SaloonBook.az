@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppointmentStatus } from "@prisma/client";
 import { getLocale } from "next-intl/server";
-import { getSession } from "@/lib/auth/session";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate, formatBakuDateTime } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
@@ -32,7 +32,10 @@ export default async function ClientProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = (await getSession())!;
+  // clients.read, like the list. This page used to check only for a salon, so a
+  // master — whose bookings carry each customer's id — could open a customer's
+  // profile, phone number and history directly.
+  const session = await requirePagePermission("clients.read");
   if (session.isAdmin || !session.salonId) notFound();
   const salonId = session.salonId;
   const df = intlLocale(await getLocale());

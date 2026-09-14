@@ -7,11 +7,19 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import type { Plan, Role } from "@prisma/client";
+import type { Plan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
 import { staffBlockedReason, type StaffBlockedReason } from "./access";
+import {
+  appRoleOf,
+  isEmployeeLogin,
+  rolePermissions,
+  spansAllBranches,
+  type AppRole,
+  type Permission,
+} from "./permissions";
 
 const COOKIE_NAME = "sb_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 30; // ~30 days
@@ -167,26 +175,34 @@ export interface Session {
     fullName: string | null;
     isPlatformAdmin: boolean;
   };
-  /** Role of the user's (single, MVP) membership, if any. */
-  role: Role | null;
   /**
-   * Employee the membership is tied to. Always set for a STAFF login (that is
-   * what makes it "this master's account"), always null for an OWNER.
+   * The product role of the user's (single, MVP) membership: OWNER, ADMIN,
+   * FINANCE or MASTER. Null without a membership, as for a platform admin.
+   */
+  appRole: AppRole | null;
+  /**
+   * What that role may do in its salon, before the plan is considered (see
+   * planIncludes). Empty for a blocked login. Ask it with hasPermission() —
+   * never by comparing appRole.
+   */
+  permissions: readonly Permission[];
+  /**
+   * Employee the membership is tied to. Always set for a master's login (that is
+   * what makes it "this master's account"), null for the owner.
    */
   employeeId: string | null;
-  /** True when this is a per-master (STAFF) login rather than the owner's. */
-  isStaff: boolean;
   /**
-   * Why a STAFF login is currently denied its salon, or null when it is fine.
-   * When set, `salonId` is deliberately null so every existing salon guard
-   * (`requireSalonId`, `where: { salonId }`) fails closed without knowing this
-   * rule exists; the dashboard layout reads the reason only to explain it.
+   * Why a master's login is currently denied its salon, or null when it is fine.
+   * When set, `salonId` is deliberately null and `permissions` empty, so every
+   * guard (`requirePermission`, `where: { salonId }`) fails closed without
+   * knowing this rule exists; the dashboard layout reads the reason only to
+   * explain it.
    */
   staffBlocked: StaffBlockedReason | null;
   /**
-   * The salon every dashboard page/action is scoped to. For a Pro owner this is
-   * the branch picked in the switcher (sb_branch cookie); otherwise the
-   * membership's home salon.
+   * The salon every dashboard page/action is scoped to. For a role that spans
+   * the account on a multi-branch (Pro) plan this is the branch picked in the
+   * switcher (sb_branch cookie); otherwise the membership's home salon.
    */
   salonId: string | null;
   /** Account behind the membership, if any. */
@@ -276,18 +292,18 @@ export async function getSession(): Promise<Session | null> {
   }
 
   const membership = user.memberships[0] ?? null;
+  const appRole = membership ? appRoleOf(membership.role) : null;
   const sub = membership?.account.subscription ?? null;
   const plan = effectivePlan(sub);
   const features = featuresFor(plan);
   const multiBranch = features.multiBranch;
 
-  // Is this a master's own login, and is it still entitled to one? Both answers
-  // are derived here, per request, from the plan and the employee row — never
-  // from the cookie — so a downgrade or a deactivation takes effect on the very
-  // next page load rather than whenever the session happens to expire.
-  const isStaff = membership?.role === "STAFF";
+  // Is this an employee's own login, and is it still entitled to one? Both
+  // answers are derived here, per request, from the plan and the employee row —
+  // never from the cookie — so a downgrade or a deactivation takes effect on the
+  // very next page load rather than whenever the session happens to expire.
   const staffBlocked = staffBlockedReason({
-    isStaff,
+    employeeLogin: appRole !== null && isEmployeeLogin(appRole),
     staffRolesEnabled: features.staffRoles,
     employeeIsActive: membership?.employee?.isActive,
   });
@@ -297,15 +313,16 @@ export async function getSession(): Promise<Session | null> {
     limitsFor(plan).maxBranches + (multiBranch ? (sub?.extraBranches ?? 0) : 0);
   const branches = membership?.account.salons ?? [];
 
-  // Default scope: the membership's home salon. Owners of a multi-branch (Pro)
-  // account may override it via the switcher cookie — but only to a salon that
-  // is still an ACTIVE member of THEIR account. Staff stay pinned to theirs.
+  // Default scope: the membership's home salon. A role that spans the account
+  // may override it on a multi-branch (Pro) account via the switcher cookie —
+  // but only to a salon that is still an ACTIVE member of THEIR account. Every
+  // other role stays pinned to its own.
   let salonId = membership?.salonId ?? null;
   // Fail closed: a blocked master keeps a valid session (so the layout can say
-  // why) but carries no salon, which is what every dashboard guard already
-  // refuses on. No other call site has to know this rule exists.
+  // why) but carries no salon and no permissions, which is what every dashboard
+  // guard already refuses on. No other call site has to know this rule exists.
   if (staffBlocked) salonId = null;
-  else if (membership?.role === "OWNER") {
+  else if (appRole !== null && spansAllBranches(appRole)) {
     if (!salonId) salonId = branches[0]?.id ?? null;
     const picked = store.get(BRANCH_COOKIE)?.value;
     if (picked && multiBranch && branches.some((b) => b.id === picked)) {
@@ -320,9 +337,9 @@ export async function getSession(): Promise<Session | null> {
       fullName: user.fullName,
       isPlatformAdmin: user.isPlatformAdmin,
     },
-    role: membership?.role ?? null,
+    appRole,
+    permissions: appRole === null || staffBlocked ? [] : rolePermissions(appRole),
     employeeId: membership?.employeeId ?? null,
-    isStaff,
     staffBlocked,
     salonId,
     accountId: membership?.accountId ?? null,

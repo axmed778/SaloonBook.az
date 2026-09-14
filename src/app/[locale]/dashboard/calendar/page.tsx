@@ -1,7 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
-import { getSession } from "@/lib/auth/session";
-import { appointmentScope } from "@/lib/auth/access";
+import { requirePagePermission } from "@/lib/auth/guards";
+import { appointmentScope, salonScopeFor } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
 import { intlLocale } from "@/i18n/format";
 import {
@@ -14,9 +14,9 @@ import {
   formatBakuDate,
 } from "@/lib/time";
 import {
-  bookingSelectForRole,
-  bookingViewerRole,
-  serializeBookingsForRole,
+  bookingSelectForViewer,
+  bookingViewer,
+  serializeBookingsForViewer,
   type BookingRow,
 } from "@/lib/serializers/booking";
 import { Calendar } from "../_components/calendar";
@@ -81,15 +81,28 @@ export default async function CalendarPage({
 }: {
   searchParams: Promise<{ day?: string; view?: string }>;
 }) {
-  // The layout already guarantees a session (redirects otherwise).
-  const session = (await getSession())!;
+  // Every role reads bookings; the gate is here so this page cannot quietly lose
+  // one. A master's own column is enforced by `scope` below.
+  const session = await requirePagePermission("bookings.read");
   const locale = await getLocale();
   const df = intlLocale(locale);
   const t = await getTranslations("Dashboard");
 
   // Platform admins manage accounts, not a salon calendar.
   if (session.isAdmin) redirect({ href: "/dashboard/admin", locale });
-  if (!session.salonId) {
+  // A master's dashboard is their own column and nothing else. `scope` carries
+  // that as data (null employeeId = the whole salon), so every query below is
+  // narrowed the same way the server actions are. No scope — no salon, or a
+  // master's login with no employee behind it — shows the empty state instead
+  // of widening to the whole salon.
+  const scope = session.salonId
+    ? salonScopeFor({
+        salonId: session.salonId,
+        appRole: session.appRole,
+        employeeId: session.employeeId,
+      })
+    : null;
+  if (!scope) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("noSalonTitle")}</h1>
@@ -100,15 +113,12 @@ export default async function CalendarPage({
     );
   }
 
-  const salonId = session.salonId;
-  // A master's dashboard is their own column and nothing else. `scope` carries
-  // that as data (null employeeId = the whole salon, i.e. the owner), so every
-  // query below is narrowed the same way the server actions are.
-  const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
+  const salonId = scope.salonId;
   // Which COLUMNS the queries below may read. For a master that excludes the
-  // customer's phone and the booking note, so the blocks streamed into the RSC
-  // payload have no contact data in them to be found by View Source.
-  const role = bookingViewerRole(session);
+  // customer's phone, and the booking note arrives with any contact cut out, so
+  // the blocks streamed into the RSC payload have no contact data in them to be
+  // found by View Source.
+  const viewer = bookingViewer(session);
   const { day: dayParam, view: viewParam } = await searchParams;
   const view = viewParam === "week" ? "week" : "day";
   const today = bakuToday();
@@ -156,7 +166,7 @@ export default async function CalendarPage({
     const { startUtc } = bakuDayBoundsUtc(weekStart);
     const { endUtc } = bakuDayBoundsUtc(weekEnd);
 
-    const appts = serializeBookingsForRole(
+    const appts = serializeBookingsForViewer(
       (await prisma.appointment.findMany({
         where: {
           ...appointmentScope(scope),
@@ -164,9 +174,9 @@ export default async function CalendarPage({
           startsAt: { gte: startUtc, lt: endUtc },
         },
         orderBy: { startsAt: "asc" },
-        select: bookingSelectForRole(role),
+        select: bookingSelectForViewer(viewer),
       })) as BookingRow[],
-      role,
+      viewer,
     );
 
     const weekDays: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
@@ -202,7 +212,7 @@ export default async function CalendarPage({
   // --- Day view ---
   const { startUtc, endUtc } = bakuDayBoundsUtc(day);
   const dateLabel = formatBakuDate(day, df);
-  const appts = serializeBookingsForRole(
+  const appts = serializeBookingsForViewer(
     (await prisma.appointment.findMany({
       where: {
         ...appointmentScope(scope),
@@ -210,9 +220,9 @@ export default async function CalendarPage({
         startsAt: { gte: startUtc, lt: endUtc },
       },
       orderBy: { startsAt: "asc" },
-      select: bookingSelectForRole(role),
+      select: bookingSelectForViewer(viewer),
     })) as BookingRow[],
-    role,
+    viewer,
   );
 
   const blocks = appts

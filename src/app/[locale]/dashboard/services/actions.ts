@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { requireOwnerSalonId } from "@/lib/auth/guards";
+import { requirePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
 // Server actions for the Services (Xidmətlər) screen. Every action re-derives
@@ -30,7 +30,7 @@ function toMinor(priceAzn: number): number {
 }
 
 export async function createService(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
@@ -53,7 +53,7 @@ export async function createService(input: unknown): Promise<ActionResult> {
 }
 
 export async function updateService(id: string, input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) {
@@ -70,7 +70,7 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
 }
 
 export async function setServiceActive(id: string, isActive: boolean): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   await prisma.service.updateMany({ where: { id, salonId }, data: { isActive } });
   revalidatePath("/dashboard/services");
   return { ok: true };
@@ -98,7 +98,7 @@ async function ownsServices(salonId: string, ids: string[]): Promise<boolean> {
 }
 
 export async function createAddon(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   const parsed = addonInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -120,7 +120,7 @@ export async function createAddon(input: unknown): Promise<ActionResult> {
 }
 
 export async function updateAddon(id: string, input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   const parsed = addonInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -148,14 +148,14 @@ export async function updateAddon(id: string, input: unknown): Promise<ActionRes
 }
 
 export async function setAddonActive(id: string, isActive: boolean): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   await prisma.serviceAddon.updateMany({ where: { id, salonId }, data: { isActive } });
   revalidatePath("/dashboard/services");
   return { ok: true };
 }
 
 export async function deleteAddon(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   // Unlike a service, an add-on can always go: its links cascade, and the
   // bookings that used it keep their copy (AppointmentAddon.addonId → null).
@@ -166,7 +166,7 @@ export async function deleteAddon(id: string): Promise<ActionResult> {
 }
 
 export async function deleteService(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("services.write");
   const t = await getTranslations("Services.errors");
   try {
     const res = await prisma.service.deleteMany({ where: { id, salonId } });

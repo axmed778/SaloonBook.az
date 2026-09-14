@@ -149,6 +149,14 @@ export async function subscriptionForSalon(
  * Throw (with a user-facing AZ message) if activating/creating one more active
  * employee would exceed the plan's seat limit. Deactivated employees don't
  * consume seats; pass `excludeEmployeeId` when re-saving an existing employee.
+ *
+ * Call it inside the transaction that then writes the employee. It locks the
+ * salon row before counting, so a second save for the same salon waits for this
+ * one to commit and then counts the seat it took. Without the lock both saves
+ * counted under READ COMMITTED, both saw a free seat, and the salon ended up one
+ * master over its plan. NO KEY UPDATE conflicts with itself but not with the KEY
+ * SHARE lock a booking insert takes on its Salon row, so bookings never wait on
+ * it.
  */
 export async function assertEmployeeSeatAvailable(
   db: Prisma.TransactionClient,
@@ -158,6 +166,7 @@ export async function assertEmployeeSeatAvailable(
   const sub = await subscriptionForSalon(db, salonId);
   const max = effectiveLimits(sub).maxEmployees;
   if (!Number.isFinite(max)) return;
+  await db.$queryRaw`SELECT 1 FROM "Salon" WHERE "id" = ${salonId} FOR NO KEY UPDATE`;
   const active = await db.employee.count({
     where: {
       salonId,

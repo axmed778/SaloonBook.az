@@ -1,13 +1,13 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
-import { appointmentScope } from "@/lib/auth/access";
+import { appointmentScope, salonScopeFor } from "@/lib/auth/access";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc, formatBakuDate } from "@/lib/time";
 import {
-  bookingSelectForRole,
-  bookingViewerRole,
-  serializeBookingsForRole,
+  bookingSelectForViewer,
+  bookingViewer,
+  serializeBookingsForViewer,
   type BookingRow,
 } from "@/lib/serializers/booking";
 import { TodayView } from "./_components/today-view";
@@ -17,6 +17,9 @@ export const dynamic = "force-dynamic";
 
 // Phone-first landing: today's appointments as a chronological, thumb-friendly
 // list ("Bu gün"). The full day/week grid moved to /dashboard/calendar.
+//
+// Every role lands here, and requirePagePermission() sends a refused role back
+// here, so this page guards by scope rather than by redirecting.
 export default async function DashboardTodayPage() {
   const session = (await getSession())!;
   const locale = await getLocale();
@@ -24,7 +27,20 @@ export default async function DashboardTodayPage() {
 
   // Platform admins manage accounts, not a salon.
   if (session.isAdmin) redirect({ href: "/dashboard/admin", locale });
-  if (!session.salonId) {
+
+  // A master's dashboard is their own column and nothing else. `scope` carries
+  // that as data (null employeeId = the whole salon), so every query below is
+  // narrowed the same way the server actions are. No scope — no salon, or a
+  // master's login with no employee behind it — shows the empty state instead of
+  // widening to the whole salon.
+  const scope = session.salonId
+    ? salonScopeFor({
+        salonId: session.salonId,
+        appRole: session.appRole,
+        employeeId: session.employeeId,
+      })
+    : null;
+  if (!scope) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="text-xl font-semibold text-foreground">{t("noSalonTitle")}</h1>
@@ -33,15 +49,11 @@ export default async function DashboardTodayPage() {
     );
   }
 
-  const salonId = session.salonId;
-  // A master's dashboard is their own column and nothing else. `scope` carries
-  // that as data (null employeeId = the whole salon, i.e. the owner), so every
-  // query below is narrowed the same way the server actions are.
-  const scope = { salonId, employeeId: session.isStaff ? session.employeeId : null };
-  // ...and `role` decides WHICH COLUMNS of those rows exist at all: a master's
+  const salonId = scope.salonId;
+  // ...and `viewer` decides WHICH COLUMNS of those rows exist at all: a master's
   // query never reads the customer's phone, so nothing downstream — this page,
   // the RSC payload, the client component — can leak it.
-  const role = bookingViewerRole(session);
+  const viewer = bookingViewer(session);
   const today = bakuToday();
   const { startUtc, endUtc } = bakuDayBoundsUtc(today);
   const now = Date.now();
@@ -60,10 +72,10 @@ export default async function DashboardTodayPage() {
       startsAt: { gte: startUtc, lt: endUtc },
     },
     orderBy: { startsAt: "asc" },
-    select: bookingSelectForRole(role),
+    select: bookingSelectForViewer(viewer),
   })) as BookingRow[];
 
-  const items: TodayAppointment[] = serializeBookingsForRole(appts, role).map((b) =>
+  const items: TodayAppointment[] = serializeBookingsForViewer(appts, viewer).map((b) =>
     toTodayAppointment(b, now),
   );
 

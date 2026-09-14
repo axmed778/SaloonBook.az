@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { requireOwnerSalonId, requireOwnerSession } from "@/lib/auth/guards";
+import { requirePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { featuresFor } from "@/lib/plans";
@@ -71,7 +71,7 @@ const employeeSchema = z
   });
 
 export async function saveEmployee(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("staff.manage");
   const t = await getTranslations("Workers.errors");
   const parsed = employeeSchema.safeParse(input);
   if (!parsed.success) {
@@ -160,7 +160,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
 }
 
 export async function setEmployeeActive(id: string, isActive: boolean): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("staff.manage");
   const t = await getTranslations("Workers.errors");
   try {
     await prisma.$transaction(async (tx) => {
@@ -196,7 +196,7 @@ const timeOffSchema = z
   .refine((d) => d.from <= d.to, { message: "Bitmə tarixi başlanğıcdan əvvəl ola bilməz." });
 
 export async function addTimeOff(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("schedule.write");
   const t = await getTranslations("Workers.errors");
   const parsed = timeOffSchema.safeParse(input);
   if (!parsed.success) {
@@ -233,7 +233,7 @@ export async function addTimeOff(input: unknown): Promise<ActionResult> {
 }
 
 export async function deleteTimeOff(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("schedule.write");
   const t = await getTranslations("Workers.errors");
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: t("invalidData") };
 
@@ -248,7 +248,7 @@ export async function deleteTimeOff(id: string): Promise<ActionResult> {
 }
 
 export async function deleteEmployee(id: string): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("staff.manage");
   const t = await getTranslations("Workers.errors");
   try {
     await prisma.$transaction(async (tx) => {
@@ -275,7 +275,7 @@ export async function deleteEmployee(id: string): Promise<ActionResult> {
 // --- Per-master logins ------------------------------------------------------
 // A master signs in with their own email + password and lands on a dashboard
 // holding exactly their own day: their column of the calendar, their bookings,
-// nothing about the salon's money, clients or colleagues (see lib/auth/access).
+// nothing about the salon's money, clients or colleagues (see lib/auth/permissions).
 //
 // The credential is deliberately thin: the owner sets the password and hands it
 // over. There is no invite email — most masters here are handed the login in
@@ -286,14 +286,14 @@ export async function deleteEmployee(id: string): Promise<ActionResult> {
 type Tx = Prisma.TransactionClient;
 
 /**
- * Owner of a salon whose CURRENT plan includes staff logins. The plan is
- * re-read from the subscription rather than trusted from the session, for the
- * same reason payroll does: stale UI must not be able to grant an entitlement
- * the account has stopped paying for.
+ * A caller who manages staff (staff.manage), in a salon whose CURRENT plan
+ * includes staff logins. The plan is re-read from the subscription rather than
+ * trusted from the session, for the same reason payroll does: stale UI must not
+ * be able to grant an entitlement the account has stopped paying for.
  */
-async function requireStaffAccessOwner(): Promise<{ salonId: string; accountId: string }> {
-  const session = await requireOwnerSession();
-  const salonId = session.salonId!;
+async function requireStaffLoginManager(): Promise<{ salonId: string; accountId: string }> {
+  const session = await requirePermission("staff.manage");
+  const salonId = session.salonId;
   const sub = await subscriptionForSalon(prisma, salonId);
   if (!featuresFor(effectivePlan(sub)).staffRoles) {
     const t = await getTranslations("Workers.errors");
@@ -378,7 +378,7 @@ export async function grantStaffAccess(input: unknown): Promise<ActionResult> {
   }
 
   try {
-    const { salonId, accountId } = await requireStaffAccessOwner();
+    const { salonId, accountId } = await requireStaffLoginManager();
     const passwordHash = await hashPassword(d.password);
 
     await prisma.$transaction(async (tx) => {
@@ -444,7 +444,7 @@ export async function resetStaffPassword(input: unknown): Promise<ActionResult> 
   }
 
   try {
-    const { salonId } = await requireStaffAccessOwner();
+    const { salonId } = await requireStaffLoginManager();
     const passwordHash = await hashPassword(parsed.data.password);
 
     const membership = await prisma.membership.findFirst({
@@ -477,8 +477,8 @@ export async function revokeStaffAccess(employeeId: string): Promise<ActionResul
   try {
     // Revoking is deliberately NOT plan-gated: an account that lost the feature
     // must still be able to take a login away.
-    const session = await requireOwnerSession();
-    await prisma.$transaction((tx) => revokeAccessRows(tx, session.salonId!, employeeId));
+    const { salonId } = await requirePermission("staff.manage");
+    await prisma.$transaction((tx) => revokeAccessRows(tx, salonId, employeeId));
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : t("saveFailed") };
   }

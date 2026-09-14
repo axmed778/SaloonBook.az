@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { withTenantScope } from "@/lib/tenant";
 import { featuresFor } from "@/lib/plans";
@@ -13,8 +14,9 @@ import {
   MAX_EXPORT_ROWS,
 } from "../_lib/csv-stream";
 import {
-  bookingSelectForRole,
-  serializeBookingsForRole,
+  bookingSelectForViewer,
+  bookingViewer,
+  serializeBookingsForViewer,
   type BookingRow,
 } from "@/lib/serializers/booking";
 import {
@@ -71,18 +73,19 @@ export async function GET(req: NextRequest) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
-  // Owner-only, and only the owner. A master exporting the salon's appointment
-  // history would be the same customer-contact list this product deliberately
-  // keeps out of their dashboard, just as a spreadsheet — so the export is not
-  // narrowed for them, it is refused. Platform admins have no salon here.
-  if (session.isAdmin || session.isStaff || !session.salonId) {
+  // exports.data, which a master does not hold. A master exporting the salon's
+  // appointment history would be the same customer-contact list this product
+  // deliberately keeps out of their dashboard, just as a spreadsheet — so the
+  // export is not narrowed for them, it is refused. Platform admins have no
+  // salon here.
+  if (session.isAdmin || !session.salonId || !hasPermission(session, "exports.data")) {
     return new Response("Forbidden", { status: 403 });
   }
   const salonId = session.salonId;
-  // The role the rows are read and serialized under. Constant "OWNER" because
-  // of the guard above — written as the same call every other booking surface
-  // makes, so this route cannot drift into selecting columns by hand again.
-  const role = "OWNER" as const;
+  // Which columns the rows are read and serialized under — the same call every
+  // other booking surface makes, so this route cannot drift into selecting
+  // columns by hand again.
+  const viewer = bookingViewer(session);
 
   // Plan gate — mirrors the analytics UI, enforced independently here.
   const salon = await prisma.salon.findUnique({
@@ -157,7 +160,7 @@ export async function GET(req: NextRequest) {
           orderBy: [{ startsAt: "asc" }, { id: "asc" }],
           take: EXPORT_BATCH_SIZE,
           ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
-          select: bookingSelectForRole(role),
+          select: bookingSelectForViewer(viewer),
         }),
       )) as BookingRow[];
 
@@ -165,7 +168,7 @@ export async function GET(req: NextRequest) {
         cursorId = rows[rows.length - 1].id;
       }
 
-      return serializeBookingsForRole(rows, role).map((a) => [
+      return serializeBookingsForViewer(rows, viewer).map((a) => [
         bakuYmd(a.startsAt),
         minutesToHHMM(bakuMinutesOfDay(a.startsAt)),
         minutesToHHMM(bakuMinutesOfDay(a.endsAt)),

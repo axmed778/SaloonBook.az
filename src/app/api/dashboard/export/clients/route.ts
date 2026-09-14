@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { withTenantScope } from "@/lib/tenant";
 import { featuresFor } from "@/lib/plans";
@@ -45,7 +46,9 @@ export async function GET() {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
-  if (session.isAdmin || session.isStaff || !session.salonId) {
+  // exports.data: the whole customer base, phone numbers included — exactly the
+  // list a master's dashboard never shows them.
+  if (session.isAdmin || !session.salonId || !hasPermission(session, "exports.data")) {
     return new Response("Forbidden", { status: 403 });
   }
   const salonId = session.salonId;

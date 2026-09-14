@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { requireOwnerPage } from "@/lib/auth/guards";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { ServicesManager } from "./services-manager";
 import { AddonsManager } from "./addons-manager";
@@ -7,7 +7,7 @@ import { AddonsManager } from "./addons-manager";
 export const dynamic = "force-dynamic";
 
 export default async function ServicesPage() {
-  const session = await requireOwnerPage();
+  const session = await requirePagePermission("services.write");
   if (!session.salonId) {
     const t = await getTranslations("Dashboard");
     return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;

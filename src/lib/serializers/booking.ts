@@ -1,91 +1,96 @@
 // The single funnel every booking passes through on its way to a client.
 //
-// A master (STAFF) runs their own day: they need the client's NAME, the service,
-// the date and the time. They do not need the client's phone number, and the
-// salon does not want them to have it — a masters' book of the salon's customer
+// A master runs their own day: they need the client's NAME, the service, the
+// date and the time. They do not need the client's phone number, and the salon
+// does not want them to have it — a masters' book of the salon's customer
 // contacts is how a master leaves and takes the clientele with them.
 //
 // "Not shown" is not the requirement. The number must never reach the device:
 //   * not in a JSON body,
 //   * not in Next.js's RSC payload, which is inlined into the dashboard's HTML
 //     as flight data and is fully readable with View Source even when nothing
-//     renders it — hiding a field with CSS or `{role === "OWNER" && …}` in a
-//     client component leaves it right there in the page,
+//     renders it — hiding a field with CSS or a conditional in a client
+//     component leaves it right there in the page,
 //   * not in a CSV/print export.
 //
 // So the rule is enforced twice, and both halves live here:
-//   1. bookingSelectForRole() — a master's Prisma query does not SELECT the
-//      contact columns at all, so the row in memory has nothing to leak.
-//   2. serializeBookingForRole() — every booking that becomes a prop or a
-//      response body goes through this, and for a master the contact keys are
-//      ABSENT from the object (not null, not "***"). A key that does not exist
-//      cannot be serialized by accident, and `"customerPhone" in booking` is a
-//      test anyone can write against any new endpoint.
+//   1. bookingSelectForViewer() — a query for a viewer without contact access
+//      does not SELECT the contact columns at all, so the row in memory has
+//      nothing to leak.
+//   2. serializeBookingForViewer() — every booking that becomes a prop or a
+//      response body goes through this, and for such a viewer the contact keys
+//      are ABSENT from the object (not null, not "***"). A key that does not
+//      exist cannot be serialized by accident, and `"customerPhone" in booking`
+//      is a test anyone can write against any new endpoint.
 //
-// There is deliberately no setting, toggle or permission that turns this off.
-// It is a property of the role.
+// Who is such a viewer is decided by a permission, not a role: whoever may read
+// the client base (clients.read) sees contacts, and nobody else does. There is
+// deliberately no setting or toggle that turns this off.
 
-import type { Role } from "@prisma/client";
+import type { Permission } from "../auth/permissions";
 import { redactContactsOrNull } from "./redact-notes";
 
 /**
- * Who is looking. Prisma's Role plus the platform admin, who has no membership
- * (and therefore no Role) but is trusted with everything an owner sees.
+ * How much of a customer a viewer may see on a booking:
+ *   FULL       — contact details, and the service note verbatim;
+ *   NO_CONTACT — no contact details, and the service note with any contact cut out.
  */
-export type BookingViewerRole = Role | "ADMIN";
+export type BookingViewer = "FULL" | "NO_CONTACT";
 
 /**
- * The viewer role for a dashboard session. One place decides it, so a new page
+ * The viewer for a dashboard session. One place decides it, so a new page
  * cannot invent its own — and cannot get it backwards.
  */
-export function bookingViewerRole(session: {
+export function bookingViewer(session: {
   isAdmin: boolean;
-  isStaff: boolean;
-}): BookingViewerRole {
-  if (session.isAdmin) return "ADMIN";
-  // Fail closed: anything that is not provably the owner or an admin is treated
-  // as a master. A future third role starts with no contact access and has to
-  // ask for it, rather than inheriting it by omission.
-  return session.isStaff ? "STAFF" : "OWNER";
+  permissions: readonly Permission[];
+}): BookingViewer {
+  // The platform admin has no membership, and so no permissions, but is trusted
+  // with everything an owner sees.
+  if (session.isAdmin) return "FULL";
+  // Fail closed: a role that may not read the client base gets no contact
+  // details. A role added later starts without them and has to be granted
+  // clients.read, rather than inheriting contacts by omission.
+  return session.permissions.includes("clients.read") ? "FULL" : "NO_CONTACT";
 }
 
 /**
- * May this role see the customer's contact details? Only the phone hangs off
- * this now: the service note is shown to a master too, but redacted — see
- * serializeBookingForRole().
+ * May this viewer see the customer's contact details? Only the phone hangs off
+ * this now: the service note is shown to every viewer, redacted for NO_CONTACT —
+ * see serializeBookingForViewer().
  */
-export function canSeeCustomerContact(role: BookingViewerRole): boolean {
-  return role !== "STAFF";
+export function canSeeCustomerContact(viewer: BookingViewer): boolean {
+  return viewer === "FULL";
 }
 
 /**
- * Keys that must never appear in anything a master receives. The service note
- * is NOT one of them — a master needs it to do the job, and it arrives with any
- * contact inside it already cut out (redact-notes.ts).
+ * Keys that must never appear in anything a NO_CONTACT viewer receives. The
+ * service note is NOT one of them — a master needs it to do the job, and it
+ * arrives with any contact inside it already cut out (redact-notes.ts).
  */
 export const CONTACT_KEYS = ["customerPhone", "phone", "clientPhone", "tel", "whatsapp", "email"] as const;
 
 // --- Prisma selects ---------------------------------------------------------
 
 /**
- * The `customer` sub-select for a booking query. A master gets id + name and
- * nothing else — the phone column is not read, so no later mistake can expose
- * it. (Customer has no email/whatsapp column; if one is ever added it must be
- * added to the owner branch here and nowhere else.)
+ * The `customer` sub-select for a booking query. A NO_CONTACT viewer gets id +
+ * name and nothing else — the phone column is not read, so no later mistake can
+ * expose it. (Customer has no email/whatsapp column; if one is ever added it
+ * must be added to the FULL branch here and nowhere else.)
  */
-export function bookingCustomerSelect(role: BookingViewerRole) {
-  return canSeeCustomerContact(role)
+export function bookingCustomerSelect(viewer: BookingViewer) {
+  return canSeeCustomerContact(viewer)
     ? { id: true, name: true, phone: true }
     : { id: true, name: true };
 }
 
 /**
  * Everything the dashboard's booking surfaces (today list, calendar, export)
- * read about an appointment, narrowed by role. Shared on purpose: one select
+ * read about an appointment, narrowed by viewer. Shared on purpose: one select
  * means one place to audit, and a new surface that copies it gets the rule for
  * free.
  */
-export function bookingSelectForRole(role: BookingViewerRole) {
+export function bookingSelectForViewer(viewer: BookingViewer) {
   return {
     id: true,
     employeeId: true,
@@ -99,21 +104,21 @@ export function bookingSelectForRole(role: BookingViewerRole) {
     manageToken: true,
     attendeeName: true,
     service: { select: { name: true } },
-    // The add-ons as booked (snapshots). Part of the job, so every role reads
+    // The add-ons as booked (snapshots). Part of the job, so every viewer reads
     // them; priceMinor above already includes their prices.
     addons: { select: { name: true }, orderBy: { name: "asc" as const } },
     employee: { select: { name: true, position: true } },
-    customer: { select: bookingCustomerSelect(role) },
-    // Read for every role. A master sees the service note — it is how they know
-    // the customer wants a dark shade — and serializeBookingForRole() strips any
-    // contact out of it on the way to them.
+    customer: { select: bookingCustomerSelect(viewer) },
+    // Read for every viewer. A master sees the service note — it is how they
+    // know the customer wants a dark shade — and serializeBookingForViewer()
+    // strips any contact out of it on the way to them.
     serviceNote: true,
   };
 }
 
 // --- Serialization ----------------------------------------------------------
 
-/** An appointment row as bookingSelectForRole() returns it. */
+/** An appointment row as bookingSelectForViewer() returns it. */
 export interface BookingRow {
   id: string;
   employeeId: string;
@@ -136,10 +141,10 @@ export interface BookingRow {
 export type BookingStatus = "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 
 /**
- * A booking as the client may see it. The two contact fields are optional
- * because for a master they are genuinely missing, not empty — check with
- * `if (booking.customerPhone)` and the master's UI simply has no phone row and
- * no WhatsApp button to render.
+ * A booking as the client may see it. The contact field is optional because
+ * for a NO_CONTACT viewer it is genuinely missing, not empty — check with
+ * `if (booking.customerPhone)` and a master's UI simply has no phone row and no
+ * WhatsApp button to render.
  */
 export interface SerializedBooking {
   id: string;
@@ -163,25 +168,25 @@ export interface SerializedBooking {
   /** Who the booking is for: the attendee's name when the booker named someone
    *  else (a child, a parent), otherwise the customer's own name. */
   customerName: string;
-  /** OWNER/ADMIN only. Absent — not null, not masked — for a master. */
+  /** FULL viewers only. Absent — not null, not masked — for a master. */
   customerPhone?: string;
   /**
    * The customer's wish for the service ("tünd çalar", "allergiya var").
-   * Present for every role, but for a master any phone/email/handle inside it
-   * has been replaced with [gizli] here, on the server, before it could reach
-   * the RSC payload. The owner and the platform admin get it verbatim.
+   * Present for every viewer, but for NO_CONTACT any phone/email/handle inside
+   * it has been replaced with [gizli] here, on the server, before it could reach
+   * the RSC payload. FULL viewers get it verbatim.
    */
   serviceNote: string | null;
 }
 
 /**
- * Redacts one booking for one role. Every response and every prop carrying a
+ * Redacts one booking for one viewer. Every response and every prop carrying a
  * booking goes through this; nothing else is allowed to hand a raw Prisma row
  * to a client component or a Response body.
  */
-export function serializeBookingForRole(
+export function serializeBookingForViewer(
   booking: BookingRow,
-  role: BookingViewerRole,
+  viewer: BookingViewer,
 ): SerializedBooking {
   const base: SerializedBooking = {
     id: booking.id,
@@ -200,17 +205,17 @@ export function serializeBookingForRole(
     employeePosition: booking.employee.position,
     customerId: booking.customer.id,
     customerName: booking.attendeeName ?? booking.customer.name,
-    // Redacted for a master, verbatim for the owner and the platform admin.
-    // Booking endpoints already refuse a note with a contact in it, so in
-    // practice this only fires on rows written before that rule existed — and
-    // on anything that gets past it. Two locks, not one.
-    serviceNote: canSeeCustomerContact(role)
+    // Redacted for NO_CONTACT, verbatim for FULL. Booking endpoints already
+    // refuse a note with a contact in it, so in practice this only fires on rows
+    // written before that rule existed — and on anything that gets past it. Two
+    // locks, not one.
+    serviceNote: canSeeCustomerContact(viewer)
       ? (booking.serviceNote ?? null)
       : redactContactsOrNull(booking.serviceNote),
   };
-  if (!canSeeCustomerContact(role)) return base;
-  // Owner/admin. The phone is still only added when the query actually read it,
-  // so a caller that forgot the right select gets a missing key rather than
+  if (!canSeeCustomerContact(viewer)) return base;
+  // FULL. The phone is still only added when the query actually read it, so a
+  // caller that forgot the right select gets a missing key rather than
   // `undefined` masquerading as a value.
   return {
     ...base,
@@ -218,12 +223,12 @@ export function serializeBookingForRole(
   };
 }
 
-/** serializeBookingForRole over a list. */
-export function serializeBookingsForRole(
+/** serializeBookingForViewer over a list. */
+export function serializeBookingsForViewer(
   bookings: BookingRow[],
-  role: BookingViewerRole,
+  viewer: BookingViewer,
 ): SerializedBooking[] {
-  return bookings.map((b) => serializeBookingForRole(b, role));
+  return bookings.map((b) => serializeBookingForViewer(b, viewer));
 }
 
 /**

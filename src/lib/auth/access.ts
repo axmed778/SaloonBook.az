@@ -1,32 +1,47 @@
-// What a signed-in user of a salon is allowed to see and touch.
+// Row scope: which of a salon's rows a signed-in role may read and touch.
 //
-// Two roles share one dashboard:
-//   OWNER — the paying account. Sees the whole salon.
-//   STAFF — a single master's own login (Membership.employeeId). Sees their own
-//           column of the calendar and nothing else.
+// WHAT a role may do lives in ./permissions. This file answers the narrower
+// question every bookings query asks — the whole salon, or only the login's own
+// employee — plus the rule that closes an employee's login.
 //
 // Everything here is PURE: no cookies, no Prisma, no next/headers. The async
 // wrappers that read the session live in ./guards. Keeping the decisions pure is
 // what lets the staff-isolation tests cover them without a database.
 
-import type { Role } from "@prisma/client";
+import { seesOnlyOwnRows, type AppRole } from "./permissions";
 
 /**
  * The tenant + row scope a request runs under.
  *
- * `employeeId` is the whole point: null means "the entire salon" (owner), a
- * value means "only this master's rows". Passing it into a Prisma `where`
- * alongside `salonId` is how a master is confined — never by filtering in JS
- * after the fact, which leaks the moment someone forgets.
+ * `employeeId` is the whole point: null means "the entire salon", a value means
+ * "only this master's rows". Passing it into a Prisma `where` alongside
+ * `salonId` is how a master is confined — never by filtering in JS after the
+ * fact, which leaks the moment someone forgets.
  */
 export interface SalonScope {
   salonId: string;
   employeeId: string | null;
 }
 
-/** True when the scope belongs to a master's own login rather than the owner. */
+/** True when the scope belongs to a master's own login rather than the salon. */
 export function isStaffScope(scope: SalonScope): boolean {
   return scope.employeeId !== null;
+}
+
+/**
+ * The scope a session's booking queries run under: the whole salon, or — for a
+ * role that sees only its own rows — the login's employee. Null when there is no
+ * role, or when such a login has no employee to narrow to: treating that as "the
+ * whole salon" would silently widen a master to owner reach.
+ */
+export function salonScopeFor(session: {
+  salonId: string;
+  appRole: AppRole | null;
+  employeeId: string | null;
+}): SalonScope | null {
+  if (session.appRole === null) return null;
+  if (!seesOnlyOwnRows(session.appRole)) return { salonId: session.salonId, employeeId: null };
+  return session.employeeId ? { salonId: session.salonId, employeeId: session.employeeId } : null;
 }
 
 /**
@@ -46,8 +61,8 @@ export function appointmentScope(scope: SalonScope): {
 }
 
 /**
- * May this scope create or move work for `employeeId`? An owner books for
- * anyone; a master books only for themselves. Call it before trusting an
+ * May this scope create or move work for `employeeId`? A salon-wide scope books
+ * for anyone; a master books only for themselves. Call it before trusting an
  * employeeId that arrived in a request body.
  */
 export function canActForEmployee(scope: SalonScope, employeeId: string): boolean {
@@ -55,44 +70,9 @@ export function canActForEmployee(scope: SalonScope, employeeId: string): boolea
 }
 
 /**
- * Dashboard sections a master never gets: the salon's whole client base, the
- * service catalogue and prices, other masters' records, revenue, payroll,
- * salon settings and billing.
- *
- * Single source of truth for BOTH the navigation and the page guards, so a new
- * owner-only screen cannot end up hidden-but-reachable (or guarded-but-listed).
- * Matched by prefix, locale prefix already stripped.
- */
-export const OWNER_ONLY_SECTIONS = [
-  "/dashboard/clients",
-  "/dashboard/services",
-  "/dashboard/workers",
-  "/dashboard/analytics",
-  "/dashboard/payroll",
-  "/dashboard/settings",
-  "/dashboard/billing",
-  "/dashboard/admin",
-] as const;
-
-/** True when `pathname` falls inside a section only the owner may open. */
-export function isOwnerOnlySection(pathname: string): boolean {
-  return OWNER_ONLY_SECTIONS.some(
-    (s) => pathname === s || pathname.startsWith(`${s}/`),
-  );
-}
-
-/**
- * Can a user with this role open this path? Admins are handled separately (they
- * have no salon at all), so this only answers the OWNER/STAFF question.
- */
-export function canOpenSection(role: Role | null, pathname: string): boolean {
-  if (role === "STAFF") return !isOwnerOnlySection(pathname);
-  return true;
-}
-
-/**
- * Why a master's login stops working. Re-derived on EVERY request, so revoking
- * access is immediate: no claim cached in the session cookie can outlive it.
+ * Why an employee's own login (a master's) stops working. Re-derived on EVERY
+ * request, so revoking access is immediate: no claim cached in the session
+ * cookie can outlive it.
  *   plan     — the account fell to a tier without staffRoles (lapsed trial,
  *              missed payment). Staff logins are a paid feature.
  *   inactive — the owner deactivated the master, or their employee record is
@@ -102,12 +82,13 @@ export function canOpenSection(role: Role | null, pathname: string): boolean {
 export type StaffBlockedReason = "plan" | "inactive";
 
 export function staffBlockedReason(opts: {
-  isStaff: boolean;
+  /** The login belongs to an employee (see isEmployeeLogin). */
+  employeeLogin: boolean;
   staffRolesEnabled: boolean;
   /** Employee.isActive; null/undefined when the record no longer resolves. */
   employeeIsActive: boolean | null | undefined;
 }): StaffBlockedReason | null {
-  if (!opts.isStaff) return null;
+  if (!opts.employeeLogin) return null;
   if (!opts.staffRolesEnabled) return "plan";
   // Anything other than an explicit `true` — false, null, a membership whose
   // employee was deleted — closes the login. Fail closed, not open.
