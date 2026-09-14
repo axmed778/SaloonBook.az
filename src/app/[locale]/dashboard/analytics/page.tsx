@@ -1,5 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { requirePagePermission } from "@/lib/auth/guards";
+import { can } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import {
   BAKU_TZ,
@@ -9,8 +10,7 @@ import {
   formatBakuDate,
 } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
-import { PLAN_LIMITS, featuresFor } from "@/lib/plans";
-import { effectivePlan } from "@/lib/subscription";
+import { PLAN_LIMITS } from "@/lib/plans";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { HeroValue } from "./_components/HeroValue";
 import { ExportCard } from "./_components/ExportCard";
@@ -277,7 +277,8 @@ export default async function AnalyticsPage() {
       Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000),
     );
   }
-  const canExport = featuresFor(effectivePlan(sub)).exports;
+  // The export card follows the export routes' own rule: the role and the plan.
+  const canExport = can(session, "exports.data");
   const planPriceMinor = PLAN_LIMITS[sub?.plan ?? "BASIC"].priceMinor;
   // Internal BASIC tier is marketed as "Salon"; START/PRO keep their names
   // (see MARKETING_PLANS).

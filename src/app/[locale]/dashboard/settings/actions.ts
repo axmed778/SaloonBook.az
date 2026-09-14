@@ -360,21 +360,24 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
   ]);
   if (appointments > 0 || customers > 0) return { ok: false, error: t("hasData") };
 
-  // The branch's masters lose their logins with it. Collect the user rows behind
-  // those memberships too: dropping only the membership would leave a working
-  // password attached to nothing, and an email address permanently spent. A user
-  // who somehow also belongs to another salon is left alone — this action was
-  // not asked to touch that one.
+  // The branch's logins — masters and reception, which are pinned to a branch —
+  // go with it. Collect the user rows behind those memberships too: dropping only
+  // the membership would leave a working password attached to nothing, and an
+  // email address permanently spent. A user who somehow also belongs to another
+  // salon is left alone — this action was not asked to touch that one. The OWNER
+  // membership always points at the primary, which is never deletable, and is
+  // excluded anyway.
+  const branchLogins = { salonId: id, role: { not: "OWNER" as const } };
   const staffUserIds = (
     await prisma.membership.findMany({
-      where: { salonId: id, role: "STAFF" },
+      where: branchLogins,
       select: { userId: true },
     })
   ).map((m) => m.userId);
   const elsewhere = new Set(
     (
       await prisma.membership.findMany({
-        where: { userId: { in: staffUserIds }, NOT: { salonId: id, role: "STAFF" } },
+        where: { userId: { in: staffUserIds }, NOT: branchLogins },
         select: { userId: true },
       })
     ).map((m) => m.userId),
@@ -392,9 +395,7 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
       prisma.customerNote.deleteMany({ where: { salonId: id } }),
       prisma.payout.deleteMany({ where: { salonId: id } }),
       prisma.usageCounter.deleteMany({ where: { salonId: id } }),
-      // Branch-bound STAFF logins go with the branch; the OWNER membership
-      // always points at the primary, which is never deletable.
-      prisma.membership.deleteMany({ where: { salonId: id, role: "STAFF" } }),
+      prisma.membership.deleteMany({ where: branchLogins }),
       prisma.passwordResetToken.deleteMany({ where: { userId: { in: orphanedUserIds } } }),
       prisma.user.deleteMany({ where: { id: { in: orphanedUserIds } } }),
       // WorkingHour/TimeOff/ServiceEmployee cascade from employees/services.

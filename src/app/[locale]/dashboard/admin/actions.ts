@@ -18,10 +18,10 @@ import { fetchWhatsAppNumberInfo } from "@/lib/whatsapp";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function requireAdmin(): Promise<string> {
+/** The acting platform admin's user id, or null for anyone else. */
+async function requireAdmin(): Promise<string | null> {
   const session = await getSession();
-  if (!session?.isAdmin) throw new Error("Unauthorized: admin only");
-  return session.user.id;
+  return session?.isAdmin ? session.user.id : null;
 }
 
 const activateSchema = z.object({
@@ -33,13 +33,9 @@ const activateSchema = z.object({
 });
 
 export async function activateSubscription(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.errors");
-  let adminId: string;
-  try {
-    adminId = await requireAdmin();
-  } catch {
-    return { ok: false, error: t("unauthorized") };
-  }
+  if (!adminId) return { ok: false, error: t("unauthorized") };
   const parsed = activateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
   const d = parsed.data;
@@ -112,13 +108,9 @@ const setSenderSchema = z.object({
 });
 
 export async function setWhatsAppSender(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.errors");
-  let adminId: string;
-  try {
-    adminId = await requireAdmin();
-  } catch {
-    return { ok: false, error: t("unauthorized") };
-  }
+  if (!adminId) return { ok: false, error: t("unauthorized") };
   if (!hasEncryptionKey()) return { ok: false, error: t("encKeyMissing") };
 
   const parsed = setSenderSchema.safeParse(input);
@@ -191,13 +183,9 @@ const disableSenderSchema = z.object({ salonId: z.string().uuid() });
 
 /** Turn a salon's own number OFF — reverts it to the shared platform number. */
 export async function disableWhatsAppSender(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.errors");
-  let adminId: string;
-  try {
-    adminId = await requireAdmin();
-  } catch {
-    return { ok: false, error: t("unauthorized") };
-  }
+  if (!adminId) return { ok: false, error: t("unauthorized") };
   const parsed = disableSenderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
   const d = parsed.data;
@@ -245,13 +233,9 @@ const extraBranchesSchema = z.object({
  * are never touched, the owner simply can't add new ones past the new limit.
  */
 export async function setExtraBranches(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.errors");
-  let adminId: string;
-  try {
-    adminId = await requireAdmin();
-  } catch {
-    return { ok: false, error: t("unauthorized") };
-  }
+  if (!adminId) return { ok: false, error: t("unauthorized") };
   const parsed = extraBranchesSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
   const d = parsed.data;
@@ -376,12 +360,9 @@ export type DetailsResult =
 const detailsSchema = z.object({ accountId: z.string().uuid() });
 
 export async function getAccountDetails(input: unknown): Promise<DetailsResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.errors");
-  try {
-    await requireAdmin();
-  } catch {
-    return { ok: false, error: t("unauthorized") };
-  }
+  if (!adminId) return { ok: false, error: t("unauthorized") };
   const parsed = detailsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
 

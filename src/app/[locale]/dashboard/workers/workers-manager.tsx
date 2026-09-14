@@ -7,22 +7,21 @@ import {
   saveEmployee,
   setEmployeeActive,
   deleteEmployee,
-  addTimeOff,
-  deleteTimeOff,
   grantStaffAccess,
   resetStaffPassword,
   revokeStaffAccess,
 } from "./actions";
 import { type Audience } from "@/lib/audience";
-import { bakuToday } from "@/lib/time";
 import { AudienceSelect } from "../_components/audience-select";
 import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { ErrorToast } from "../_components/toast";
+import { TimeOffModal, type TimeOffRow } from "../_components/time-off-modal";
+import { generatePassword } from "./password";
+import { TeamLogins, type TeamSection } from "./team-logins";
 
 type Svc = { id: string; name: string; isActive: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
-export type TimeOffRow = { id: string; label: string; reason: string | null };
 /** The master's own login, or null when the owner has not issued one. */
 export type AccessRow = { email: string };
 export type EmployeeRow = {
@@ -137,10 +136,13 @@ export function WorkersManager({
   employees,
   services,
   staffLoginsEnabled,
+  team,
 }: {
   employees: EmployeeRow[];
   services: Svc[];
   staffLoginsEnabled: boolean;
+  /** Reception and finance logins; null for a caller who may not hand them out. */
+  team: TeamSection | null;
 }) {
   const t = useTranslations("Workers");
   const tc = useTranslations("Common");
@@ -552,6 +554,8 @@ export function WorkersManager({
         </ul>
       )}
 
+      {team && <TeamLogins {...team} />}
+
       {accessFor && (
         <AccessModal
           // Same reason as the time-off modal: re-resolve from props so the
@@ -566,6 +570,7 @@ export function WorkersManager({
           // Re-resolve from props so the list inside the modal stays fresh
           // after add/delete (router.refresh replaces `employees`).
           employee={employees.find((x) => x.id === timeOffFor.id) ?? timeOffFor}
+          canEdit
           onClose={() => setTimeOffFor(null)}
         />
       )}
@@ -586,198 +591,11 @@ export function WorkersManager({
   );
 }
 
-// --- Time off modal -----------------------------------------------------------
-// Whole-day ranges; booked slots inside the range stay booked (the engine only
-// blocks NEW bookings), so the salon should resolve conflicts manually.
-
-function TimeOffModal({
-  employee,
-  onClose,
-}: {
-  employee: EmployeeRow;
-  onClose: () => void;
-}) {
-  const t = useTranslations("Workers");
-  const tc = useTranslations("Common");
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  // Baku day, not the browser's UTC day: between midnight and 04:00 local time
-  // toISOString() still returns YESTERDAY, so the picker offered a past date.
-  const today = bakuToday();
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!from || !to) return setError(t("timeOffModal.errors.selectDates"));
-    if (to < from) return setError(t("timeOffModal.errors.endBeforeStart"));
-    startTransition(async () => {
-      const res = await addTimeOff({
-        employeeId: employee.id,
-        from,
-        to,
-        reason: reason.trim() || null,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-      setReason("");
-      router.refresh();
-    });
-  }
-
-  function remove(id: string) {
-    setError(null);
-    startTransition(async () => {
-      const res = await deleteTimeOff(id);
-      if (!res.ok) setError(res.error);
-      router.refresh();
-    });
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">
-            {t("timeOffModal.titleFor", { name: employee.name })}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={tc("close")} title={tc("close")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-hover hover:text-foreground"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>{t("timeOffModal.start")}</label>
-              <input
-                type="date"
-                className={inputCls + " w-full"}
-                value={from}
-                min={today}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  if (to < e.target.value) setTo(e.target.value);
-                }}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>{t("timeOffModal.endInclusive")}</label>
-              <input
-                type="date"
-                className={inputCls + " w-full"}
-                value={to}
-                min={from}
-                onChange={(e) => setTo(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>{t("timeOffModal.reason")}</label>
-            <input
-              className={inputCls + " w-full"}
-              placeholder={t("timeOffModal.reasonPlaceholder")}
-              maxLength={200}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
-          >
-            {pending ? t("timeOffModal.adding") : t("timeOffModal.add")}
-          </button>
-        </form>
-
-        <div className="mt-5 border-t border-border pt-4">
-          <p className="text-xs font-medium text-faint-foreground">{t("timeOffModal.current")}</p>
-          {employee.timeOff.length === 0 ? (
-            <p className="mt-2 text-sm text-faint-foreground">{t("timeOffModal.none")}</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {employee.timeOff.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2 text-sm"
-                >
-                  <span className="min-w-0 truncate text-secondary-foreground">
-                    {row.label}
-                    {row.reason && <span className="text-faint-foreground"> · {row.reason}</span>}
-                  </span>
-                  <button
-                    onClick={() => remove(row.id)}
-                    disabled={pending}
-                    className="shrink-0 text-xs text-faint-foreground transition hover:text-rose-400"
-                  >
-                    {t("delete")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 text-xs text-faint-foreground">
-            {t("timeOffModal.note")}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // --- Per-master login ---------------------------------------------------------
 // The owner hands a master their own email + password here. What that login can
 // then reach is decided server-side (lib/auth/access); this panel only says so
 // plainly, because "can my masters log in and see ONLY their own schedule" is
 // the question salons ask before they buy.
-
-const PW_LOWER = "abcdefghijkmnopqrstuvwxyz"; // no l — it reads as 1 over the phone
-const PW_UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I, no O
-const PW_DIGITS = "23456789"; // no 0/1
-const PW_SPECIAL = "!@#$%*?";
-
-function pick(set: string, n: number): string[] {
-  const buf = new Uint32Array(n);
-  crypto.getRandomValues(buf);
-  return Array.from(buf, (v) => set[v % set.length]);
-}
-
-/**
- * A password that satisfies the server's policy by construction (lower, upper,
- * digit, special, 10 chars) out of characters that survive being read aloud.
- */
-function generatePassword(): string {
-  const chars = [
-    ...pick(PW_LOWER, 4),
-    ...pick(PW_UPPER, 3),
-    ...pick(PW_DIGITS, 2),
-    ...pick(PW_SPECIAL, 1),
-  ];
-  // Shuffle, or the character classes would always land in the same positions.
-  const order = new Uint32Array(chars.length);
-  crypto.getRandomValues(order);
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = order[i] % (i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join("");
-}
 
 function AccessModal({
   employee,

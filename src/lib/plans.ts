@@ -58,15 +58,18 @@ export interface PlanFeatures {
   expenses: boolean;
   /** Finance reports and the finance CSV/XLSX exports. Pro only. */
   financeReports: boolean;
+  /** FINANCE logins, which see every branch's money. Pro only. */
+  financeLogins: boolean;
 }
 
 // The finance flags are mapped to permissions in src/lib/auth/permissions.ts
 // (PERMISSION_PLAN_FEATURE), which is where a gate is asked for.
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   // staffRoles is the one advanced-sounding flag every PAID tier carries: a
-  // two-chair salon on Start is exactly who needs a login per master. FREE keeps
-  // it off — it is the lapsed-trial floor, and a staff login must stop working
-  // the moment the account stops paying (enforced in getSession).
+  // two-chair salon on Start is exactly who needs a login per master, and it
+  // covers reception logins too. FREE keeps it off — it is the lapsed-trial
+  // floor, and a staff login must stop working the moment the account stops
+  // paying (enforced in getSession).
   FREE: {
     multiBranch: false,
     advancedAnalytics: false,
@@ -80,6 +83,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     payoutStatements: false,
     expenses: false,
     financeReports: false,
+    financeLogins: false,
   },
   // Start = same feature floor as Basic (no advanced features); it differs in
   // enforcement limits (2 staff / 1 branch, see PLAN_LIMITS) and in finance,
@@ -97,6 +101,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     payoutStatements: false,
     expenses: false,
     financeReports: false,
+    financeLogins: false,
   },
   BASIC: {
     multiBranch: false,
@@ -111,6 +116,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     payoutStatements: true,
     expenses: true,
     financeReports: false,
+    financeLogins: false,
   },
   PRO: {
     multiBranch: true,
@@ -125,6 +131,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     payoutStatements: true,
     expenses: true,
     financeReports: true,
+    financeLogins: true,
   },
 };
 

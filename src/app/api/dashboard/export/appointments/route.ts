@@ -2,11 +2,8 @@ import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/auth/permissions";
-import { prisma } from "@/lib/prisma";
+import { accessRefusal } from "@/lib/auth/permissions";
 import { withTenantScope } from "@/lib/tenant";
-import { featuresFor } from "@/lib/plans";
-import { effectivePlan } from "@/lib/subscription";
 import { localeFromCookie } from "@/i18n/request-locale";
 import {
   csvStreamResponse,
@@ -73,28 +70,25 @@ export async function GET(req: NextRequest) {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
+  // Platform admins have no salon here.
+  if (session.isAdmin || !session.salonId) {
+    return new Response("Forbidden", { status: 403 });
+  }
   // exports.data, which a master does not hold. A master exporting the salon's
   // appointment history would be the same customer-contact list this product
   // deliberately keeps out of their dashboard, just as a spreadsheet — so the
-  // export is not narrowed for them, it is refused. Platform admins have no
-  // salon here.
-  if (session.isAdmin || !session.salonId || !hasPermission(session, "exports.data")) {
-    return new Response("Forbidden", { status: 403 });
+  // export is not narrowed for them, it is refused. The role is asked first, then
+  // the plan (Pro), from the session's per-request plan.
+  const refused = accessRefusal(session, ["exports.data"]);
+  if (refused === "role") return new Response("Forbidden", { status: 403 });
+  if (refused === "plan") {
+    return new Response("Data export requires the Pro plan.", { status: 403 });
   }
   const salonId = session.salonId;
   // Which columns the rows are read and serialized under — the same call every
   // other booking surface makes, so this route cannot drift into selecting
   // columns by hand again.
   const viewer = bookingViewer(session);
-
-  // Plan gate — mirrors the analytics UI, enforced independently here.
-  const salon = await prisma.salon.findUnique({
-    where: { id: salonId },
-    select: { account: { select: { subscription: true } } },
-  });
-  if (!featuresFor(effectivePlan(salon?.account.subscription ?? null)).exports) {
-    return new Response("Data export requires the Pro plan.", { status: 403 });
-  }
 
   const rangeParam = req.nextUrl.searchParams.get("range");
   const range: Range = RANGES.includes(rangeParam as Range)

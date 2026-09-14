@@ -23,10 +23,13 @@ export function TodayView({
   items,
   dateLabel,
   salonName,
+  canWrite,
 }: {
   items: TodayAppointment[];
   dateLabel: string;
   salonName: string;
+  /** bookings.write: complete, no-show, cancel, reschedule. Read-only without it. */
+  canWrite: boolean;
 }) {
   const t = useTranslations("Today");
   const router = useRouter();
@@ -110,6 +113,7 @@ export function TodayView({
                 pending={ov?.pending ?? false}
                 salonName={salonName}
                 dateLabel={dateLabel}
+                canWrite={canWrite}
                 onComplete={() => changeStatus(appt.id, "COMPLETED")}
                 onNoShow={() => changeStatus(appt.id, "NO_SHOW")}
                 onCancel={() => changeStatus(appt.id, "CANCELLED")}

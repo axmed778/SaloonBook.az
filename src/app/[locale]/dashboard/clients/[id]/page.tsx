@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AppointmentStatus } from "@prisma/client";
 import { getLocale } from "next-intl/server";
 import { requirePagePermission } from "@/lib/auth/guards";
+import { can } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate, formatBakuDateTime } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
@@ -257,6 +258,12 @@ export default async function ClientProfilePage({
       notes={noteItems}
       catalog={catalog}
       today={bakuToday()}
+      // Reception edits clients but does not delete them; finance only reads.
+      allowed={{
+        book: can(session, "bookings.write"),
+        edit: can(session, "clients.write"),
+        remove: can(session, "clients.delete"),
+      }}
     />
   );
 }

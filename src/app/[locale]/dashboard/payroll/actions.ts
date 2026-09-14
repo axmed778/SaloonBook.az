@@ -5,25 +5,13 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
-import { featuresFor } from "@/lib/plans";
-import { effectivePlan, subscriptionForSalon } from "@/lib/subscription";
 
 // Server actions for the PRO payroll screen. Same tenancy rules as the other
 // dashboard actions (salonId re-derived from the session, used as a write
-// guard), plus a plan gate: payroll is a Pro feature, enforced server-side so
-// a downgraded account can't keep using it through stale UI.
+// guard). payroll.manage carries the Pro plan gate, so requirePermission refuses
+// a downgraded account's stale UI on its own.
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-
-async function requirePayrollSalon(): Promise<string> {
-  const { salonId } = await requirePermission("payroll.manage");
-  const sub = await subscriptionForSalon(prisma, salonId);
-  if (!featuresFor(effectivePlan(sub)).payroll) {
-    const t = await getTranslations("Payroll");
-    throw new Error(t("proOnly"));
-  }
-  return salonId;
-}
 
 // 100 000 AZN in qəpik — sanity ceiling for salaries and payouts.
 const MAX_MINOR = 10_000_000;
@@ -35,13 +23,8 @@ const paySchema = z.object({
 });
 
 export async function saveEmployeePay(input: unknown): Promise<ActionResult> {
+  const { salonId } = await requirePermission("payroll.manage");
   const te = await getTranslations("Payroll.errors");
-  let salonId: string;
-  try {
-    salonId = await requirePayrollSalon();
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
-  }
   const parsed = paySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: te("invalidData") };
   const d = parsed.data;
@@ -64,13 +47,8 @@ const payoutSchema = z.object({
 });
 
 export async function recordPayout(input: unknown): Promise<ActionResult> {
+  const { salonId } = await requirePermission("payroll.manage");
   const te = await getTranslations("Payroll.errors");
-  let salonId: string;
-  try {
-    salonId = await requirePayrollSalon();
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
-  }
   const parsed = payoutSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: te("invalidData") };
   const d = parsed.data;
@@ -97,13 +75,8 @@ export async function recordPayout(input: unknown): Promise<ActionResult> {
 }
 
 export async function deletePayout(id: string): Promise<ActionResult> {
+  const { salonId } = await requirePermission("payroll.manage");
   const te = await getTranslations("Payroll.errors");
-  let salonId: string;
-  try {
-    salonId = await requirePayrollSalon();
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : te("unauthorized") };
-  }
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: te("invalidData") };
 
   const res = await prisma.payout.deleteMany({ where: { id, salonId } });

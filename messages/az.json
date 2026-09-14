@@ -58,12 +58,14 @@
     "roleFinance": "Maliyyə",
     "branch": "Filial",
     "branchSwitcherLabel": "Aktiv filial",
-    "manageBranches": "Filialları idarə et"
+    "manageBranches": "Filialları idarə et",
+    "timeOff": "Məzuniyyət"
   },
   "StaffBlocked": {
     "title": "Giriş bağlıdır",
-    "plan": "Salonun planı artıq usta girişlərini əhatə etmir. Salon sahibi ilə əlaqə saxlayın.",
-    "inactive": "Salon sahibi bu girişi dayandırıb."
+    "plan": "Salonun planı artıq bu girişi əhatə etmir. Salon sahibi ilə əlaqə saxlayın.",
+    "inactive": "Salon sahibi bu girişi dayandırıb.",
+    "role": "Bu girişin rolu tanınmır. Salon sahibindən onu yoxlamasını xahiş edin."
   },
   "Pwa": {
     "installTitle": "SalonBook-u ana ekrana əlavə edin",
@@ -559,6 +561,41 @@
       "errors": {
         "selectDates": "Tarixləri seçin.",
         "endBeforeStart": "Bitmə tarixi başlanğıcdan əvvəl ola bilməz."
+      }
+    },
+    "team": {
+      "title": "Komanda girişləri",
+      "subtitle": "Administrator və maliyyə əməkdaşı öz e-poçtu ilə daxil olur. Onlar təqvimdə sütun tutmur və işçi limitinə sayılmır.",
+      "add": "Giriş əlavə et",
+      "empty": "Hələ komanda girişi yoxdur.",
+      "role": "Rol",
+      "roles": {
+        "ADMIN": "Administrator",
+        "FINANCE": "Maliyyə"
+      },
+      "roleHint": {
+        "ADMIN": "Bu filialda rezervasiyalar, müştərilər və məzuniyyətlər. Qiymətlər, işçilər, tənzimləmələr və analitika yoxdur.",
+        "FINANCE": "Bütün filiallar üzrə analitika və məlumat ixracı. Rezervasiyalar, müştərilər və məzuniyyətlər yalnız baxış üçün."
+      },
+      "planAdmin": "Administrator girişləri ödənişli planlara daxildir.",
+      "planFinance": "Maliyyə girişləri Pro planına daxildir.",
+      "fullName": "Ad",
+      "fullNamePlaceholder": "məs., Aysel",
+      "employee": "Bağlı işçi (istəyə bağlı)",
+      "employeeNone": "Bağlı deyil",
+      "employeeHint": "Əgər o həm də usta kimi işləyirsə, bağlayın — öz hesablaşmasını görə bilsin.",
+      "linkedTo": "Bağlıdır: {name}",
+      "allBranches": "Bütün filiallar",
+      "disabled": "Dayandırılıb",
+      "resetPassword": "Şifrəni dəyiş",
+      "revokeConfirm": "{name} üçün giriş silinsin? O, dərhal sistemdən çıxarılacaq.",
+      "create": "Girişi yarat",
+      "issued": "Şifrə yadda saxlanıldı — indi təhvil verin:",
+      "errors": {
+        "nameRequired": "Ad daxil edin.",
+        "notFound": "Giriş tapılmadı.",
+        "employeeTaken": "Bu işçinin artıq girişi var.",
+        "employeeNotFound": "İşçi tapılmadı."
       }
     }
   },
@@ -1384,7 +1421,8 @@
     "guard": {
       "noSalon": "Sessiyanız salona bağlı deyil. Yenidən daxil olun.",
       "forbidden": "Bu əməliyyat üçün icazəniz yoxdur. Səhifəni yeniləyin və ya icazəsi olan hesabla daxil olun.",
-      "sessionInvalid": "Sessiya etibarlı deyil. Çıxıb yenidən daxil olun."
+      "sessionInvalid": "Sessiya etibarlı deyil. Çıxıb yenidən daxil olun.",
+      "planRequired": "Salonun planı bu funksiyanı əhatə etmir. Salon sahibi planı yüksəldə bilər."
     },
     "api": {
       "invalidCredentials": "E-poçt və ya şifrə yanlışdır.",
@@ -1772,5 +1810,18 @@
         "a": "Sabit aylıq abunə — rezervasiyalardan heç bir komissiya yoxdur. İllik ödəniş də mövcuddur. Hazırda ödənişlər əl ilə aparılır: planınızı seçirsiniz, biz aktivləşdiririk. Avtomatik onlayn ödəniş və depozitlər (no-show qoruması) Pro üçün hazırlanır."
       }
     ]
+  },
+  "TimeOff": {
+    "title": "Məzuniyyət",
+    "subtitle": "Hər mütəxəssisin istirahət günləri. Onlayn qeydiyyat bu günləri göstərmir.",
+    "empty": "Hələ aktiv işçi yoxdur.",
+    "manage": "İdarə et",
+    "view": "Bax",
+    "upcoming": "{count, plural, =0 {Məzuniyyət planlaşdırılmayıb} other {# məzuniyyət planlaşdırılıb}}"
+  },
+  "PlanRequired": {
+    "title": "Salonun planına daxil deyil",
+    "body": "Bu funksiya salonun planına daxil deyil. Salon sahibinə müraciət edin — o, planı yüksəldə bilər.",
+    "back": "Bu günə qayıt"
   }
 }

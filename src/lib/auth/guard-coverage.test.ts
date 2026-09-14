@@ -9,7 +9,8 @@ import { sectionPermission } from "./permissions";
 // actually had.
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
-const DASHBOARD = join(ROOT, "src", "app", "[locale]", "dashboard");
+const SRC = join(ROOT, "src");
+const DASHBOARD = join(SRC, "app", "[locale]", "dashboard");
 
 function filesUnder(dir: string, keep: (path: string) => boolean): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -26,14 +27,43 @@ function rel(path: string): string {
 
 const read = (path: string) => readFileSync(path, "utf8");
 const isTest = (path: string) => /\.test\.tsx?$/.test(path);
+const isComment = (line: string) => /^\s*(?:\/\/|\*|\/\*)/.test(line);
 
 describe("role names in app code", () => {
   // Checks ask for a permission. A comparison against a role name anywhere but
   // permissions.ts is a rule the permission table does not know about — which is
   // how the "not a master, so the owner" checks came to fail open for any role
-  // added after them.
-  const ROLE_COMPARISON =
-    /\b(?:role|appRole)\s*[!=]==?\s*["'`]|[!=]==?\s*["'`](?:OWNER|STAFF|ADMIN|FINANCE|MASTER)["'`]|\bisStaff\b/;
+  // added after them. Every shape such a check takes is listed.
+  const NAME = String.raw`["'\x60](?:OWNER|STAFF|ADMIN|FINANCE|MASTER)["'\x60]`;
+  const ROLE_CHECK = new RegExp(
+    [
+      String.raw`\b(?:role|appRole)\s*[!=]==?\s*["'\x60]`, // role === "…"
+      String.raw`[!=]==?\s*${NAME}`, //                          … === "OWNER"
+      String.raw`\bcase\s+${NAME}`, //                            case "OWNER":
+      String.raw`\.includes\(\s*${NAME}`, //                      roles.includes("OWNER")
+      String.raw`\bisStaff\b`,
+    ].join("|"),
+  );
+
+  it("catches each shape of role check, and not the database filters that merely name a role", () => {
+    const checks = [
+      'if (session.role === "OWNER") {',
+      "if (appRole !== 'ADMIN') return;",
+      'const owner = membership.role == "OWNER";',
+      '    case "FINANCE":',
+      'if (["OWNER", "ADMIN"].includes("OWNER")) {',
+      "if (session.isStaff) {",
+    ];
+    const notChecks = [
+      'where: { salonId: id, role: "STAFF" },',
+      'const branchLogins = { salonId: id, role: { not: "OWNER" as const } };',
+      '  OWNER: "roleOwner",',
+      '    case "plan":',
+      "role: { in: [...TEAM_ROLES] },",
+    ];
+    for (const line of checks) expect(ROLE_CHECK.test(line), line).toBe(true);
+    for (const line of notChecks) expect(ROLE_CHECK.test(line), line).toBe(false);
+  });
 
   // Allowed, each for a reason:
   //   permissions.ts           the one place roles are mapped to permissions;
@@ -43,9 +73,9 @@ describe("role names in app code", () => {
     path === "src/lib/auth/permissions.ts" ||
     path.startsWith("src/app/[locale]/dashboard/admin/");
 
-  it("appear in comparisons only inside permissions.ts", () => {
+  it("appear in checks only inside permissions.ts", () => {
     const files = [
-      ...filesUnder(join(ROOT, "src"), (p) => /\.tsx?$/.test(p) && !isTest(p)),
+      ...filesUnder(SRC, (p) => /\.tsx?$/.test(p) && !isTest(p)),
       ...filesUnder(join(ROOT, "worker"), (p) => /\.ts$/.test(p)),
     ];
     const offenders = files
@@ -55,51 +85,95 @@ describe("role names in app code", () => {
           .split(/\r?\n/)
           .map((line, i) => ({ line, at: `${rel(file)}:${i + 1}` }))
           // Comments may describe the old rules; only code is held to this.
-          .filter(({ line }) => !/^\s*(?:\/\/|\*|\/\*)/.test(line) && ROLE_COMPARISON.test(line))
+          .filter(({ line }) => !isComment(line) && ROLE_CHECK.test(line))
           .map(({ line, at }) => `${at}  ${line.trim()}`),
       );
     expect(offenders).toEqual([]);
   });
 });
 
-describe("dashboard server actions", () => {
+describe("server actions", () => {
   // A server action is a POST endpoint of its own: the page that renders its
-  // button protects nothing. Every exported action has to open with a guard —
-  // updateSlug did not, and a master's login could rename the salon's link.
-  const GUARD = /\brequire[A-Z]\w*\(|\bhasPermission\(|\bspansAllBranches\(/;
-  const files = filesUnder(DASHBOARD, (p) => /[\\/]actions\.ts$/.test(p));
+  // button protects nothing. So every exported action opens with its guard, as
+  // its FIRST statement — anything before it, even parsing input or loading
+  // translations, runs for a caller nobody has checked. updateSlug had no guard
+  // at all, and a master's login could rename the salon's link.
+  //
+  // Every "use server" file under src is held to this, not just the dashboard's:
+  // the client profile and the PWA prompt are POST endpoints too.
+  // Line by line rather than one regex over the file: a pattern that skips any
+  // number of leading block comments backtracks exponentially on long files.
+  function isActionFile(text: string): boolean {
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line === "" || line.startsWith("//")) continue;
+      if (line.startsWith("/*")) {
+        while (i < lines.length && !lines[i].includes("*/")) i += 1;
+        continue;
+      }
+      return /^["']use server["'];?$/.test(line);
+    }
+    return false;
+  }
+  const files = filesUnder(SRC, (p) => /\.tsx?$/.test(p) && !isTest(p) && isActionFile(read(p)));
 
-  it("finds the action files, so the check below is not vacuous", () => {
+  // `const x = await requireFoo(…)` or `await requireFoo(…)`. getClientSession is
+  // the client area's guard: it returns the verified customer or nothing.
+  const GUARD_FIRST = /^(?:(?:const|let)\s+[^=]+=\s*)?await\s+(?:require[A-Z]\w*|getClientSession)\(/;
+
+  // Actions with no caller to check, each with the reason.
+  const NO_CALLER: Record<string, string> = {
+    "src/components/pwa/actions.ts: dismissInstallPrompt":
+      "sets the install-prompt cookie on the caller's own browser and reads or writes nothing else",
+  };
+
+  /** Each exported action and the first statement of its body. */
+  function exportedActions(file: string): { id: string; first: string }[] {
+    const lines = read(file).split(/\r?\n/);
+    return lines.flatMap((line, start) => {
+      const name = /^export async function (\w+)/.exec(line)?.[1];
+      if (!name) return [];
+      // The signature may wrap; the body opens on the first line ending in "{".
+      let open = start;
+      while (open < lines.length && !/\{\s*$/.test(lines[open])) open += 1;
+      let body = open + 1;
+      while (body < lines.length && (lines[body].trim() === "" || isComment(lines[body]))) {
+        body += 1;
+      }
+      return [{ id: `${rel(file)}: ${name}`, first: (lines[body] ?? "").trim() }];
+    });
+  }
+
+  const actions = files.flatMap(exportedActions);
+
+  it("finds the action files and their actions, so the checks below are not vacuous", () => {
     expect(files.map(rel)).toEqual(
       expect.arrayContaining([
         "src/app/[locale]/dashboard/actions.ts",
+        "src/app/[locale]/dashboard/admin/actions.ts",
         "src/app/[locale]/dashboard/clients/actions.ts",
+        "src/app/[locale]/dashboard/payroll/actions.ts",
+        "src/app/[locale]/dashboard/services/actions.ts",
         "src/app/[locale]/dashboard/settings/actions.ts",
         "src/app/[locale]/dashboard/workers/actions.ts",
+        "src/app/[locale]/profile/actions.ts",
+        "src/components/pwa/actions.ts",
       ]),
     );
+    expect(actions.length).toBeGreaterThan(40);
   });
 
-  it("each open with a guard", () => {
-    const unguarded = files.flatMap((file) => {
-      const lines = read(file).split(/\r?\n/);
-      return lines.flatMap((line, start) => {
-        const name = /^export async function (\w+)/.exec(line)?.[1];
-        if (!name) return [];
-        // The body runs to the next top-level declaration or comment.
-        let end = start + 1;
-        while (
-          end < lines.length &&
-          !/^(?:export |async function |function |const |let |type |interface |\/\/|\/\*)/.test(
-            lines[end],
-          )
-        ) {
-          end += 1;
-        }
-        return GUARD.test(lines.slice(start, end).join("\n")) ? [] : [`${rel(file)}: ${name}`];
-      });
-    });
+  it("each open with a guard as their first statement", () => {
+    const unguarded = actions
+      .filter(({ id, first }) => !(id in NO_CALLER) && !GUARD_FIRST.test(first))
+      .map(({ id, first }) => `${id}  — starts with: ${first}`);
     expect(unguarded).toEqual([]);
+  });
+
+  it("lists only exemptions that still exist", () => {
+    const ids = new Set(actions.map((a) => a.id));
+    for (const id of Object.keys(NO_CALLER)) expect(ids.has(id), id).toBe(true);
   });
 });
 
@@ -108,16 +182,17 @@ describe("dashboard pages", () => {
   // profile had no role check of its own, so a master — whose bookings carry
   // each customer's id — could open a customer's phone and history directly.
   const pages = filesUnder(DASHBOARD, (p) => /[\\/]page\.tsx$/.test(p)).map(rel);
-  // Today is where a refused role is sent, so it cannot refuse anyone (it narrows
-  // by scope instead); the platform admin panel checks its own flag.
-  const EXEMPT = [
-    "src/app/[locale]/dashboard/page.tsx",
-    "src/app/[locale]/dashboard/admin/page.tsx",
-  ];
+  // The platform admin panel checks its own flag.
+  const EXEMPT = ["src/app/[locale]/dashboard/admin/page.tsx"];
 
   it("finds the pages, so the check below is not vacuous", () => {
     expect(pages).toEqual(
-      expect.arrayContaining([...EXEMPT, "src/app/[locale]/dashboard/clients/[id]/page.tsx"]),
+      expect.arrayContaining([
+        ...EXEMPT,
+        "src/app/[locale]/dashboard/page.tsx",
+        "src/app/[locale]/dashboard/clients/[id]/page.tsx",
+        "src/app/[locale]/dashboard/time-off/page.tsx",
+      ]),
     );
   });
 
@@ -127,19 +202,18 @@ describe("dashboard pages", () => {
       const route = page.replace("src/app/[locale]", "").replace(/\/page\.tsx$/, "");
       const needed = sectionPermission(route);
       const source = read(join(ROOT, page));
-      if (needed) expect(source).toContain(`requirePagePermission("${needed}")`);
-      else expect(source).toMatch(/requirePagePermission\("[\w.]+"\)/);
+      const gate = String.raw`requirePage(?:Permission|Access)\("`;
+      if (needed) expect(source).toMatch(new RegExp(`${gate}${needed.replace(".", "\\.")}"\\)`));
+      else expect(source).toMatch(new RegExp(`${gate}[\\w.]+"\\)`));
     },
   );
 });
 
 describe("dashboard API routes", () => {
-  const routes = filesUnder(join(ROOT, "src", "app", "api", "dashboard"), (p) =>
-    /[\\/]route\.ts$/.test(p),
-  );
+  const routes = filesUnder(join(SRC, "app", "api", "dashboard"), (p) => /[\\/]route\.ts$/.test(p));
 
-  it("check a permission before answering", () => {
+  it("ask the role and the plan together before answering", () => {
     expect(routes.length).toBeGreaterThan(0);
-    for (const route of routes) expect(read(route), rel(route)).toMatch(/\bhasPermission\(/);
+    for (const route of routes) expect(read(route), rel(route)).toMatch(/\baccessRefusal\(/);
   });
 });

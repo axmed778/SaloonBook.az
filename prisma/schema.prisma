@@ -91,8 +91,14 @@ model Membership {
   userId     String
   accountId  String
   role       Role
-  salonId    String? // which salon/branch a STAFF member works at
-  employeeId String?   @unique // links a STAFF membership to its Employee record
+  // The branch a STAFF or ADMIN login works at. Null for FINANCE, which spans the
+  // account and starts at its primary salon.
+  salonId    String?
+  // Links a STAFF membership to its Employee record; optional for ADMIN and
+  // FINANCE, who may be linked to see their own payout statement.
+  employeeId String?   @unique
+  // Set when the owner switches the login off; null = active. getSession blocks it.
+  disabledAt DateTime? @db.Timestamptz(6)
   user       User      @relation(fields: [userId], references: [id])
   account    Account   @relation(fields: [accountId], references: [id])
   salon      Salon?    @relation(fields: [salonId], references: [id])
@@ -105,7 +111,9 @@ model Membership {
 
 enum Role {
   OWNER
-  STAFF
+  STAFF // a master's own login (MASTER in code)
+  ADMIN // reception
+  FINANCE
 }
 
 enum AccountStatus {

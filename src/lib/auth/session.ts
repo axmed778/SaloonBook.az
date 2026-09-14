@@ -7,19 +7,11 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import type { Plan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { effectivePlan } from "@/lib/subscription";
-import { featuresFor, limitsFor } from "@/lib/plans";
-import { staffBlockedReason, type StaffBlockedReason } from "./access";
-import {
-  appRoleOf,
-  isEmployeeLogin,
-  rolePermissions,
-  spansAllBranches,
-  type AppRole,
-  type Permission,
-} from "./permissions";
+import { buildSession, type Session } from "./session-state";
+
+export type { Session, SessionBranch, StaffBlockedReason } from "./session-state";
 
 const COOKIE_NAME = "sb_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 30; // ~30 days
@@ -160,78 +152,12 @@ export async function setActiveBranch(salonId: string): Promise<void> {
   });
 }
 
-export type { StaffBlockedReason };
-
-export interface SessionBranch {
-  id: string;
-  name: string;
-  address: string | null;
-}
-
-export interface Session {
-  user: {
-    id: string;
-    email: string;
-    fullName: string | null;
-    isPlatformAdmin: boolean;
-  };
-  /**
-   * The product role of the user's (single, MVP) membership: OWNER, ADMIN,
-   * FINANCE or MASTER. Null without a membership, as for a platform admin.
-   */
-  appRole: AppRole | null;
-  /**
-   * What that role may do in its salon, before the plan is considered (see
-   * planIncludes). Empty for a blocked login. Ask it with hasPermission() —
-   * never by comparing appRole.
-   */
-  permissions: readonly Permission[];
-  /**
-   * Employee the membership is tied to. Always set for a master's login (that is
-   * what makes it "this master's account"), null for the owner.
-   */
-  employeeId: string | null;
-  /**
-   * Why a master's login is currently denied its salon, or null when it is fine.
-   * When set, `salonId` is deliberately null and `permissions` empty, so every
-   * guard (`requirePermission`, `where: { salonId }`) fails closed without
-   * knowing this rule exists; the dashboard layout reads the reason only to
-   * explain it.
-   */
-  staffBlocked: StaffBlockedReason | null;
-  /**
-   * The salon every dashboard page/action is scoped to. For a role that spans
-   * the account on a multi-branch (Pro) plan this is the branch picked in the
-   * switcher (sb_branch cookie); otherwise the membership's home salon.
-   */
-  salonId: string | null;
-  /** Account behind the membership, if any. */
-  accountId: string | null;
-  /** Effective (time-aware) plan of the account — FREE when no membership. */
-  plan: Plan;
-  /** Whether the effective plan includes multi-branch support. */
-  multiBranch: boolean;
-  /**
-   * How many branches the account may have in total: the plan's maxBranches
-   * plus paid extra slots (Subscription.extraBranches, Pro only).
-   */
-  maxBranches: number;
-  /** ACTIVE salons (branches) of the account, oldest (primary) first. */
-  branches: SessionBranch[];
-  /**
-   * Legal-document versions the account last accepted. Compared against
-   * LEGAL_DOC_VERSION by the dashboard's re-consent gate; null when the account
-   * predates consent capture (also treated as stale).
-   */
-  legal: { offerVersion: string | null; privacyVersion: string | null };
-  isAdmin: boolean;
-}
-
 /**
  * Reads and verifies the session cookie, then loads the User + first membership
  * (with the account's subscription and ACTIVE salons, so the active branch and
- * plan gating resolve in the same query). Returns null when there is no valid
- * session.
+ * plan gating resolve in the same query) and hands them to buildSession(), which
+ * owns every rule about what the login may reach. Returns null when there is no
+ * valid session.
  */
 export async function getSession(): Promise<Session | null> {
   const store = await cookies();
@@ -252,7 +178,8 @@ export async function getSession(): Promise<Session | null> {
           salonId: true,
           accountId: true,
           employeeId: true,
-          // A staff login is only as alive as the master it points at.
+          disabledAt: true,
+          // A master's login is only as alive as the master it points at.
           employee: { select: { isActive: true } },
           account: {
             select: {
@@ -292,65 +219,23 @@ export async function getSession(): Promise<Session | null> {
   }
 
   const membership = user.memberships[0] ?? null;
-  const appRole = membership ? appRoleOf(membership.role) : null;
-  const sub = membership?.account.subscription ?? null;
-  const plan = effectivePlan(sub);
-  const features = featuresFor(plan);
-  const multiBranch = features.multiBranch;
-
-  // Is this an employee's own login, and is it still entitled to one? Both
-  // answers are derived here, per request, from the plan and the employee row —
-  // never from the cookie — so a downgrade or a deactivation takes effect on the
-  // very next page load rather than whenever the session happens to expire.
-  const staffBlocked = staffBlockedReason({
-    employeeLogin: appRole !== null && isEmployeeLogin(appRole),
-    staffRolesEnabled: features.staffRoles,
-    employeeIsActive: membership?.employee?.isActive,
-  });
-  // Paid extra slots only count while the plan actually has multi-branch —
-  // after a downgrade they lie dormant until the account is Pro again.
-  const maxBranches =
-    limitsFor(plan).maxBranches + (multiBranch ? (sub?.extraBranches ?? 0) : 0);
-  const branches = membership?.account.salons ?? [];
-
-  // Default scope: the membership's home salon. A role that spans the account
-  // may override it on a multi-branch (Pro) account via the switcher cookie —
-  // but only to a salon that is still an ACTIVE member of THEIR account. Every
-  // other role stays pinned to its own.
-  let salonId = membership?.salonId ?? null;
-  // Fail closed: a blocked master keeps a valid session (so the layout can say
-  // why) but carries no salon and no permissions, which is what every dashboard
-  // guard already refuses on. No other call site has to know this rule exists.
-  if (staffBlocked) salonId = null;
-  else if (appRole !== null && spansAllBranches(appRole)) {
-    if (!salonId) salonId = branches[0]?.id ?? null;
-    const picked = store.get(BRANCH_COOKIE)?.value;
-    if (picked && multiBranch && branches.some((b) => b.id === picked)) {
-      salonId = picked;
-    }
-  }
-
-  return {
+  const { session, unknownRole } = buildSession({
     user: {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
       isPlatformAdmin: user.isPlatformAdmin,
     },
-    appRole,
-    permissions: appRole === null || staffBlocked ? [] : rolePermissions(appRole),
-    employeeId: membership?.employeeId ?? null,
-    staffBlocked,
-    salonId,
-    accountId: membership?.accountId ?? null,
-    plan,
-    multiBranch,
-    maxBranches,
-    branches,
-    legal: {
-      offerVersion: membership?.account.offerVersion ?? null,
-      privacyVersion: membership?.account.privacyVersion ?? null,
-    },
-    isAdmin: user.isPlatformAdmin,
-  };
+    membership,
+    plan: effectivePlan(membership?.account.subscription ?? null),
+    branchCookie: store.get(BRANCH_COOKIE)?.value,
+  });
+  if (unknownRole !== null) {
+    // The login is blocked rather than failing the request: the database knows a
+    // role this deploy does not (a migration ahead of its code, or a bad write).
+    console.warn(
+      `[auth] user ${user.id} has membership role "${unknownRole}", which this build does not map — login blocked`,
+    );
+  }
+  return session;
 }

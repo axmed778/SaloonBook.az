@@ -27,6 +27,7 @@
     "db:setup": "prisma migrate deploy && pnpm db:constraints && pnpm db:indexes && pnpm db:checks && pnpm db:rls-grants",
     "test:rls": "vitest run src/lib/tenant.rls.test.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:demo-finance": "tsx scripts/seed-demo-finance.ts",
     "postinstall": "prisma generate",
     "lint": "eslint .",
     "e2e": "playwright test",

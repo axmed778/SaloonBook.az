@@ -36,6 +36,7 @@ export function Calendar({
   windowStartMin,
   windowEndMin,
   salonName,
+  canWrite,
 }: {
   view: "day" | "week";
   day: string;
@@ -48,6 +49,8 @@ export function Calendar({
   windowStartMin: number;
   windowEndMin: number;
   salonName: string;
+  /** bookings.write: create, move, change status, close the day. Read-only without it. */
+  canWrite: boolean;
 }) {
   const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
@@ -126,20 +129,22 @@ export function Calendar({
           </div>
 
           {/* New booking */}
-          <button
-            type="button"
-            onClick={() => setBooking(true)}
-            disabled={!canBook}
-            title={canBook ? undefined : t("needStaffFirst")}
-            className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            {t("newBooking")}
-          </button>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={() => setBooking(true)}
+              disabled={!canBook}
+              title={canBook ? undefined : t("needStaffFirst")}
+              className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+              {t("newBooking")}
+            </button>
+          )}
         </div>
       </div>
 
-      <ReconcileBar blocks={blocks} />
+      {canWrite && <ReconcileBar blocks={blocks} />}
 
       {isWeek ? (
         <WeekGrid
@@ -163,11 +168,12 @@ export function Calendar({
         <AppointmentPopup
           block={selected}
           salonName={salonName}
+          canWrite={canWrite}
           onClose={() => setSelected(null)}
         />
       )}
 
-      {booking && (
+      {canWrite && booking && (
         <BookingModal
           catalog={catalog}
           defaultDay={day >= today ? day : today}

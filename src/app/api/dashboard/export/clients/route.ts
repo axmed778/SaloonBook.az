@@ -1,11 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/auth/permissions";
-import { prisma } from "@/lib/prisma";
+import { accessRefusal } from "@/lib/auth/permissions";
 import { withTenantScope } from "@/lib/tenant";
-import { featuresFor } from "@/lib/plans";
-import { effectivePlan } from "@/lib/subscription";
 import { localeFromCookie } from "@/i18n/request-locale";
 import {
   csvStreamResponse,
@@ -46,20 +43,19 @@ export async function GET() {
   if (!session) {
     return new Response("Unauthorized", { status: 401 });
   }
-  // exports.data: the whole customer base, phone numbers included — exactly the
-  // list a master's dashboard never shows them.
-  if (session.isAdmin || !session.salonId || !hasPermission(session, "exports.data")) {
+  if (session.isAdmin || !session.salonId) {
     return new Response("Forbidden", { status: 403 });
   }
-  const salonId = session.salonId;
-
-  const salon = await prisma.salon.findUnique({
-    where: { id: salonId },
-    select: { account: { select: { subscription: true } } },
-  });
-  if (!featuresFor(effectivePlan(salon?.account.subscription ?? null)).exports) {
+  // The whole customer base, phone numbers included, so both: clients.read — a
+  // role that may not open the client list must not download it — and
+  // exports.data, which also carries the Pro plan gate. Roles are asked first,
+  // then the session's per-request plan.
+  const refused = accessRefusal(session, ["clients.read", "exports.data"]);
+  if (refused === "role") return new Response("Forbidden", { status: 403 });
+  if (refused === "plan") {
     return new Response("Data export requires the Pro plan.", { status: 403 });
   }
+  const salonId = session.salonId;
 
   const locale = await localeFromCookie();
   const [t, tLimits] = await Promise.all([

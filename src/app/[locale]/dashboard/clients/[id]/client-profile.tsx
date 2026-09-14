@@ -89,6 +89,7 @@ export function ClientProfile({
   notes,
   catalog,
   today,
+  allowed,
 }: {
   data: ProfileData;
   upcoming: AppointmentItem[];
@@ -96,6 +97,11 @@ export function ClientProfile({
   notes: NoteItem[];
   catalog: CatalogEmployee[];
   today: string;
+  /**
+   * Which write controls to render: book (bookings.write — new booking, status
+   * changes), edit (clients.write — edit, notes), remove (clients.delete).
+   */
+  allowed: { book: boolean; edit: boolean; remove: boolean };
 }) {
   const t = useTranslations("ClientProfile");
   const router = useRouter();
@@ -160,27 +166,33 @@ export function ClientProfile({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setBooking(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700"
-            >
-              + {t("newBooking")}
-            </button>
+            {allowed.book && (
+              <button
+                onClick={() => setBooking(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700"
+              >
+                + {t("newBooking")}
+              </button>
+            )}
             <a href={`tel:${data.phone}`} className={actionBtn}>
               {t("call")}
             </a>
             <button onClick={copyPhone} className={actionBtn}>
               {copied ? t("copied") : t("copyPhone")}
             </button>
-            <button onClick={() => setEditing(true)} className={actionBtn}>
-              {t("edit")}
-            </button>
-            <button
-              onClick={() => setDeleting(true)}
-              className="inline-flex items-center rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-700 dark:text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
-            >
-              {t("delete")}
-            </button>
+            {allowed.edit && (
+              <button onClick={() => setEditing(true)} className={actionBtn}>
+                {t("edit")}
+              </button>
+            )}
+            {allowed.remove && (
+              <button
+                onClick={() => setDeleting(true)}
+                className="inline-flex items-center rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs font-medium text-rose-700 dark:text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
+              >
+                {t("delete")}
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -211,8 +223,10 @@ export function ClientProfile({
         </dl>
       </section>
 
-      {/* Notes */}
-      <NotesSection customerId={data.id} notes={notes} />
+      {/* Notes: read by anyone who reads the client; written with clients.write. */}
+      {(allowed.edit || notes.length > 0) && (
+        <NotesSection customerId={data.id} notes={notes} canEdit={allowed.edit} />
+      )}
 
       {/* Upcoming */}
       {upcoming.length > 0 && (
@@ -245,7 +259,7 @@ export function ClientProfile({
       </section>
 
       {/* Modals */}
-      {booking && (
+      {allowed.book && booking && (
         <BookingModal
           catalog={catalog}
           defaultDay={today}
@@ -255,7 +269,7 @@ export function ClientProfile({
           onClose={() => setBooking(false)}
         />
       )}
-      {editing && (
+      {allowed.edit && editing && (
         <EditCustomerModal
           id={data.id}
           name={data.name}
@@ -263,7 +277,7 @@ export function ClientProfile({
           onClose={() => setEditing(false)}
         />
       )}
-      {deleting && (
+      {allowed.remove && deleting && (
         <DeleteCustomerModal
           id={data.id}
           name={data.name}
@@ -276,6 +290,7 @@ export function ClientProfile({
         <AppointmentDetailModal
           item={detail}
           branchName={data.branchName}
+          canChangeStatus={allowed.book}
           onClose={() => setDetail(null)}
         />
       )}
@@ -356,7 +371,15 @@ function AppointmentList({
 
 // --- Notes ---------------------------------------------------------------------
 
-function NotesSection({ customerId, notes }: { customerId: string; notes: NoteItem[] }) {
+function NotesSection({
+  customerId,
+  notes,
+  canEdit,
+}: {
+  customerId: string;
+  notes: NoteItem[];
+  canEdit: boolean;
+}) {
   const t = useTranslations("ClientProfile.notes");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -394,23 +417,25 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
         <span className="ml-2 text-xs font-normal text-faint-foreground">{t("privateHint")}</span>
       </h2>
 
-      <form onSubmit={submit} className="mt-3 flex gap-2">
-        <input
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={1000}
-          aria-label={t("title")}
-          placeholder={t("placeholder")}
-          className={inputCls + " w-full"}
-        />
-        <button
-          type="submit"
-          disabled={pending || !body.trim()}
-          className="shrink-0 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-50"
-        >
-          {t("add")}
-        </button>
-      </form>
+      {canEdit && (
+        <form onSubmit={submit} className="mt-3 flex gap-2">
+          <input
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            maxLength={1000}
+            aria-label={t("title")}
+            placeholder={t("placeholder")}
+            className={inputCls + " w-full"}
+          />
+          <button
+            type="submit"
+            disabled={pending || !body.trim()}
+            className="shrink-0 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover disabled:opacity-50"
+          >
+            {t("add")}
+          </button>
+        </form>
+      )}
       {error && <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
       {notes.length > 0 && (
@@ -424,14 +449,16 @@ function NotesSection({ customerId, notes }: { customerId: string; notes: NoteIt
                 <p className="whitespace-pre-wrap break-words text-sm text-secondary-foreground">{n.body}</p>
                 <p className="mt-0.5 text-xs text-faint-foreground">{n.createdLabel}</p>
               </div>
-              <button
-                onClick={() => remove(n.id)}
-                disabled={pending}
-                aria-label={t("deleteAria")}
-                className="shrink-0 text-xs text-faint-foreground transition hover:text-rose-400"
-              >
-                {t("delete")}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => remove(n.id)}
+                  disabled={pending}
+                  aria-label={t("deleteAria")}
+                  className="shrink-0 text-xs text-faint-foreground transition hover:text-rose-400"
+                >
+                  {t("delete")}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -626,10 +653,12 @@ function DeleteCustomerModal({
 function AppointmentDetailModal({
   item,
   branchName,
+  canChangeStatus,
   onClose,
 }: {
   item: AppointmentItem;
   branchName: string;
+  canChangeStatus: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("ClientProfile.detail");
@@ -669,7 +698,7 @@ function AppointmentDetailModal({
         <DetailRow label={t("createdAt")} value={item.createdLabel} />
       </dl>
 
-      {item.status === "CONFIRMED" && (
+      {canChangeStatus && item.status === "CONFIRMED" && (
         <div className="mt-4 border-t border-border pt-4">
           <p className="mb-2 text-xs text-faint-foreground">{t("changeStatus")}</p>
           <div className="flex flex-wrap gap-2">

@@ -2,6 +2,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { requirePagePermission } from "@/lib/auth/guards";
 import { appointmentScope, salonScopeFor } from "@/lib/auth/access";
+import { can } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { intlLocale } from "@/i18n/format";
 import {
@@ -119,6 +120,9 @@ export default async function CalendarPage({
   // the blocks streamed into the RSC payload have no contact data in them to be
   // found by View Source.
   const viewer = bookingViewer(session);
+  // Finance reads the calendar but does not book, move or close appointments:
+  // those controls are not rendered for it (the actions refuse it either way).
+  const canWrite = can(session, "bookings.write");
   const { day: dayParam, view: viewParam } = await searchParams;
   const view = viewParam === "week" ? "week" : "day";
   const today = bakuToday();
@@ -203,6 +207,7 @@ export default async function CalendarPage({
         blocks={blocks}
         catalog={catalog}
         salonName={salonName}
+        canWrite={canWrite}
         windowStartMin={win.startMin}
         windowEndMin={win.endMin}
       />
@@ -260,6 +265,7 @@ export default async function CalendarPage({
       blocks={blocks}
       catalog={catalog}
       salonName={salonName}
+      canWrite={canWrite}
       windowStartMin={win.startMin}
       windowEndMin={win.endMin}
     />

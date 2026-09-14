@@ -1,7 +1,8 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
-import { getSession } from "@/lib/auth/session";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { appointmentScope, salonScopeFor } from "@/lib/auth/access";
+import { can } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc, formatBakuDate } from "@/lib/time";
 import {
@@ -19,9 +20,10 @@ export const dynamic = "force-dynamic";
 // list ("Bu gün"). The full day/week grid moved to /dashboard/calendar.
 //
 // Every role lands here, and requirePagePermission() sends a refused role back
-// here, so this page guards by scope rather than by redirecting.
+// here. It asks for bookings.read like the calendar does; every role holds it
+// (permissions.test.ts checks), so that redirect can never point back at itself.
 export default async function DashboardTodayPage() {
-  const session = (await getSession())!;
+  const session = await requirePagePermission("bookings.read");
   const locale = await getLocale();
   const t = await getTranslations("Dashboard");
 
@@ -84,6 +86,8 @@ export default async function DashboardTodayPage() {
       items={items}
       dateLabel={formatBakuDate(today, locale)}
       salonName={salon?.name ?? ""}
+      // Finance sees the day but does not change it: no status or move buttons.
+      canWrite={can(session, "bookings.write")}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requirePagePermission } from "@/lib/auth/guards";
+import { can } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate } from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
@@ -192,6 +193,8 @@ export default async function ClientsPage({
       sort={sort}
       dir={dir}
       salonIsEmpty={salonIsEmpty}
+      // Finance reads the client list but does not add to it.
+      canCreate={can(session, "clients.write")}
     />
   );
 }
