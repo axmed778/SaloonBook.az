@@ -1,26 +1,55 @@
 import { describe, it, expect } from "vitest";
 import {
-  OWNER_ONLY_SECTIONS,
   appointmentScope,
   canActForEmployee,
-  canOpenSection,
-  isOwnerOnlySection,
   isStaffScope,
+  salonScopeFor,
   staffBlockedReason,
   type SalonScope,
 } from "./access";
 import { PLAN_FEATURES } from "../plans";
 
 // The rules that keep one master out of another master's day — and out of the
-// owner's books. They are pure on purpose: this is the layer that has to be
-// exhaustively checked, and it should not need a database to check it.
+// salon's books. They are pure on purpose: this is the layer that has to be
+// exhaustively checked, and it should not need a database to check it. Which
+// sections and actions each role gets is covered in permissions.test.ts.
 
-const OWNER: SalonScope = { salonId: "salon-1", employeeId: null };
+const SALON: SalonScope = { salonId: "salon-1", employeeId: null };
 const MASTER: SalonScope = { salonId: "salon-1", employeeId: "emp-1" };
 
+describe("salonScopeFor", () => {
+  it("gives the owner, reception and finance the whole salon", () => {
+    for (const appRole of ["OWNER", "ADMIN", "FINANCE"] as const) {
+      expect(salonScopeFor({ salonId: "salon-1", appRole, employeeId: null })).toEqual(SALON);
+    }
+  });
+
+  it("does not narrow a salon-wide role that is linked to an employee", () => {
+    // Reception or finance may be linked to an employee to see their own payout
+    // statement; that link must not shrink the bookings they work with.
+    expect(salonScopeFor({ salonId: "salon-1", appRole: "ADMIN", employeeId: "emp-7" })).toEqual(
+      SALON,
+    );
+  });
+
+  it("pins a master to their own employee", () => {
+    expect(salonScopeFor({ salonId: "salon-1", appRole: "MASTER", employeeId: "emp-1" })).toEqual(
+      MASTER,
+    );
+  });
+
+  it("refuses a master's login with no employee instead of widening it to the salon", () => {
+    expect(salonScopeFor({ salonId: "salon-1", appRole: "MASTER", employeeId: null })).toBeNull();
+  });
+
+  it("refuses a session without a role", () => {
+    expect(salonScopeFor({ salonId: "salon-1", appRole: null, employeeId: null })).toBeNull();
+  });
+});
+
 describe("appointmentScope", () => {
-  it("gives the owner the whole salon", () => {
-    expect(appointmentScope(OWNER)).toEqual({ salonId: "salon-1" });
+  it("gives a salon-wide scope the whole salon", () => {
+    expect(appointmentScope(SALON)).toEqual({ salonId: "salon-1" });
   });
 
   it("pins a master to their own rows", () => {
@@ -28,16 +57,16 @@ describe("appointmentScope", () => {
   });
 
   it("always carries the tenant guard, never the employee guard alone", () => {
-    for (const scope of [OWNER, MASTER]) {
+    for (const scope of [SALON, MASTER]) {
       expect(appointmentScope(scope).salonId).toBe("salon-1");
     }
   });
 });
 
 describe("canActForEmployee", () => {
-  it("lets the owner book for anyone", () => {
-    expect(canActForEmployee(OWNER, "emp-1")).toBe(true);
-    expect(canActForEmployee(OWNER, "emp-2")).toBe(true);
+  it("lets a salon-wide scope book for anyone", () => {
+    expect(canActForEmployee(SALON, "emp-1")).toBe(true);
+    expect(canActForEmployee(SALON, "emp-2")).toBe(true);
   });
 
   it("lets a master act only for themselves", () => {
@@ -47,72 +76,18 @@ describe("canActForEmployee", () => {
 });
 
 describe("isStaffScope", () => {
-  it("distinguishes a master's scope from the owner's", () => {
+  it("distinguishes a master's scope from the salon's", () => {
     expect(isStaffScope(MASTER)).toBe(true);
-    expect(isStaffScope(OWNER)).toBe(false);
-  });
-});
-
-describe("isOwnerOnlySection", () => {
-  it("covers every listed section and its sub-routes", () => {
-    for (const section of OWNER_ONLY_SECTIONS) {
-      expect(isOwnerOnlySection(section)).toBe(true);
-      expect(isOwnerOnlySection(`${section}/whatever`)).toBe(true);
-    }
-  });
-
-  it("leaves a master their own day", () => {
-    expect(isOwnerOnlySection("/dashboard")).toBe(false);
-    expect(isOwnerOnlySection("/dashboard/calendar")).toBe(false);
-    expect(isOwnerOnlySection("/dashboard/calendar?view=week")).toBe(false);
-  });
-
-  it("does not match a section that merely shares a prefix", () => {
-    // A plain startsWith() would have swallowed these.
-    expect(isOwnerOnlySection("/dashboard/clientsx")).toBe(false);
-    expect(isOwnerOnlySection("/dashboard/settings-export")).toBe(false);
-  });
-
-  it("names the money, the client base and the other masters", () => {
-    // Guards against a section being quietly dropped from the list.
-    expect([...OWNER_ONLY_SECTIONS]).toEqual([
-      "/dashboard/clients",
-      "/dashboard/services",
-      "/dashboard/workers",
-      "/dashboard/analytics",
-      "/dashboard/payroll",
-      "/dashboard/settings",
-      "/dashboard/billing",
-      "/dashboard/admin",
-    ]);
-  });
-});
-
-describe("canOpenSection", () => {
-  it("refuses a master every owner-only section", () => {
-    for (const section of OWNER_ONLY_SECTIONS) {
-      expect(canOpenSection("STAFF", section)).toBe(false);
-    }
-  });
-
-  it("admits a master to the calendar and today", () => {
-    expect(canOpenSection("STAFF", "/dashboard")).toBe(true);
-    expect(canOpenSection("STAFF", "/dashboard/calendar")).toBe(true);
-  });
-
-  it("admits the owner everywhere", () => {
-    for (const section of OWNER_ONLY_SECTIONS) {
-      expect(canOpenSection("OWNER", section)).toBe(true);
-    }
+    expect(isStaffScope(SALON)).toBe(false);
   });
 });
 
 describe("staffBlockedReason", () => {
-  const active = { isStaff: true, staffRolesEnabled: true, employeeIsActive: true };
+  const active = { employeeLogin: true, staffRolesEnabled: true, employeeIsActive: true };
 
-  it("never blocks the owner", () => {
+  it("never blocks a login that is not an employee's", () => {
     expect(
-      staffBlockedReason({ isStaff: false, staffRolesEnabled: false, employeeIsActive: false }),
+      staffBlockedReason({ employeeLogin: false, staffRolesEnabled: false, employeeIsActive: false }),
     ).toBeNull();
   });
 
@@ -135,7 +110,7 @@ describe("staffBlockedReason", () => {
 
   it("reports the plan first — that is the one the owner can act on", () => {
     expect(
-      staffBlockedReason({ isStaff: true, staffRolesEnabled: false, employeeIsActive: false }),
+      staffBlockedReason({ employeeLogin: true, staffRolesEnabled: false, employeeIsActive: false }),
     ).toBe("plan");
   });
 });

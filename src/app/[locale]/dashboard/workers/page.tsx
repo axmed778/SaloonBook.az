@@ -1,5 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
-import { requireOwnerPage } from "@/lib/auth/guards";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { featuresFor } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
 import { bakuYmd, formatBakuDate, shiftYmd } from "@/lib/time";
@@ -9,7 +9,7 @@ import { WorkersManager } from "./workers-manager";
 export const dynamic = "force-dynamic";
 
 export default async function WorkersPage() {
-  const session = await requireOwnerPage();
+  const session = await requirePagePermission("schedule.read");
   if (!session.salonId) {
     const t = await getTranslations("Dashboard");
     return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;

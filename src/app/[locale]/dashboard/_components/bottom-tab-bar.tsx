@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { isOwnerOnlySection } from "@/lib/auth/access";
+import { canOpenSection, type Permission } from "@/lib/auth/permissions";
 
 // Phone-only bottom navigation: Bu gün / Təqvim / Müştərilər / Ayarlar.
 // Hidden on lg+ (desktop keeps the sidebar). Safe-area padding keeps the tabs
@@ -54,11 +54,11 @@ const tabs: { href: string; labelKey: string; exact?: boolean; icon: React.React
   },
 ];
 
-export function BottomTabBar({ isStaff = false }: { isStaff?: boolean }) {
+export function BottomTabBar({ permissions = [] }: { permissions?: readonly Permission[] }) {
   const t = useTranslations("Nav");
   const pathname = usePathname();
-  // Same list as the sidebar; a master is left with Today and Calendar.
-  const visible = isStaff ? tabs.filter((t) => !isOwnerOnlySection(t.href)) : tabs;
+  // Same table as the sidebar; a master is left with Today and Calendar.
+  const visible = tabs.filter((tab) => canOpenSection(permissions, tab.href));
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-safe-bar pl-safe pr-safe pt-1 backdrop-blur lg:hidden">

@@ -1,5 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
-import { requireOwnerPage } from "@/lib/auth/guards";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { MARKETING_PLANS, type MarketingPlanKey, featuresFor } from "@/lib/plans";
@@ -37,7 +37,7 @@ type PlanCard = {
 };
 
 export default async function BillingPage() {
-  const session = await requireOwnerPage();
+  const session = await requirePagePermission("billing.manage");
   const t = await getTranslations("Billing");
   const df = intlLocale(await getLocale());
 

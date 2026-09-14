@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth/session";
+import { hasPermission, spansAllBranches, type AppRole } from "@/lib/auth/permissions";
 import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { ConsentGate } from "@/components/legal/consent-gate";
 import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
@@ -10,6 +11,15 @@ import { LogoutButton } from "./logout-button";
 import { DashboardShell } from "./_components/dashboard-shell";
 
 export const dynamic = "force-dynamic";
+
+// The label under the user's name in the sidebar. ADMIN is reception here:
+// "Admin" on its own already means the platform admin.
+const ROLE_LABEL: Record<AppRole, "roleOwner" | "roleReception" | "roleFinance" | "roleStaff"> = {
+  OWNER: "roleOwner",
+  ADMIN: "roleReception",
+  FINANCE: "roleFinance",
+  MASTER: "roleStaff",
+};
 
 // Route protection lives here (Node runtime) rather than Edge middleware, so the
 // session crypto stays on node:crypto. Any unauthenticated request to /dashboard/*
@@ -47,16 +57,16 @@ export default async function DashboardLayout({
   const displayName = session.user.fullName?.trim() || session.user.email;
   const roleLabel = session.isAdmin
     ? t("roleAdmin")
-    : session.isStaff
-      ? t("roleStaff")
-      : t("roleOwner");
+    : t(session.appRole ? ROLE_LABEL[session.appRole] : "roleOwner");
   const initial = displayName.charAt(0).toUpperCase();
 
-  // Branch switcher: only meaningful for a Pro owner with 2+ ACTIVE branches.
-  // Everyone else (staff, single-branch, admins) never sees it.
+  // Branch switcher: only for a role that spans the account (the owner), on a
+  // multi-branch (Pro) account with 2+ ACTIVE branches. Everyone else —
+  // reception, masters, single-branch salons, admins — never sees it.
   const branch =
     !session.isAdmin &&
-    session.role === "OWNER" &&
+    session.appRole &&
+    spansAllBranches(session.appRole) &&
     session.multiBranch &&
     session.branches.length > 1 &&
     session.salonId
@@ -68,18 +78,20 @@ export default async function DashboardLayout({
   const installDismissed = (await cookies()).get(A2HS_DISMISS_COOKIE)?.value === "1";
 
   // Re-consent gate: blocks the dashboard when a legal document the account
-  // accepted has since been revised. Platform admins are exempt — they have no
-  // membership, so there is no account to record an acceptance against. So are
-  // masters: accepting a revised offer binds the paying account, which is the
-  // owner's decision, and blocking a master's day on it would strand them.
+  // accepted has since been revised. Only for whoever speaks for the paying
+  // account (billing.manage — the owner). Platform admins have no membership to
+  // record an acceptance against, and blocking anyone else's day on a decision
+  // that is not theirs would strand them.
   const stale =
-    session.role === "OWNER" && session.accountId ? staleSalonDocs(session.legal) : [];
+    session.accountId && hasPermission(session, "billing.manage")
+      ? staleSalonDocs(session.legal)
+      : [];
 
   return (
     <DashboardShell
       user={{ name: displayName, role: roleLabel, initial }}
       isAdmin={session.isAdmin}
-      isStaff={session.isStaff}
+      permissions={session.permissions}
       branch={branch}
       installDismissed={installDismissed}
     >

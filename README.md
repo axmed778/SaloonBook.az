@@ -12,7 +12,11 @@ Online booking for Azerbaijan salons, barbershops, and clinics.
   separate process; **booking creation never waits on it.**
 - **PostgreSQL + Prisma** — shared DB, shared schema, `salonId` tenant discriminator.
 - **Redis + BullMQ** — job queue, caching, slot locks.
-- **Clerk** — auth (OWNER / STAFF roles; platform admins via `User.isPlatformAdmin`).
+- **Auth** — email + password (scrypt) with an HMAC-signed session cookie, re-checked
+  against the database on every request (`src/lib/auth/session.ts`). Roles live in
+  `Membership.role`; every server action, route handler and page asks for a permission
+  key from `src/lib/auth/permissions.ts`, never for a role name. Platform admins via
+  `User.isPlatformAdmin`.
 - **Cloudflare R2** — file storage. **Railway** — hosting.
 
 Tenancy: an **`Account`** is the paying business and owns the `Subscription`. In MVP an
@@ -139,8 +143,8 @@ free"), so making it strict before threading `salonId` through
 
 Other production must-haves (the app refuses to boot otherwise — see
 `src/lib/env.ts`): a strong unique `WHATSAPP_VERIFY_TOKEN` (never the
-placeholder) and configured Clerk keys. `WHATSAPP_APP_SECRET` is required to
-signature-verify incoming WhatsApp webhooks.
+placeholder) and a real `SESSION_SECRET`, which signs the session cookie.
+`WHATSAPP_APP_SECRET` is required to signature-verify incoming WhatsApp webhooks.
 
 ## Deploy (Railway)
 

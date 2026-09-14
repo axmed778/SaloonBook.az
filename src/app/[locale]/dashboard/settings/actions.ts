@@ -3,22 +3,22 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession, type Session } from "@/lib/auth/session";
-import { requireOwnerSalonId, requireOwnerSession } from "@/lib/auth/guards";
+import { requirePermission, type SalonSession } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
-// Server actions for the Settings (Tənzimləmələr) screen. Each action derives the
-// caller's salon from the session and only ever writes to that salon (or, for
-// branch management, to salons of the caller's own account).
+// Server actions for the Settings (Tənzimləmələr) screen. Every one needs
+// settings.write. Each derives the caller's salon from the session and only ever
+// writes to that salon (or, for branch management, to salons of the caller's own
+// account).
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 
 /** Branch management additionally needs the account, not just the salon. */
-async function requireOwner(): Promise<Session> {
-  const session = await requireOwnerSession();
+async function requireBranchManager(): Promise<SalonSession & { accountId: string }> {
+  const session = await requirePermission("settings.write");
   if (!session.accountId) throw new Error("Unauthorized: owner account required");
-  return session;
+  return { ...session, accountId: session.accountId };
 }
 
 // --- Profile ---------------------------------------------------------------
@@ -33,7 +33,7 @@ const profileSchema = z.object({
 });
 
 export async function updateProfile(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("settings.write");
   const t = await getTranslations("Settings.errors");
   const parsed = profileSchema.safeParse(input);
   if (!parsed.success) {
@@ -69,7 +69,7 @@ const locationSchema = z
   });
 
 export async function updateLocation(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("settings.write");
   const t = await getTranslations("Settings.errors");
   const parsed = locationSchema.safeParse(input);
   if (!parsed.success) {
@@ -112,8 +112,10 @@ async function primarySalonOf(accountId: string): Promise<{ id: string; slug: st
 }
 
 export async function updateSlug(input: unknown): Promise<ActionResult> {
-  const session = await getSession();
-  if (!session?.salonId) throw new Error("Unauthorized: no salon in session");
+  // settings.write, like every other card on this screen. This action used to
+  // read the raw session with no role check at all, so a master's login could
+  // rename the salon's public booking link by posting it directly.
+  const session = await requirePermission("settings.write");
   const t = await getTranslations("Settings.errors");
   const parsed = slugSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidLink") };
@@ -123,13 +125,11 @@ export async function updateSlug(input: unknown): Promise<ActionResult> {
     return { ok: false, error: t("slugTooShort") };
   }
 
-  // For owners the link card edits the account's PUBLIC link — the primary
-  // salon's slug — regardless of which branch the dashboard is currently
-  // switched to. Staff keep editing their own salon's slug (no branch UI).
-  const target =
-    session.role === "OWNER" && session.accountId
-      ? ((await primarySalonOf(session.accountId)) ?? { id: session.salonId })
-      : { id: session.salonId };
+  // The link card edits the account's PUBLIC link — the primary salon's slug —
+  // regardless of which branch the dashboard is currently switched to.
+  const target = session.accountId
+    ? ((await primarySalonOf(session.accountId)) ?? { id: session.salonId })
+    : { id: session.salonId };
 
   const existing = await prisma.salon.findUnique({ where: { slug }, select: { id: true } });
   if (existing && existing.id !== target.id) {
@@ -171,7 +171,7 @@ const businessHoursSchema = z
   });
 
 export async function updateBusinessHours(input: unknown): Promise<ActionResult> {
-  const salonId = await requireOwnerSalonId();
+  const { salonId } = await requirePermission("settings.write");
   const t = await getTranslations("Settings.errors");
   const parsed = businessHoursSchema.safeParse(input);
   if (!parsed.success) {
@@ -211,7 +211,7 @@ const branchCreateSchema = z.object({
 });
 
 export async function createBranch(input: unknown): Promise<ActionResult> {
-  const session = await requireOwner();
+  const session = await requireBranchManager();
   const t = await getTranslations("Settings.branches.errors");
 
   const parsed = branchCreateSchema.safeParse(input);
@@ -219,33 +219,46 @@ export async function createBranch(input: unknown): Promise<ActionResult> {
 
   if (!session.multiBranch) return { ok: false, error: t("proRequired") };
 
+  const { name, address } = parsed.data;
+  const { accountId, maxBranches } = session;
+  const slug = await uniqueBranchSlug(slugify(name));
+
   // Plan cap: Pro includes 3 branches; paid extra slots (granted by a platform
   // admin, 15 ₼ each) raise it. session.maxBranches is base + extras.
-  const count = await prisma.salon.count({
-    where: { accountId: session.accountId!, status: { not: "DELETED" } },
-  });
-  if (count >= session.maxBranches) return { ok: false, error: t("limitReached") };
+  //
+  // Counted and created in one transaction that locks the account row first, so
+  // two requests at the same moment cannot both see a free slot — before this,
+  // the count and the insert were not even in the same transaction. NO KEY UPDATE
+  // conflicts with itself but not with the KEY SHARE lock an insert referencing
+  // the account takes.
+  const created = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT 1 FROM "Account" WHERE "id" = ${accountId} FOR NO KEY UPDATE`;
+    const count = await tx.salon.count({
+      where: { accountId, status: { not: "DELETED" } },
+    });
+    if (count >= maxBranches) return false;
 
-  // New branches inherit audience/timezone/currency from the primary salon so
-  // the booking flow behaves consistently; the owner renames freely.
-  const template = await prisma.salon.findFirst({
-    where: { accountId: session.accountId!, status: { not: "DELETED" } },
-    orderBy: { createdAt: "asc" },
-    select: { audience: true, timezone: true, currency: true },
+    // New branches inherit audience/timezone/currency from the primary salon so
+    // the booking flow behaves consistently; the owner renames freely.
+    const template = await tx.salon.findFirst({
+      where: { accountId, status: { not: "DELETED" } },
+      orderBy: { createdAt: "asc" },
+      select: { audience: true, timezone: true, currency: true },
+    });
+    await tx.salon.create({
+      data: {
+        accountId,
+        slug,
+        name,
+        address: address || null,
+        audience: template?.audience ?? "ALL",
+        timezone: template?.timezone ?? "Asia/Baku",
+        currency: template?.currency ?? "AZN",
+      },
+    });
+    return true;
   });
-
-  const slug = await uniqueBranchSlug(slugify(parsed.data.name));
-  await prisma.salon.create({
-    data: {
-      accountId: session.accountId!,
-      slug,
-      name: parsed.data.name,
-      address: parsed.data.address || null,
-      audience: template?.audience ?? "ALL",
-      timezone: template?.timezone ?? "Asia/Baku",
-      currency: template?.currency ?? "AZN",
-    },
-  });
+  if (!created) return { ok: false, error: t("limitReached") };
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");
@@ -259,7 +272,7 @@ const branchUpdateSchema = z.object({
 });
 
 export async function updateBranch(input: unknown): Promise<ActionResult> {
-  const session = await requireOwner();
+  const session = await requireBranchManager();
   const t = await getTranslations("Settings.branches.errors");
 
   const parsed = branchUpdateSchema.safeParse(input);
@@ -284,7 +297,7 @@ const branchStatusSchema = z.object({
 });
 
 export async function setBranchStatus(input: unknown): Promise<ActionResult> {
-  const session = await requireOwner();
+  const session = await requireBranchManager();
   const t = await getTranslations("Settings.branches.errors");
 
   const parsed = branchStatusSchema.safeParse(input);
@@ -324,7 +337,7 @@ const branchDeleteSchema = z.object({ id: z.string().uuid() });
  * downgraded account can still clean up leftover branches.
  */
 export async function deleteBranch(input: unknown): Promise<ActionResult> {
-  const session = await requireOwner();
+  const session = await requireBranchManager();
   const t = await getTranslations("Settings.branches.errors");
 
   const parsed = branchDeleteSchema.safeParse(input);

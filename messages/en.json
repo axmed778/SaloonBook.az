@@ -54,6 +54,8 @@
     "roleAdmin": "Platform Admin",
     "roleOwner": "Salon owner",
     "roleStaff": "Master",
+    "roleReception": "Reception",
+    "roleFinance": "Finance",
     "branch": "Branch",
     "branchSwitcherLabel": "Active branch",
     "manageBranches": "Manage branches"
@@ -1381,7 +1383,7 @@
     },
     "guard": {
       "noSalon": "Your session is not linked to a salon. Please sign in again.",
-      "ownerOnly": "This action is the salon owner's. Refresh the page and sign in with the owner account.",
+      "forbidden": "You don't have access to this action. Refresh the page, or sign in with an account that does.",
       "sessionInvalid": "This session is not valid. Sign out and sign in again."
     },
     "api": {

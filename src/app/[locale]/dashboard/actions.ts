@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getSession, setActiveBranch } from "@/lib/auth/session";
 import { requireScope } from "@/lib/auth/guards";
 import { appointmentScope, canActForEmployee } from "@/lib/auth/access";
+import { hasPermission, spansAllBranches } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasContact } from "@/lib/serializers/redact-notes";
 import { acceptSalonConsents } from "@/lib/legal-consent";
@@ -29,11 +30,12 @@ import {
 
 // Server actions backing the dashboard calendar: staff-entered ("manual")
 // bookings and appointment status changes. Unlike the salon-management actions,
-// these are the one surface BOTH roles use, so they carry two guards rather than
-// one: `salonId` as the tenant guard, plus — for a master's own login —
+// these are the one surface every role shares, so they carry two guards rather
+// than one: `salonId` as the tenant guard, plus — for a master's own login —
 // `employeeId`, so the day they can read and rewrite is only ever their own.
-// Both come from requireScope(); spreading appointmentScope() into the filter
-// keeps them from drifting apart.
+// Both come from requireScope("bookings.write"), which also refuses a role that
+// may only read bookings; spreading appointmentScope() into the filter keeps the
+// two guards from drifting apart.
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -73,7 +75,7 @@ export type SlotsResult =
   | { ok: false; error: string };
 
 export async function availableSlots(input: unknown): Promise<SlotsResult> {
-  const scope = await requireScope();
+  const scope = await requireScope("bookings.write");
   const t = await getTranslations("Actions");
   const parsed = slotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -121,7 +123,7 @@ const bookingSchema = z.object({
 });
 
 export async function createManualBooking(input: unknown): Promise<ActionResult> {
-  const scope = await requireScope();
+  const scope = await requireScope("bookings.write");
   const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = bookingSchema.safeParse(input);
@@ -190,8 +192,9 @@ const switchBranchSchema = z.object({ salonId: z.string().uuid() });
 /**
  * Sets the sb_branch cookie that getSession() reads, re-scoping the WHOLE
  * dashboard (calendar, clients, services, workers, payroll, analytics) to the
- * chosen branch. Owner-only, Pro-only, and only to a branch of the caller's own
- * account — everything else is a silent no-op error.
+ * chosen branch. Only for a role that spans the whole account (the owner), only
+ * on a multi-branch (Pro) plan, and only to a branch of the caller's own account
+ * — everything else is a silent no-op error.
  */
 export async function switchBranch(input: unknown): Promise<ActionResult> {
   const session = await getSession();
@@ -200,8 +203,8 @@ export async function switchBranch(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: t("invalidData") };
 
   if (
-    !session ||
-    session.role !== "OWNER" ||
+    !session?.appRole ||
+    !spansAllBranches(session.appRole) ||
     !session.multiBranch ||
     !session.branches.some((b) => b.id === parsed.data.salonId)
   ) {
@@ -221,7 +224,7 @@ const statusSchema = z.object({
 });
 
 export async function setAppointmentStatus(input: unknown): Promise<ActionResult> {
-  const scope = await requireScope();
+  const scope = await requireScope("bookings.write");
   const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = statusSchema.safeParse(input);
@@ -334,7 +337,7 @@ const rescheduleSlotsSchema = z.object({
 /** Free slots for the reschedule picker: the appointment's own (employee,
  *  service, booked add-ons) on the given day, excluding its current interval. */
 export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
-  const scope = await requireScope();
+  const scope = await requireScope("bookings.write");
   const t = await getTranslations("Actions");
   const parsed = rescheduleSlotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -365,7 +368,7 @@ const rescheduleSchema = z.object({
 });
 
 export async function rescheduleAppointment(input: unknown): Promise<ActionResult> {
-  const scope = await requireScope();
+  const scope = await requireScope("bookings.write");
   const salonId = scope.salonId;
   const t = await getTranslations("Actions");
   const parsed = rescheduleSchema.safeParse(input);
@@ -492,13 +495,13 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
  * Records this account's acceptance of the re-consent gate. Scoped to the
  * session's account; which documents are stale is re-derived server-side.
  *
- * Owner-only: accepting a revised offer binds the paying account, which is not a
- * master's to give. Their dashboard is never gated on it (see the layout), so
- * this stays a silent no-op for them rather than an error.
+ * Needs billing.manage (the owner): accepting a revised offer binds the paying
+ * account, which is not anyone else's to give. Nobody else's dashboard is gated
+ * on it (see the layout), so this stays a silent no-op for them, not an error.
  */
 export async function acceptLegalConsents(): Promise<void> {
   const session = await getSession();
-  if (session?.role !== "OWNER" || !session.accountId) return;
+  if (!session?.accountId || !hasPermission(session, "billing.manage")) return;
   await acceptSalonConsents(session.accountId);
   revalidatePath("/dashboard");
 }

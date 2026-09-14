@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { requireOwnerPage } from "@/lib/auth/guards";
+import { requirePagePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { SettingsManager, type BranchRow } from "./settings-manager";
@@ -7,7 +7,7 @@ import { SettingsManager, type BranchRow } from "./settings-manager";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const session = await requireOwnerPage();
+  const session = await requirePagePermission("settings.write");
   const t = await getTranslations("Dashboard");
   if (!session.salonId) {
     return <p className="text-sm text-muted-foreground">{t("noSalonLinked")}</p>;
@@ -35,11 +35,12 @@ export default async function SettingsPage() {
   // null in dev means the toggle hides itself.
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY?.trim() || null;
 
-  // Branch management (owners only): every non-deleted salon of the account,
-  // oldest first — the oldest is the "primary" one carrying the public link.
+  // Branch management: every non-deleted salon of the account, oldest first —
+  // the oldest is the "primary" one carrying the public link. Only this page's
+  // permission (settings.write) gets here, so the account is the caller's own.
   let branchRows: BranchRow[] = [];
   let linkSlug = salon.slug;
-  if (session.role === "OWNER" && session.accountId) {
+  if (session.accountId) {
     const rows = await prisma.salon.findMany({
       where: { accountId: session.accountId, status: { not: "DELETED" } },
       orderBy: { createdAt: "asc" },
@@ -74,7 +75,7 @@ export default async function SettingsPage() {
       appUrl={appUrl}
       vapidPublicKey={vapidPublicKey}
       branchSection={
-        session.role === "OWNER"
+        session.accountId
           ? {
               branches: branchRows,
               multiBranch: session.multiBranch,

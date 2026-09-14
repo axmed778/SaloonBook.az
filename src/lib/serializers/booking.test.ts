@@ -2,23 +2,24 @@ import { describe, it, expect } from "vitest";
 import {
   CONTACT_KEYS,
   bookingCustomerSelect,
-  bookingSelectForRole,
-  bookingViewerRole,
+  bookingSelectForViewer,
+  bookingViewer,
   canSeeCustomerContact,
   findContactKeys,
-  serializeBookingForRole,
-  serializeBookingsForRole,
+  serializeBookingForViewer,
+  serializeBookingsForViewer,
   type BookingRow,
-  type BookingViewerRole,
+  type BookingViewer,
 } from "./booking";
+import { rolePermissions } from "../auth/permissions";
 import { toCalendarBlock } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { toTodayAppointment } from "@/app/[locale]/dashboard/_components/today-shared";
 
-// The rule this file defends: a master (STAFF) never receives a customer's
-// phone number — not in a response body, not in a prop, not in the RSC payload
-// that Next.js inlines into the dashboard's HTML. "Absent", not "null" and not
-// "***": a key that does not exist cannot be read out of View Source, and it is
-// what these tests assert on.
+// The rule this file defends: a master never receives a customer's phone number
+// — not in a response body, not in a prop, not in the RSC payload that Next.js
+// inlines into the dashboard's HTML. "Absent", not "null" and not "***": a key
+// that does not exist cannot be read out of View Source, and it is what these
+// tests assert on. A master's session is the NO_CONTACT viewer.
 
 const PHONE = "+994501234567";
 const DIGITS = "501234567";
@@ -50,45 +51,55 @@ function row(overrides: Partial<BookingRow> = {}): BookingRow {
 }
 
 describe("canSeeCustomerContact", () => {
-  it("is false for a master and true for the owner and platform admin", () => {
-    expect(canSeeCustomerContact("STAFF")).toBe(false);
-    expect(canSeeCustomerContact("OWNER")).toBe(true);
-    expect(canSeeCustomerContact("ADMIN")).toBe(true);
+  it("is false for NO_CONTACT and true for FULL", () => {
+    expect(canSeeCustomerContact("NO_CONTACT")).toBe(false);
+    expect(canSeeCustomerContact("FULL")).toBe(true);
   });
 });
 
-describe("bookingViewerRole", () => {
-  it("maps a session to exactly one viewer role", () => {
-    expect(bookingViewerRole({ isAdmin: false, isStaff: true })).toBe("STAFF");
-    expect(bookingViewerRole({ isAdmin: false, isStaff: false })).toBe("OWNER");
-    expect(bookingViewerRole({ isAdmin: true, isStaff: false })).toBe("ADMIN");
+describe("bookingViewer", () => {
+  it("withholds contacts from a master", () => {
+    expect(bookingViewer({ isAdmin: false, permissions: rolePermissions("MASTER") })).toBe(
+      "NO_CONTACT",
+    );
   });
 
-  it("treats an admin flag as an admin even alongside a staff membership", () => {
-    expect(bookingViewerRole({ isAdmin: true, isStaff: true })).toBe("ADMIN");
+  it("gives them to every role that may read the client base", () => {
+    for (const role of ["OWNER", "ADMIN", "FINANCE"] as const) {
+      expect(bookingViewer({ isAdmin: false, permissions: rolePermissions(role) })).toBe("FULL");
+    }
+  });
+
+  it("fails closed for a role without clients.read, including one added later", () => {
+    expect(bookingViewer({ isAdmin: false, permissions: ["bookings.read", "bookings.write"] })).toBe(
+      "NO_CONTACT",
+    );
+    expect(bookingViewer({ isAdmin: false, permissions: [] })).toBe("NO_CONTACT");
+  });
+
+  it("trusts the platform admin, who has no membership and so no permissions", () => {
+    expect(bookingViewer({ isAdmin: true, permissions: [] })).toBe("FULL");
   });
 });
 
-describe("bookingSelectForRole", () => {
-  it("does not read the customer's phone column for a master", () => {
-    const select = bookingSelectForRole("STAFF");
+describe("bookingSelectForViewer", () => {
+  it("does not read the customer's phone column for NO_CONTACT", () => {
+    const select = bookingSelectForViewer("NO_CONTACT");
     expect(Object.keys(select.customer.select).sort()).toEqual(["id", "name"]);
   });
 
-  it("reads the service note for EVERY role — a master needs it to do the job", () => {
-    for (const role of ["STAFF", "OWNER", "ADMIN"] as const) {
-      expect(bookingSelectForRole(role)).toMatchObject({ serviceNote: true });
+  it("reads the service note for EVERY viewer — a master needs it to do the job", () => {
+    for (const viewer of ["NO_CONTACT", "FULL"] as const) {
+      expect(bookingSelectForViewer(viewer)).toMatchObject({ serviceNote: true });
     }
   });
 
-  it("reads the phone for the owner and the platform admin", () => {
-    for (const role of ["OWNER", "ADMIN"] as const) {
-      expect(bookingSelectForRole(role).customer.select).toMatchObject({ phone: true });
-    }
+  it("reads the phone for FULL", () => {
+    expect(bookingSelectForViewer("FULL").customer.select).toMatchObject({ phone: true });
   });
 
-  it("always reads what both roles need to run the day", () => {
-    const select = bookingSelectForRole("STAFF");
+  it("always reads what every role needs to run the day", () => {
+    const select = bookingSelectForViewer("NO_CONTACT");
     expect(select).toMatchObject({
       startsAt: true,
       endsAt: true,
@@ -100,27 +111,27 @@ describe("bookingSelectForRole", () => {
 });
 
 describe("bookingCustomerSelect", () => {
-  it("gives a master the identity fields only", () => {
-    expect(bookingCustomerSelect("STAFF")).toEqual({ id: true, name: true });
+  it("gives NO_CONTACT the identity fields only", () => {
+    expect(bookingCustomerSelect("NO_CONTACT")).toEqual({ id: true, name: true });
   });
 });
 
-describe("serializeBookingForRole", () => {
-  it("omits the phone entirely for a master", () => {
-    const b = serializeBookingForRole(row(), "STAFF");
+describe("serializeBookingForViewer", () => {
+  it("omits the phone entirely for NO_CONTACT", () => {
+    const b = serializeBookingForViewer(row(), "NO_CONTACT");
     expect("customerPhone" in b).toBe(false);
     expect(Object.keys(b)).not.toContain("customerPhone");
   });
 
   it("does not mask, null or blank the phone — the key is gone", () => {
-    const b: Record<string, unknown> = { ...serializeBookingForRole(row(), "STAFF") };
+    const b: Record<string, unknown> = { ...serializeBookingForViewer(row(), "NO_CONTACT") };
     expect(b.customerPhone).toBeUndefined();
     expect(JSON.stringify(b)).not.toContain(DIGITS);
     expect(JSON.stringify(b)).not.toContain("***");
   });
 
   it("still gives a master everything they need: name, service, date and time", () => {
-    const b = serializeBookingForRole(row(), "STAFF");
+    const b = serializeBookingForViewer(row(), "NO_CONTACT");
     expect(b.customerName).toBe("Nigar");
     expect(b.serviceName).toBe("Saç kəsimi");
     expect(b.startsAt).toEqual(new Date("2026-03-04T09:00:00.000Z"));
@@ -128,43 +139,43 @@ describe("serializeBookingForRole", () => {
   });
 
   it("uses the attendee's name when the booking is for someone else", () => {
-    const b = serializeBookingForRole(row({ attendeeName: "Leyla" }), "STAFF");
+    const b = serializeBookingForViewer(row({ attendeeName: "Leyla" }), "NO_CONTACT");
     expect(b.customerName).toBe("Leyla");
   });
 
-  it("carries the booked add-ons to every role — they are part of the job", () => {
+  it("carries the booked add-ons to every viewer — they are part of the job", () => {
     const withAddons = row({ addons: [{ name: "French" }, { name: "Nail art" }] });
-    for (const role of ["STAFF", "OWNER", "ADMIN"] as const) {
-      expect(serializeBookingForRole(withAddons, role).addonNames).toEqual(["French", "Nail art"]);
+    for (const viewer of ["NO_CONTACT", "FULL"] as const) {
+      expect(serializeBookingForViewer(withAddons, viewer).addonNames).toEqual([
+        "French",
+        "Nail art",
+      ]);
     }
-    expect(serializeBookingForRole(row(), "STAFF").addonNames).toEqual([]);
+    expect(serializeBookingForViewer(row(), "NO_CONTACT").addonNames).toEqual([]);
   });
 
-  it("keeps the phone and the raw note for the owner and the platform admin", () => {
-    for (const role of ["OWNER", "ADMIN"] as const) {
-      const b = serializeBookingForRole(row(), role);
-      expect(b.customerPhone).toBe(PHONE);
-      expect(b.serviceNote).toBe(NOTE);
-    }
+  it("keeps the phone and the raw note for FULL", () => {
+    const b = serializeBookingForViewer(row(), "FULL");
+    expect(b.customerPhone).toBe(PHONE);
+    expect(b.serviceNote).toBe(NOTE);
   });
 
   it("reports a missing key rather than an undefined value when the query did not read the phone", () => {
-    // An owner-role call over rows fetched with the master's select. The output
-    // must not invent `customerPhone: undefined`, which serializes differently
-    // from a field that was never there.
-    const b = serializeBookingForRole(
-      row({ customer: { id: "cust-1", name: "Nigar" } }),
-      "OWNER",
-    );
+    // A FULL call over rows fetched with the NO_CONTACT select. The output must
+    // not invent `customerPhone: undefined`, which serializes differently from a
+    // field that was never there.
+    const b = serializeBookingForViewer(row({ customer: { id: "cust-1", name: "Nigar" } }), "FULL");
     expect("customerPhone" in b).toBe(false);
   });
 });
 
 describe("a master's booking API response", () => {
   // The regression test the rule exists for: whatever a booking endpoint hands
-  // back for a STAFF session, JSON-encoded exactly as it would go on the wire,
+  // back for a master's session, JSON-encoded exactly as it would go on the wire,
   // carries no phone and no phone-shaped key at any depth.
-  const payload = { bookings: serializeBookingsForRole([row(), row({ id: "appt-2" })], "STAFF") };
+  const payload = {
+    bookings: serializeBookingsForViewer([row(), row({ id: "appt-2" })], "NO_CONTACT"),
+  };
 
   it("contains none of the contact keys, at any depth", () => {
     expect(findContactKeys(payload)).toEqual([]);
@@ -183,8 +194,8 @@ describe("a master's booking API response", () => {
     expect(JSON.stringify(payload)).toContain("Saç kəsimi");
   });
 
-  it("proves the same check catches an owner payload (the test is not vacuous)", () => {
-    const ownerPayload = { bookings: serializeBookingsForRole([row()], "OWNER") };
+  it("proves the same check catches a FULL payload (the test is not vacuous)", () => {
+    const ownerPayload = { bookings: serializeBookingsForViewer([row()], "FULL") };
     expect(findContactKeys(ownerPayload)).toContain("$.bookings[0].customerPhone");
     expect(JSON.stringify(ownerPayload)).toContain(DIGITS);
   });
@@ -193,15 +204,15 @@ describe("a master's booking API response", () => {
 describe("the props the dashboard streams into its RSC payload", () => {
   const dateLabel = "4 mart";
 
-  function block(role: BookingViewerRole) {
-    return toCalendarBlock(serializeBookingForRole(row(), role), "emp-1", dateLabel);
+  function block(viewer: BookingViewer) {
+    return toCalendarBlock(serializeBookingForViewer(row(), viewer), "emp-1", dateLabel);
   }
-  function todayRow(role: BookingViewerRole) {
-    return toTodayAppointment(serializeBookingForRole(row(), role));
+  function todayRow(viewer: BookingViewer) {
+    return toTodayAppointment(serializeBookingForViewer(row(), viewer));
   }
 
   it("builds a calendar block with no phone and a redacted note for a master", () => {
-    const b = block("STAFF");
+    const b = block("NO_CONTACT");
     expect("customerPhone" in b).toBe(false);
     expect(findContactKeys(b)).toEqual([]);
     expect(JSON.stringify(b)).not.toContain(DIGITS);
@@ -212,23 +223,23 @@ describe("the props the dashboard streams into its RSC payload", () => {
   });
 
   it("builds a today row with no phone for a master", () => {
-    const r = todayRow("STAFF");
+    const r = todayRow("NO_CONTACT");
     expect("clientPhone" in r).toBe(false);
     expect(JSON.stringify(r)).not.toContain(DIGITS);
     expect(r.clientName).toBe("Nigar");
     expect(r.priceLabel).toBe("25 ₼");
   });
 
-  it("keeps both intact for the owner, so nothing they had is lost", () => {
-    expect(block("OWNER").customerPhone).toBe(PHONE);
-    expect(block("OWNER").serviceNote).toBe(NOTE);
-    expect(todayRow("OWNER").clientPhone).toBe(PHONE);
+  it("keeps both intact for FULL, so nothing the owner had is lost", () => {
+    expect(block("FULL").customerPhone).toBe(PHONE);
+    expect(block("FULL").serviceNote).toBe(NOTE);
+    expect(todayRow("FULL").clientPhone).toBe(PHONE);
   });
 
   it("shows the booked add-ons in the calendar block and the today row", () => {
-    const b = serializeBookingForRole(
+    const b = serializeBookingForViewer(
       row({ addons: [{ name: "French" }], priceMinor: 3000 }),
-      "STAFF",
+      "NO_CONTACT",
     );
     const cal = toCalendarBlock(b, "emp-1", dateLabel);
     expect(cal.title).toBe("Saç kəsimi");
@@ -242,10 +253,9 @@ describe("the props the dashboard streams into its RSC payload", () => {
 
 describe("the service note a master receives", () => {
   const noteRow = (serviceNote: string) => row({ serviceNote });
-  const staffNote = (text: string) =>
-    serializeBookingForRole(noteRow(text), "STAFF").serviceNote;
-  const ownerNote = (text: string) =>
-    serializeBookingForRole(noteRow(text), "OWNER").serviceNote;
+  const masterNote = (text: string) =>
+    serializeBookingForViewer(noteRow(text), "NO_CONTACT").serviceNote;
+  const ownerNote = (text: string) => serializeBookingForViewer(noteRow(text), "FULL").serviceNote;
 
   it.each([
     ["+994 50 123 45 67 zəng edin", "[gizli] zəng edin"],
@@ -256,7 +266,7 @@ describe("the service note a master receives", () => {
     ["instagram @salon_baku", "instagram [gizli]"],
     ["wa.me/994501234567", "[gizli]"],
   ])("redacts the contact in %j before it reaches a master", (input, expected) => {
-    expect(staffNote(input)).toBe(expected);
+    expect(masterNote(input)).toBe(expected);
   });
 
   it("leaves no digit of the number in a master's payload, in any format", () => {
@@ -267,7 +277,7 @@ describe("the service note a master receives", () => {
       "050-123-45-67",
       "zəng: 050­123­45­67",
     ]) {
-      const payload = JSON.stringify(serializeBookingForRole(noteRow(text), "STAFF"));
+      const payload = JSON.stringify(serializeBookingForViewer(noteRow(text), "NO_CONTACT"));
       expect(payload).not.toMatch(/\d{7,}/);
       expect(payload).not.toContain(DIGITS);
       expect(payload).toContain("[gizli]");
@@ -276,15 +286,15 @@ describe("the service note a master receives", () => {
 
   it("does not count a number written in words", () => {
     // "beş yüz…" is prose, not a contact — it must survive untouched.
-    expect(staffNote("beş yüz on iki nömrəli çalar")).toBe("beş yüz on iki nömrəli çalar");
+    expect(masterNote("beş yüz on iki nömrəli çalar")).toBe("beş yüz on iki nömrəli çalar");
   });
 
   it("leaves an ordinary service note alone — times, durations, floors", () => {
-    expect(staffNote(CLEAN_NOTE)).toBe(CLEAN_NOTE);
-    expect(staffNote("saat 18:30, 2 saat çəkir, 3-cü mərtəbə")).toBe(
+    expect(masterNote(CLEAN_NOTE)).toBe(CLEAN_NOTE);
+    expect(masterNote("saat 18:30, 2 saat çəkir, 3-cü mərtəbə")).toBe(
       "saat 18:30, 2 saat çəkir, 3-cü mərtəbə",
     );
-    expect(staffNote("15% endirim, 25 AZN")).toBe("15% endirim, 25 AZN");
+    expect(masterNote("15% endirim, 25 AZN")).toBe("15% endirim, 25 AZN");
   });
 
   it("control: the SAME note reaches the owner untouched", () => {
@@ -297,22 +307,22 @@ describe("the service note a master receives", () => {
     ]) {
       expect(ownerNote(text)).toBe(text);
     }
-    expect(JSON.stringify(serializeBookingForRole(noteRow("0501234567"), "OWNER"))).toContain(
+    expect(JSON.stringify(serializeBookingForViewer(noteRow("0501234567"), "FULL"))).toContain(
       "0501234567",
     );
   });
 
   it("passes an empty or missing note through as null, not as [gizli]", () => {
-    expect(serializeBookingForRole(row({ serviceNote: null }), "STAFF").serviceNote).toBeNull();
-    expect(serializeBookingForRole(row({ serviceNote: "" }), "STAFF").serviceNote).toBe("");
+    expect(serializeBookingForViewer(row({ serviceNote: null }), "NO_CONTACT").serviceNote).toBeNull();
+    expect(serializeBookingForViewer(row({ serviceNote: "" }), "NO_CONTACT").serviceNote).toBe("");
   });
 });
 
 describe("a booking the master entered themselves", () => {
   // The audit scenario: a master types the customer's number into the manual
   // booking form, then opens that same booking in their list and calendar. The
-  // rule is the ROLE, not authorship — having typed it once does not make the
-  // number theirs to read back, and a master's device is exactly where a
+  // rule is the permission, not authorship — having typed it once does not make
+  // the number theirs to read back, and a master's device is exactly where a
   // salon's contact list must not accumulate.
   const entered = row({
     source: "DASHBOARD",
@@ -321,14 +331,14 @@ describe("a booking the master entered themselves", () => {
   });
 
   it("does not hand the number back on read, however it was written", () => {
-    const b = serializeBookingForRole(entered, "STAFF");
+    const b = serializeBookingForViewer(entered, "NO_CONTACT");
     expect("customerPhone" in b).toBe(false);
     expect(JSON.stringify(b)).not.toContain("500000199");
     expect(findContactKeys(b)).toEqual([]);
   });
 
   it("is invisible in the calendar block and the today row too", () => {
-    const b = serializeBookingForRole(entered, "STAFF");
+    const b = serializeBookingForViewer(entered, "NO_CONTACT");
     const payload = JSON.stringify([
       toCalendarBlock(b, "emp-1", "4 mart"),
       toTodayAppointment(b),
@@ -340,6 +350,6 @@ describe("a booking the master entered themselves", () => {
   });
 
   it("control: the owner sees the number on that same booking", () => {
-    expect(serializeBookingForRole(entered, "OWNER").customerPhone).toBe("+994500000199");
+    expect(serializeBookingForViewer(entered, "FULL").customerPhone).toBe("+994500000199");
   });
 });
