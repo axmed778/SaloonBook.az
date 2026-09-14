@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sectionPermission } from "./permissions";
+import { PERMISSION_PLAN_FEATURE, ROLE_PLAN_FEATURE, sectionPermission } from "./permissions";
 
 // Static checks over the source tree, for the ways an authorization rule gets
 // lost without any other test noticing. Each one is a bug this codebase has
@@ -86,6 +86,56 @@ describe("role names in app code", () => {
           .map((line, i) => ({ line, at: `${rel(file)}:${i + 1}` }))
           // Comments may describe the old rules; only code is held to this.
           .filter(({ line }) => !isComment(line) && ROLE_CHECK.test(line))
+          .map(({ line, at }) => `${at}  ${line.trim()}`),
+      );
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("plan checks", () => {
+  // The rule written at the top of permissions.ts: a plan feature that gates a
+  // permission or a role is read there and nowhere else, so every such check
+  // goes through roleOnPlan() or accessRefusal()/can(). Features that gate
+  // neither (multiBranch, ownWhatsappNumber, …) may be read anywhere.
+  const gated = [
+    ...new Set([
+      ...Object.values(PERMISSION_PLAN_FEATURE),
+      ...Object.values(ROLE_PLAN_FEATURE).filter((f) => f !== null),
+    ]),
+  ];
+  const DIRECT_READ = new RegExp(
+    String.raw`(?:featuresFor\([^;\n]*?\)|PLAN_FEATURES(?:\[[^\]]*\]|\.[A-Z]+)|\bfeatures)\.(?:${gated.join("|")})\b`,
+  );
+
+  it("catches a direct read of a gated feature, and not of an ungated one", () => {
+    const reads = [
+      "if (!featuresFor(plan).payroll) {",
+      "const canExport = featuresFor(effectivePlan(sub)).exports;",
+      "if (PLAN_FEATURES.FREE.staffRoles) {",
+      "staffRolesEnabled: features.staffRoles,",
+      "return PLAN_FEATURES[plan].financeLogins;",
+    ];
+    const notReads = [
+      "const multiBranch = featuresFor(plan).multiBranch;",
+      "ownNumberEligible: featuresFor(effective).ownWhatsappNumber,",
+    ];
+    for (const line of reads) expect(DIRECT_READ.test(line), line).toBe(true);
+    for (const line of notReads) expect(DIRECT_READ.test(line), line).toBe(false);
+  });
+
+  it("reads features that gate a permission or a role only in permissions.ts", () => {
+    const allowed = new Set(["src/lib/auth/permissions.ts", "src/lib/plans.ts"]);
+    const files = [
+      ...filesUnder(SRC, (p) => /\.tsx?$/.test(p) && !isTest(p)),
+      ...filesUnder(join(ROOT, "worker"), (p) => /\.ts$/.test(p)),
+    ];
+    const offenders = files
+      .filter((file) => !allowed.has(rel(file)))
+      .flatMap((file) =>
+        read(file)
+          .split(/\r?\n/)
+          .map((line, i) => ({ line, at: `${rel(file)}:${i + 1}` }))
+          .filter(({ line }) => !isComment(line) && DIRECT_READ.test(line))
           .map(({ line, at }) => `${at}  ${line.trim()}`),
       );
     expect(offenders).toEqual([]);

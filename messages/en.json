@@ -65,7 +65,8 @@
     "title": "Access closed",
     "plan": "The salon's plan no longer includes this login. Ask the salon owner.",
     "inactive": "The salon owner has switched this login off.",
-    "role": "This login's role isn't recognised. Ask the salon owner to check it."
+    "role": "This login's role isn't recognised. Ask the salon owner to check it.",
+    "branch": "This login's branch is suspended. Ask the salon owner."
   },
   "Pwa": {
     "installTitle": "Add SalonBook to your home screen",

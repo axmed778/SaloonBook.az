@@ -337,6 +337,38 @@ describe("logins by plan", () => {
   });
 });
 
+describe("the login gate and the permission gate agree", () => {
+  it("lets every role that can log in on a plan at least read bookings there", () => {
+    for (const role of APP_ROLES) {
+      for (const plan of PLANS) {
+        if (!roleOnPlan(role, plan)) continue;
+        expect(can({ permissions: rolePermissions(role), plan }, "bookings.read"), `${role} × ${plan}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("never makes FINANCE assignable, or let a finance login in, on a plan without finance logins", () => {
+    const withoutFinanceLogins = PLANS.filter((plan) => !PLAN_FEATURES[plan].financeLogins);
+    expect(withoutFinanceLogins.length).toBeGreaterThan(0);
+    for (const plan of withoutFinanceLogins) {
+      expect(roleOnPlan("FINANCE", plan), plan).toBe(false);
+      expect(canAssignRole({ permissions: rolePermissions("OWNER"), plan }, "FINANCE"), plan).toBe(false);
+    }
+  });
+
+  it("never lets the owner create a login that would be closed the moment it signs in", () => {
+    for (const plan of PLANS) {
+      for (const role of ["ADMIN", "FINANCE", "MASTER"] as const) {
+        if (canAssignRole({ permissions: rolePermissions("OWNER"), plan }, role)) {
+          expect(roleOnPlan(role, plan), `${role} × ${plan}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+
 describe("appRoleOf", () => {
   it("reads the stored STAFF value as MASTER, so no existing login changes", () => {
     expect(appRoleOf("STAFF")).toBe("MASTER");

@@ -7,8 +7,8 @@ import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { ConsentGate } from "@/components/legal/consent-gate";
 import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
 import { acceptLegalConsents } from "./actions";
-import { LogoutButton } from "./logout-button";
 import { DashboardShell } from "./_components/dashboard-shell";
+import { AccessClosed } from "./_components/access-closed";
 
 export const dynamic = "force-dynamic";
 
@@ -36,22 +36,10 @@ export default async function DashboardLayout({
     return null; // unreachable — redirect() throws — but narrows `session`
   }
 
-  // A master whose login has been cut off — the account fell to a tier without
-  // staff logins, or the owner deactivated them — keeps a valid session but no
-  // salon. Say which it is: they cannot fix either themselves, and an empty
-  // dashboard would just look broken.
-  if (session.staffBlocked) {
-    const tb = await getTranslations("StaffBlocked");
-    return (
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6 py-16 text-center">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{tb("title")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{tb(session.staffBlocked)}</p>
-        </div>
-        <LogoutButton />
-      </main>
-    );
-  }
+  // A closed login keeps a valid session but no salon: no dashboard frame, just
+  // why. The page guards refuse it too (they send it to /dashboard/access-closed),
+  // so this is the frame agreeing with them, not the only thing standing in front.
+  if (session.staffBlocked) return <AccessClosed reason={session.staffBlocked} />;
 
   const t = await getTranslations("Nav");
   const displayName = session.user.fullName?.trim() || session.user.email;

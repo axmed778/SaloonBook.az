@@ -83,9 +83,32 @@ describe("isStaffScope", () => {
 });
 
 describe("staffBlockedReason", () => {
-  const master = { roleOnPlan: true, disabled: false, employeeLogin: true, employeeIsActive: true };
+  const master = {
+    roleOnPlan: true,
+    branchActive: true,
+    disabled: false,
+    employeeLogin: true,
+    employeeIsActive: true,
+  };
   // Reception or finance: not an employee's login, so no employee to consult.
-  const team = { roleOnPlan: true, disabled: false, employeeLogin: false, employeeIsActive: undefined };
+  const team = {
+    roleOnPlan: true,
+    branchActive: true,
+    disabled: false,
+    employeeLogin: false,
+    employeeIsActive: undefined,
+  };
+
+  it("closes a login whose branch is not active", () => {
+    expect(staffBlockedReason({ ...master, branchActive: false })).toBe("branch");
+    expect(staffBlockedReason({ ...team, branchActive: false })).toBe("branch");
+  });
+
+  it("reports the branch before a switch-off or a deactivated master", () => {
+    expect(
+      staffBlockedReason({ ...master, branchActive: false, disabled: true, employeeIsActive: false }),
+    ).toBe("branch");
+  });
 
   it("lets a working master in", () => {
     expect(staffBlockedReason(master)).toBeNull();
@@ -120,7 +143,13 @@ describe("staffBlockedReason", () => {
 
   it("reports the plan first — that is the one the owner can act on", () => {
     expect(
-      staffBlockedReason({ roleOnPlan: false, disabled: true, employeeLogin: true, employeeIsActive: false }),
+      staffBlockedReason({
+        roleOnPlan: false,
+        branchActive: false,
+        disabled: true,
+        employeeLogin: true,
+        employeeIsActive: false,
+      }),
     ).toBe("plan");
   });
 });

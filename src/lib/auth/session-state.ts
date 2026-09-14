@@ -133,6 +133,13 @@ export function buildSession(source: SessionSource): BuiltSession {
   else if (membership && appRole !== null) {
     staffBlocked = staffBlockedReason({
       roleOnPlan: roleOnPlan(appRole, plan),
+      // account.salons holds only ACTIVE branches. A pinned role whose home salon
+      // is not among them — suspended, or missing altogether — has no branch to
+      // work in. A role that spans the account is not tied to one.
+      branchActive:
+        spansAllBranches(appRole) ||
+        (membership.salonId !== null &&
+          membership.account.salons.some((s) => s.id === membership.salonId)),
       disabled: membership.disabledAt !== null,
       employeeLogin: isEmployeeLogin(appRole),
       employeeIsActive: membership.employee?.isActive,

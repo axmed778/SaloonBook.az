@@ -65,7 +65,8 @@
     "title": "Giriş bağlıdır",
     "plan": "Salonun planı artıq bu girişi əhatə etmir. Salon sahibi ilə əlaqə saxlayın.",
     "inactive": "Salon sahibi bu girişi dayandırıb.",
-    "role": "Bu girişin rolu tanınmır. Salon sahibindən onu yoxlamasını xahiş edin."
+    "role": "Bu girişin rolu tanınmır. Salon sahibindən onu yoxlamasını xahiş edin.",
+    "branch": "Bu girişin filialı dayandırılıb. Salon sahibi ilə əlaqə saxlayın."
   },
   "Pwa": {
     "installTitle": "SalonBook-u ana ekrana əlavə edin",

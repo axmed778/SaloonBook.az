@@ -77,6 +77,46 @@ describe("a closed login", () => {
   });
 });
 
+describe("a login pinned to a branch that is not active", () => {
+  // account.salons lists only ACTIVE branches, so a suspended home salon is one
+  // that is missing from it.
+  const SUSPENDED = "salon-suspended";
+
+  it.each([
+    ["reception", "ADMIN", {}],
+    ["a master", "STAFF", masterLogin],
+  ] as const)("closes %s whose branch was suspended", (_label, role, extra) => {
+    const { session } = buildSession(source(role, "PRO", { ...extra, salonId: SUSPENDED }));
+    expect(session.staffBlocked).toBe("branch");
+    expect(session.permissions).toEqual([]);
+    expect(session.salonId).toBeNull();
+  });
+
+  it("stays closed even when the cookie names a branch that is still active", () => {
+    const { session } = buildSession(source("STAFF", "PRO", { ...masterLogin, salonId: SUSPENDED }, PRIMARY.id));
+    expect(session.staffBlocked).toBe("branch");
+    expect(session.salonId).toBeNull();
+  });
+
+  it("closes a pinned login with no home branch at all", () => {
+    expect(buildSession(source("ADMIN", "PRO", { salonId: null })).session.staffBlocked).toBe("branch");
+  });
+
+  it("reports a lapsed plan before the suspended branch", () => {
+    expect(buildSession(source("ADMIN", "FREE", { salonId: SUSPENDED })).session.staffBlocked).toBe("plan");
+  });
+
+  it("does not close the owner or finance, who span the account, when their home salon is suspended", () => {
+    for (const role of ["OWNER", "FINANCE"]) {
+      const { session } = buildSession(source(role, "PRO", { salonId: SUSPENDED }));
+      expect(session.staffBlocked, role).toBeNull();
+      // This rule leaves their scope alone: they keep their home salon, and the
+      // branch switcher still moves them to any active one.
+      expect(session.salonId, role).toBe(SUSPENDED);
+    }
+  });
+});
+
 describe("a working login", () => {
   it("leaves the owner open on FREE, with every permission", () => {
     const { session, unknownRole } = buildSession(source("OWNER", "FREE"));

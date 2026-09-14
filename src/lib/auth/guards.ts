@@ -7,13 +7,18 @@
 // guard-coverage.test.ts fails when one does not.
 //
 // Each of them asks the role AND the plan (accessRefusal), so a plan-gated
-// permission is refused here and never needs a check of its own.
+// permission is refused here and never needs a check of its own. And each
+// refuses a closed login itself (guards.test.ts), rather than trusting the
+// layout, or every page's check for a missing salon, to stop it.
 
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
-import { getSession, type Session } from "./session";
+import { getSession, type Session, type StaffBlockedReason } from "./session";
 import { salonScopeFor, type SalonScope } from "./access";
 import { accessRefusal, canUpgradePlan, type Permission } from "./permissions";
+
+/** Where a closed login is sent: it explains why, and offers only a logout. */
+export const ACCESS_CLOSED_PATH = "/dashboard/access-closed";
 
 /**
  * These refusals are "should never happen" guards — the UI does not offer a role
@@ -87,20 +92,24 @@ export async function requireScope(
 }
 
 /**
- * What a page may render: its content, or — when the plan lacks the feature — an
- * upgrade card for whoever can change the plan (`canUpgrade`, the owner) and the
- * plan-required screen for everyone else.
+ * What a page may render. Only `granted` carries a session, so a page cannot
+ * render its content for a caller it has not been cleared for:
+ *   blocked — the login is closed (see StaffBlockedReason); the page shows the
+ *             access-closed screen, or requirePagePermission sends it there.
+ *   plan    — the plan lacks the feature: an upgrade card for whoever can change
+ *             the plan (`canUpgrade`, the owner), the plan-required screen for
+ *             everyone else.
  */
 export type PageAccess =
   | { granted: true; session: Session }
+  | { granted: false; reason: "blocked"; blocked: StaffBlockedReason }
   | { granted: false; reason: "plan"; canUpgrade: boolean };
 
 /**
- * Page-level gate for a page with an upgrade card of its own. A role without the
- * permission is sent back to its own day rather than shown a permission error —
- * they did nothing wrong, that screen is simply not theirs. A role that holds it
- * on a plan that doesn't include it gets `granted: false`, and no session: the
- * page cannot render its content without first handling that.
+ * Page-level gate for a page that renders its own refusal (an upgrade card, the
+ * access-closed screen). A role without the permission is sent back to its own
+ * day rather than shown a permission error — they did nothing wrong, that screen
+ * is simply not theirs.
  */
 export async function requirePageAccess(permission: Permission): Promise<PageAccess> {
   const locale = await getLocale();
@@ -112,11 +121,11 @@ export async function requirePageAccess(permission: Permission): Promise<PageAcc
   // Platform admins pass: they have no salon, and each page shows them its own
   // notice.
   if (session.isAdmin) return { granted: true, session };
-  // A closed login keeps its session so the layout can explain why, and the
-  // layout shows that explanation instead of any page. It has no salon and no
-  // permissions, so the page underneath renders only its empty state. Sending it
-  // to Today instead would loop: Today asks too.
-  if (session.staffBlocked) return { granted: true, session };
+  // A closed login is refused here, before any permission is asked. Its session
+  // has no salon and no permissions, but no page should have to know that.
+  if (session.staffBlocked) {
+    return { granted: false, reason: "blocked", blocked: session.staffBlocked };
+  }
 
   const refused = accessRefusal(session, [permission]);
   // Today needs bookings.read, which every role holds, so this cannot loop.
@@ -128,15 +137,18 @@ export async function requirePageAccess(permission: Permission): Promise<PageAcc
 }
 
 /**
- * Page-level gate for a page without an upgrade card of its own. When the plan
- * lacks the permission, the owner is sent to Billing, where they can change it;
- * anyone else — who could not open Billing — to the plan-required screen, which
- * tells them to ask the owner.
+ * Page-level gate for a page that renders no refusal of its own. A closed login
+ * is sent to the access-closed screen. When the plan lacks the permission, the
+ * owner is sent to Billing, where they can change it; anyone else — who could
+ * not open Billing — to the plan-required screen, which tells them to ask the
+ * owner.
  */
 export async function requirePagePermission(permission: Permission): Promise<Session> {
   const access = await requirePageAccess(permission);
   if (!access.granted) {
-    sendTo(access.canUpgrade ? "/dashboard/billing" : "/dashboard/plan-required", await getLocale());
+    const locale = await getLocale();
+    if (access.reason === "blocked") sendTo(ACCESS_CLOSED_PATH, locale);
+    sendTo(access.canUpgrade ? "/dashboard/billing" : "/dashboard/plan-required", locale);
   }
   return access.session;
 }

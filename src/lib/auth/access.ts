@@ -75,17 +75,26 @@ export function canActForEmployee(scope: SalonScope, employeeId: string): boolea
  *   plan     — the account's plan does not include logins of this role: it fell
  *              to FREE (lapsed trial, missed payment), or it is not Pro and the
  *              login is a finance one.
+ *   branch   — the login is pinned to a branch (reception, a master) and that
+ *              branch is not ACTIVE: the owner suspended it. Suspending a branch
+ *              has to close the people who work only there, the same way a
+ *              lapsed plan does, or they keep working a salon that is closed.
  *   inactive — the owner switched the login off, or — for a master's own login —
  *              deactivated the master or deleted their employee record.
  *              Deactivating someone is how a salon says "not any more", and it
  *              has to close the login too, not just the calendar column.
  *   role     — the stored role is one this code does not know (see appRoleOf).
  */
-export type StaffBlockedReason = "plan" | "inactive" | "role";
+export type StaffBlockedReason = "plan" | "branch" | "inactive" | "role";
 
 export function staffBlockedReason(opts: {
   /** The plan includes logins of this role (roleOnPlan). Always true for the owner. */
   roleOnPlan: boolean;
+  /**
+   * The branch the login is pinned to is ACTIVE. Always true for a role that
+   * spans the account (owner, finance), which is not tied to one branch.
+   */
+  branchActive: boolean;
   /** The owner switched this login off (Membership.disabledAt is set). */
   disabled: boolean;
   /** The login belongs to an employee (see isEmployeeLogin). */
@@ -93,8 +102,10 @@ export function staffBlockedReason(opts: {
   /** Employee.isActive; null/undefined when the record no longer resolves. */
   employeeIsActive: boolean | null | undefined;
 }): StaffBlockedReason | null {
-  // The plan first: it is the one the owner can act on.
+  // The account-wide reasons first — plan, then branch: they are the ones the
+  // owner acts on, and they explain every login they close at once.
   if (!opts.roleOnPlan) return "plan";
+  if (!opts.branchActive) return "branch";
   if (opts.disabled) return "inactive";
   // Anything other than an explicit `true` — false, null, a membership whose
   // employee was deleted — closes an employee's login. Fail closed, not open.

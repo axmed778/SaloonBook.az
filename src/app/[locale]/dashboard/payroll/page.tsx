@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { requirePageAccess } from "@/lib/auth/guards";
 import { PlanRequired } from "../_components/plan-required";
+import { AccessClosed } from "../_components/access-closed";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc } from "@/lib/time";
 import { PayrollManager, type PayrollRow, type PayoutItem } from "./payroll-manager";
@@ -27,6 +28,7 @@ export default async function PayrollPage({
   const access = await requirePageAccess("payroll.manage");
   const t = await getTranslations("Payroll");
 
+  if (!access.granted && access.reason === "blocked") return <AccessClosed reason={access.blocked} />;
   // The upgrade card links to Billing, so only whoever can open it gets the card.
   if (!access.granted && !access.canUpgrade) return <PlanRequired />;
   if (!access.granted) {

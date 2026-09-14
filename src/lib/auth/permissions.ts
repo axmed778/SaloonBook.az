@@ -7,14 +7,24 @@
 // else. guard-coverage.test.ts fails if a role-name comparison appears anywhere
 // outside this file.
 //
-// Two questions, answered together:
-//   may this ROLE do it?       rolePermissions(), carried on the session
-//   does the PLAN include it?  planIncludes(), which reads the same
-//                              PLAN_FEATURES every existing gate reads
-// accessRefusal() asks both and says which one refused, because a page needs to
-// know: a role without the permission is sent back to its own day, a plan without
-// it gets the upgrade card. can() is the yes/no. The guards in ./guards use
-// them, so a plan-gated permission is never checked by hand.
+// THE RULE FOR PLAN CHECKS. There are exactly two, and both live in this file:
+//
+//   roleOnPlan(role, plan)       Can this role EXIST on this plan? The login gate.
+//                                buildSession() closes a login whose plan fails it,
+//                                and canAssignRole() refuses to create one.
+//   accessRefusal() / can()      Can this role DO this on this plan? The permission
+//                                gate. accessRefusal() asks the role (the permission
+//                                table, carried on the session), then the plan
+//                                (planIncludes), and says which refused: a page needs
+//                                to know, because a role without the permission is
+//                                sent back to its own day and a plan without it gets
+//                                the upgrade card. can() is the yes/no.
+//
+// No other plan check for a permission is allowed. Guards, routes, pages and
+// actions go through these two — never featuresFor(plan).payroll beside a
+// requirePermission("payroll.manage"). A plan feature that gates a permission or
+// a role is read here and nowhere else (guard-coverage.test.ts fails on a direct
+// read), and permissions.test.ts checks the two gates agree.
 //
 // PURE, like ./access: no cookies, no Prisma client, no next/headers.
 
