@@ -28,8 +28,9 @@ under "As built" for anything the code settled differently.
 | 5 | Expenses | Not started |
 | 6 | Reports and exports | Not started |
 
-Checks after 2: 568 tests pass, 11 skipped · lint 0 errors (the same 4
-pre-existing warnings) · typecheck clean · locales in sync at 1,303 keys each.
+Checks after 2: 596 tests pass, 11 skipped · lint 0 errors (the same 4
+pre-existing warnings) · typecheck clean · locales in sync at 1,397 keys each
+(+45 this phase, none removed).
 
 Earlier: 453 tests after 1b, 430 after 1a, 303 at Phase 0.
 
@@ -543,6 +544,43 @@ These are deliberate. Do not "fix" the code back to the table above.
     the booking day, because it answers "what is in the drawer". Revenue and
     payouts still follow the booking day (D7). Tips sit on their own line, never
     inside a method total. It is not the shift card — phase 3 replaces it.
+
+### As built — phase 2 review fixes
+
+14. **A void can be refused.** `refuseVoid()` blocks voiding an entry that would
+    leave refunds standing against money no longer recorded — take 100, refund
+    100, void the payment, and the net is −100, which no later total can mean
+    anything by. The refunds come off first, and the message says so.
+15. **`deleteCustomer` is aligned with the FK, which knows nothing about
+    voiding.** Live payments refuse with `deletePaid`; a customer whose payments
+    were ALL voided is still deletable, and those rows are swept inside the
+    transaction — only the voided ones, so a live payment arriving after the
+    count still hits the FK and rolls back rather than being erased. The void
+    itself remains in the audit log.
+16. **D8 is about identifiers too, not only labels.** `revenueMinor` is now
+    `bookedValueMinor` in analytics and payroll. The payroll one feeds the
+    commission calculation, so a name that said revenue and meant booked value
+    was exactly the confusion D8 exists to prevent.
+17. **`dayTotalsByMethod` delegates to `netReceivedMinor`/`tipsMinor`** instead
+    of re-deriving that a REFUND subtracts, and applies the voided filter itself
+    rather than trusting the caller's query. Phase 3's shift close reads the same
+    function over the same rows; two places signing money independently is how a
+    close comes to disagree with the strip above it.
+18. **Constraints go on with their own `ADD CONSTRAINT` blocks.** Inside
+    `CREATE TABLE IF NOT EXISTS` they would never reach a database where the
+    table already exists. Verified by dropping the six CHECKs and re-running: 0
+    back to 6.
+19. **A surface cannot hardcode `payments: true`.** `guard-coverage.test.ts`
+    checks the real call sites take the flag from `canSeePayments(session)`, so a
+    new booking screen cannot hand every role the money — the serializer tests
+    supply their own flag and would not notice. `client-namespaces.test.ts`
+    likewise now fails on a `useTranslations(variable)` call it cannot read,
+    instead of skipping it.
+
+**Known, deliberately not fixed (backlog):** the check-then-write race on both
+ceilings; RLS keying only on the row's own `salonId` with no parent-tenant check
+(matches `AppointmentAddon`; app level covers it); `PAYMENT_KEYS` not covering
+the `DayTotals` strip.
 
 ---
 

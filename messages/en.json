@@ -1000,12 +1000,14 @@
       "paidAtFuture": "The payment date cannot be in the future.",
       "network": "Connection error. Please try again.",
       "amountNegative": "The amount must be greater than zero.",
+      "amountRequired": "Enter an amount.",
       "discountNegative": "The discount cannot be negative.",
       "tipNegative": "The tip cannot be negative.",
       "emptyEntry": "Enter an amount or a discount.",
       "exceedsPrice": "That is more than the booking costs. Record anything over it as a tip.",
       "refundExceedsPaid": "A refund cannot exceed what was received.",
-      "refundOnEmpty": "There is nothing to refund on this booking."
+      "refundOnEmpty": "There is nothing to refund on this booking.",
+      "voidLeavesNegative": "Void the refunds first: without this payment they would be left standing against nothing."
     }
   },
   "Payroll": {
@@ -1753,7 +1755,7 @@
         },
         "roi": {
           "title": "ROI analytics",
-          "body": "Revenue earned from online bookings, returning clients and your most profitable services — at a glance, on every plan."
+          "body": "Booked value from online bookings, returning clients and your most profitable services — at a glance, on every plan."
         }
       }
     },

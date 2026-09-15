@@ -1000,12 +1000,14 @@
       "paidAtFuture": "Ödəniş tarixi gələcəkdə ola bilməz.",
       "network": "Əlaqə xətası. Yenidən cəhd edin.",
       "amountNegative": "Məbləğ sıfırdan böyük olmalıdır.",
+      "amountRequired": "Məbləğ yazın.",
       "discountNegative": "Endirim mənfi ola bilməz.",
       "tipNegative": "Bəxşiş mənfi ola bilməz.",
       "emptyEntry": "Məbləğ və ya endirim yazın.",
       "exceedsPrice": "Məbləğ görüşün qiymətini aşır. Artıq qalan hissəni bəxşiş kimi yazın.",
       "refundExceedsPaid": "Qaytarma alınan məbləğdən çox ola bilməz.",
-      "refundOnEmpty": "Bu görüş üzrə qaytarılacaq ödəniş yoxdur."
+      "refundOnEmpty": "Bu görüş üzrə qaytarılacaq ödəniş yoxdur.",
+      "voidLeavesNegative": "Əvvəlcə qaytarmaları ləğv edin: bu ödəniş silinsə, qaytarmalar qarşılıqsız qalır."
     }
   },
   "Payroll": {
@@ -1753,7 +1755,7 @@
         },
         "roi": {
           "title": "ROI analitika",
-          "body": "Onlayn qeydiyyatın qazandırdığı gəlir, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda."
+          "body": "Onlayn qeydiyyatın gətirdiyi görüş dəyəri, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda."
         }
       }
     },

@@ -11,7 +11,12 @@ const { getSession, db } = vi.hoisted(() => ({
   getSession: vi.fn(),
   db: {
     appointment: { findFirst: vi.fn() },
-    appointmentPayment: { findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+    appointmentPayment: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+    },
     auditLog: { create: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -72,6 +77,8 @@ const PAYMENT_ID = "22222222-2222-4222-8222-222222222222";
 beforeEach(() => {
   vi.clearAllMocks();
   bookingWith([]);
+  // What a booking is left with once the entry under test is voided.
+  db.appointmentPayment.findMany.mockResolvedValue([]);
   db.appointmentPayment.create.mockResolvedValue({ id: "new-pay" });
   db.appointmentPayment.updateMany.mockResolvedValue({ count: 1 });
   db.auditLog.create.mockResolvedValue({});
@@ -298,6 +305,65 @@ describe("voidPayment", () => {
       where: { id: PAYMENT_ID, salonId: HOME.id, voidedAt: null },
       data: expect.objectContaining({ voidedByUserId: "user-1", voidReason: "səhv məbləğ" }),
     });
+  });
+
+  // The review case: take 100, refund 100, then void the payment. The refund
+  // would be left standing against money that is no longer recorded.
+  it("refuses a void that would leave a refund unopposed", async () => {
+    db.appointmentPayment.findFirst.mockResolvedValue(live);
+    db.appointmentPayment.findMany.mockResolvedValue([
+      { kind: "REFUND", amountMinor: 4500, discountMinor: 0, tipMinor: 0, voidedAt: null },
+    ]);
+    await expect(voidPayment({ paymentId: PAYMENT_ID, reason: "səhv" })).resolves.toEqual({
+      ok: false,
+      error: "voidLeavesNegative",
+    });
+    expect(db.appointmentPayment.updateMany).not.toHaveBeenCalled();
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("allows the void once the refund itself is gone", async () => {
+    db.appointmentPayment.findFirst.mockResolvedValue(live);
+    db.appointmentPayment.findMany.mockResolvedValue([]);
+    await expect(voidPayment({ paymentId: PAYMENT_ID, reason: "səhv" })).resolves.toEqual({
+      ok: true,
+    });
+  });
+
+  it("asks only about the booking's other live entries", async () => {
+    db.appointmentPayment.findFirst.mockResolvedValue(live);
+    await voidPayment({ paymentId: PAYMENT_ID, reason: "səhv" });
+    expect(db.appointmentPayment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          salonId: HOME.id,
+          appointmentId: APPT,
+          voidedAt: null,
+          id: { not: PAYMENT_ID },
+        },
+      }),
+    );
+  });
+
+  // Someone else voided it between the read and the write. Nothing changed, so
+  // there is nothing to record: an audit entry for a write that did not happen
+  // is worse than none.
+  it("writes no audit entry when the row was voided by someone else first", async () => {
+    db.appointmentPayment.findFirst.mockResolvedValue(live);
+    db.appointmentPayment.updateMany.mockResolvedValue({ count: 0 });
+    await expect(voidPayment({ paymentId: PAYMENT_ID, reason: "səhv" })).resolves.toEqual({
+      ok: false,
+      error: "alreadyVoided",
+    });
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("records the timestamp it actually wrote, not a second one", async () => {
+    db.appointmentPayment.findFirst.mockResolvedValue(live);
+    await voidPayment({ paymentId: PAYMENT_ID, reason: "səhv" });
+    const written = db.appointmentPayment.updateMany.mock.calls[0][0].data.voidedAt as Date;
+    const logged = db.auditLog.create.mock.calls[0][0].data.meta.after.voidedAt as string;
+    expect(logged).toBe(written.toISOString());
   });
 
   it("writes an audit entry carrying the reason and the entry it undid", async () => {

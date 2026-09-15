@@ -7,6 +7,7 @@ import {
   summarize,
   refuseNewPayment,
   refuseRefund,
+  refuseVoid,
   type PaymentEntry,
 } from "./payments";
 
@@ -234,8 +235,13 @@ describe("refuseRefund", () => {
     expect(refuseRefund(1000, [pay(0, { discountMinor: 4500 })])).toBe("refundOnEmpty");
   });
 
-  it("refuses a non-positive refund", () => {
-    expect(refuseRefund(0, [pay(4500)])).toBe("amountNegative");
+  // An empty form field is not a negative number: "enter an amount" is the
+  // message, not "the amount is negative".
+  it("asks for an amount when none was entered", () => {
+    expect(refuseRefund(0, [pay(4500)])).toBe("amountRequired");
+  });
+
+  it("still refuses a negative refund as negative", () => {
     expect(refuseRefund(-1, [pay(4500)])).toBe("amountNegative");
   });
 
@@ -247,5 +253,40 @@ describe("refuseRefund", () => {
   it("ignores voided entries on both sides", () => {
     expect(refuseRefund(1000, [pay(4500), refund(4500, VOIDED)])).toBeNull();
     expect(refuseRefund(1000, [pay(4500, VOIDED)])).toBe("refundOnEmpty");
+  });
+});
+
+describe("refuseVoid", () => {
+  it("allows voiding the only payment on a booking", () => {
+    expect(refuseVoid([])).toBeNull();
+  });
+
+  it("allows voiding one of two payments", () => {
+    expect(refuseVoid([pay(2000)])).toBeNull();
+  });
+
+  // The case from review: take 100, refund 100, then void the payment. The
+  // refund would be left standing against money that was never received.
+  it("refuses a void that would leave a refund unopposed", () => {
+    expect(refuseVoid([refund(10000)])).toBe("voidLeavesNegative");
+  });
+
+  it("refuses when the remaining refunds outweigh the remaining payments", () => {
+    expect(refuseVoid([pay(2000), refund(4500)])).toBe("voidLeavesNegative");
+  });
+
+  // The way out: void the refund first, which always leaves a sane net.
+  it("allows voiding the refund instead", () => {
+    expect(refuseVoid([pay(10000)])).toBeNull();
+  });
+
+  it("allows a void that leaves exactly zero", () => {
+    expect(refuseVoid([pay(4500), refund(4500)])).toBeNull();
+  });
+
+  // Entries already voided are not "remaining" in any sense that matters, and
+  // netReceivedMinor drops them, so a stale one cannot make a void look unsafe.
+  it("ignores entries that were already voided", () => {
+    expect(refuseVoid([refund(10000, VOIDED)])).toBeNull();
   });
 });

@@ -113,21 +113,27 @@ export function summarize(
  * action turns it into the caller's language.
  *
  *   amountNegative    / discountNegative — below zero.
+ *   amountRequired    — the amount is zero where one is needed (a refund of
+ *                       nothing). "Enter an amount", not "the amount is negative".
  *   emptyEntry        — amount and discount both zero: a row that moves nothing.
  *                       (A tip alone is not a payment; it rides a real one.)
  *   exceedsPrice      — this payment would settle more than the booking costs.
  *                       Change over the price is a TIP, in the tip field.
  *   refundExceedsPaid — refunding more than was ever received.
  *   refundOnEmpty     — refunding a booking with nothing received.
+ *   voidLeavesNegative — voiding this entry would leave refunds standing against
+ *                       a payment that is no longer there.
  */
 export type PaymentRefusal =
   | "amountNegative"
   | "discountNegative"
   | "tipNegative"
+  | "amountRequired"
   | "emptyEntry"
   | "exceedsPrice"
   | "refundExceedsPaid"
-  | "refundOnEmpty";
+  | "refundOnEmpty"
+  | "voidLeavesNegative";
 
 export interface NewPayment {
   amountMinor: number;
@@ -159,6 +165,22 @@ export function refuseNewPayment(
 }
 
 /**
+ * May an entry be voided, given the OTHER live entries that would remain?
+ *
+ * Voiding is not free: take 100, refund 100, then void the payment, and the
+ * refund is left standing against money the booking never received — a net of
+ * −100, which is not a state any later total can make sense of. Revenue would
+ * go negative, and so would the master's payout base. So the refunds come off
+ * first, and this says so rather than letting the row through.
+ *
+ * Pass the entries that would be left, NOT including the one being voided.
+ */
+export function refuseVoid(remaining: readonly PaymentEntry[]): PaymentRefusal | null {
+  if (netReceivedMinor(remaining) < 0) return "voidLeavesNegative";
+  return null;
+}
+
+/**
  * May this REFUND be added? Only against money actually received — a discount is
  * not refundable, because nothing was handed over to give back.
  */
@@ -166,7 +188,10 @@ export function refuseRefund(
   amountMinor: number,
   existing: readonly PaymentEntry[],
 ): PaymentRefusal | null {
-  if (amountMinor <= 0) return "amountNegative";
+  if (amountMinor < 0) return "amountNegative";
+  // An empty form field is not a negative number, and telling someone their
+  // amount is negative when they simply have not typed one is a bad message.
+  if (amountMinor === 0) return "amountRequired";
   const received = netReceivedMinor(existing);
   if (received <= 0) return "refundOnEmpty";
   if (amountMinor > received) return "refundExceedsPaid";

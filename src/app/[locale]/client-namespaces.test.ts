@@ -63,16 +63,40 @@ function isClientFile(text: string): boolean {
 
 const clientFiles = filesUnder(SRC, (p) => /\.tsx?$/.test(p) && !isTest(p) && isClientFile(read(p)));
 
+const CALL = /useTranslations\(/g;
+const LITERAL_CALL = /useTranslations\(\s*["'`]([\w.]+)["'`]\s*\)/g;
+
 /** Every useTranslations("X") in a client file, with the file that asks. */
 function namespacesAsked(): { ns: string; file: string }[] {
   return clientFiles.flatMap((file) =>
-    [...read(file).matchAll(/useTranslations\(\s*["'`]([\w.]+)["'`]\s*\)/g)].map((m) => ({
+    [...read(file).matchAll(LITERAL_CALL)].map((m) => ({
       // A nested call like useTranslations("Settings.location") is served by its
       // top-level namespace being present.
       ns: m[1].split(".")[0],
       file: rel(file),
     })),
   );
+}
+
+/**
+ * Calls this file cannot read — useTranslations(ns), or a template with a
+ * substitution. The check above works by reading string literals, so such a call
+ * would pass silently while asking for a namespace nobody verified. There are
+ * none today; if one is added, it needs a different way of being checked, and
+ * this says so rather than shrugging.
+ */
+function countCalls(text: string): { all: number; literal: number } {
+  return {
+    all: text.match(CALL)?.length ?? 0,
+    literal: [...text.matchAll(LITERAL_CALL)].length,
+  };
+}
+
+function opaqueCalls(): string[] {
+  return clientFiles.flatMap((file) => {
+    const { all, literal } = countCalls(read(file));
+    return all > literal ? [`${rel(file)} (${all - literal} of ${all})`] : [];
+  });
 }
 
 describe("CLIENT_NAMESPACES", () => {
@@ -90,6 +114,20 @@ describe("CLIENT_NAMESPACES", () => {
       .filter((a) => !CLIENT_NAMESPACES.includes(a.ns))
       .map((a) => `${a.ns} (${a.file})`);
     expect([...new Set(missing)]).toEqual([]);
+  });
+
+  // Without this, useTranslations(someVariable) is invisible to the check above
+  // and ships unverified.
+  it("has no call whose namespace this check cannot read", () => {
+    expect(opaqueCalls()).toEqual([]);
+  });
+
+  it("would actually catch one (the check above is not vacuous)", () => {
+    expect(countCalls('const t = useTranslations("Today");')).toEqual({ all: 1, literal: 1 });
+    // The shapes that must NOT pass as readable.
+    expect(countCalls("const t = useTranslations(ns);")).toEqual({ all: 1, literal: 0 });
+    expect(countCalls("const t = useTranslations(`${a}.b`);")).toEqual({ all: 1, literal: 0 });
+    expect(countCalls('const t = useTranslations(cond ? "A" : "B");')).toEqual({ all: 1, literal: 0 });
   });
 
   it("names only namespaces that exist in the catalogue", () => {

@@ -9,6 +9,7 @@ import { bakuYmd } from "@/lib/time";
 import {
   refuseNewPayment,
   refuseRefund,
+  refuseVoid,
   type PaymentEntry,
   type PaymentRefusal,
 } from "@/lib/finance/payments";
@@ -196,14 +197,38 @@ export async function voidPayment(input: unknown): Promise<ActionResult> {
   // Voiding twice would overwrite who did it and when, for no change in meaning.
   if (existing.voidedAt) return { ok: false, error: t("alreadyVoided") };
 
-  await prisma.$transaction([
+  // What the booking would be left with. Voiding a payment that refunds were
+  // taken against would leave those refunds standing against money that is no
+  // longer recorded — a negative net, which no later total can mean anything
+  // by. The refunds come off first.
+  const remaining = await prisma.appointmentPayment.findMany({
+    where: {
+      salonId: session.salonId,
+      appointmentId: existing.appointmentId,
+      voidedAt: null,
+      id: { not: paymentId },
+    },
+    select: ENTRY_SELECT,
+  });
+  const refused = refuseVoid(remaining);
+  if (refused) return { ok: false, error: await refusalMessage(refused) };
+
+  // One timestamp, written to the row AND recorded in the audit entry: a second
+  // `new Date()` would put a time in the log that is not the time in the table.
+  const voidedAt = new Date();
+  const written = await prisma.$transaction(async (tx) => {
     // salonId in the filter again, and voidedAt null as a compare-and-set: two
     // people voiding the same row at once write it once.
-    prisma.appointmentPayment.updateMany({
+    const res = await tx.appointmentPayment.updateMany({
       where: { id: paymentId, salonId: session.salonId, voidedAt: null },
-      data: { voidedAt: new Date(), voidedByUserId: session.user.id, voidReason: reason },
-    }),
-    prisma.auditLog.create({
+      data: { voidedAt, voidedByUserId: session.user.id, voidReason: reason },
+    });
+    // Nothing matched — someone else voided it between the read above and here.
+    // No row changed, so there is nothing to record: an audit entry for a write
+    // that did not happen is worse than none.
+    if (res.count === 0) return false;
+
+    await tx.auditLog.create({
       data: {
         accountId: session.accountId!,
         actorUserId: session.user.id,
@@ -224,11 +249,13 @@ export async function voidPayment(input: unknown): Promise<ActionResult> {
             businessDate: existing.businessDate,
             voidedAt: null,
           },
-          after: { voidedAt: new Date().toISOString(), voidReason: reason },
+          after: { voidedAt: voidedAt.toISOString(), voidReason: reason },
         },
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!written) return { ok: false, error: t("alreadyVoided") };
 
   revalidateBookingSurfaces();
   return { ok: true };

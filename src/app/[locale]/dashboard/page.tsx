@@ -95,8 +95,17 @@ export default async function DashboardTodayPage() {
   let totals: DayTotals | null = null;
   if (showPayments) {
     const rows = await prisma.appointmentPayment.findMany({
-      where: { salonId, businessDate: today, voidedAt: null },
-      select: { kind: true, method: true, amountMinor: true, tipMinor: true },
+      where: { salonId, businessDate: today },
+      // Voided rows are read too, and dayTotalsByMethod drops them: deciding
+      // what counts is the rule functions' job, not a query's.
+      select: {
+        kind: true,
+        method: true,
+        amountMinor: true,
+        discountMinor: true,
+        tipMinor: true,
+        voidedAt: true,
+      },
     });
     totals = dayTotalsByMethod(rows);
   }

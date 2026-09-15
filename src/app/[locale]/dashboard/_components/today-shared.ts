@@ -5,7 +5,12 @@
 import { bakuMinutesOfDay, minutesToHHMM } from "@/lib/time";
 import { serviceWithAddons } from "@/lib/addons";
 import type { SerializedBooking } from "@/lib/serializers/booking";
-import type { PaymentStatus } from "@/lib/finance/payments";
+import {
+  netReceivedMinor,
+  tipsMinor as sumTips,
+  type PaymentEntry,
+  type PaymentStatus,
+} from "@/lib/finance/payments";
 import { azn } from "./calendar-shared";
 
 export type TodayApptStatus = "CONFIRMED" | "COMPLETED" | "NO_SHOW";
@@ -59,15 +64,19 @@ export function toTodayAppointment(
 }
 
 /**
- * Today's takings, split by method. Payments minus refunds, voided rows already
- * excluded by the caller's query.
+ * Today's takings, split by method.
+ *
+ * Every figure comes from the rule functions in lib/finance/payments — this does
+ * NOT re-derive that a REFUND subtracts, and does not trust the caller to have
+ * filtered voided rows out of the query. Phase 3's shift close reads the same
+ * function against the same rows, and two places signing money independently is
+ * how a close comes to disagree with the strip above it.
  *
  * Tips are kept OUT of the per-method figures and reported on their own: a tip
  * is not revenue and not part of any payout base (D6), so folding it into "cash"
  * would overstate what the salon earned. It is still money in the drawer, which
- * is why it is counted at all — the shift close in phase 3 adds it to expected
- * cash, and having it here already means that screen inherits a number that
- * already balances.
+ * is why it is counted at all — the shift close adds it to expected cash, and
+ * having it here already means that screen inherits a number that balances.
  */
 export interface DayTotals {
   byMethod: { method: PaymentMethodKey; netMinor: number }[];
@@ -77,32 +86,25 @@ export interface DayTotals {
 
 export type PaymentMethodKey = "CASH" | "CARD" | "TERMINAL" | "TRANSFER";
 
+/** A day's payment row: a rule-function entry plus the method it came in by. */
+export interface DayPaymentRow extends PaymentEntry {
+  method: PaymentMethodKey;
+}
+
 const METHOD_ORDER: PaymentMethodKey[] = ["CASH", "CARD", "TERMINAL", "TRANSFER"];
 
-export function dayTotalsByMethod(
-  rows: readonly {
-    kind: "PAYMENT" | "REFUND";
-    method: PaymentMethodKey;
-    amountMinor: number;
-    tipMinor: number;
-  }[],
-): DayTotals {
-  const net = new Map<PaymentMethodKey, number>();
-  let tipsMinor = 0;
-  for (const r of rows) {
-    const signed = r.kind === "REFUND" ? -r.amountMinor : r.amountMinor;
-    net.set(r.method, (net.get(r.method) ?? 0) + signed);
-    tipsMinor += r.tipMinor;
-  }
+export function dayTotalsByMethod(rows: readonly DayPaymentRow[]): DayTotals {
   // Fixed order, and a method nobody used today is simply absent rather than a
-  // row of zeros — the strip is read at a glance on a phone.
-  const byMethod = METHOD_ORDER.filter((m) => (net.get(m) ?? 0) !== 0).map((method) => ({
+  // row of zeros — the strip is read at a glance on a phone. netReceivedMinor
+  // drops the voided rows itself, so a caller that hands over everything and a
+  // caller that pre-filters get the same answer.
+  const byMethod = METHOD_ORDER.map((method) => ({
     method,
-    netMinor: net.get(method) ?? 0,
-  }));
+    netMinor: netReceivedMinor(rows.filter((r) => r.method === method)),
+  })).filter((m) => m.netMinor !== 0);
   return {
     byMethod,
-    netMinor: [...net.values()].reduce((a, b) => a + b, 0),
-    tipsMinor,
+    netMinor: netReceivedMinor(rows),
+    tipsMinor: sumTips(rows),
   };
 }

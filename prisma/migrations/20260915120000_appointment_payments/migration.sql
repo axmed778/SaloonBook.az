@@ -7,7 +7,7 @@
 -- NOTE ON NAMES. "AppointmentPayment", not "Payment": the latter is SaaS
 -- subscription billing and has nothing to do with a salon's till.
 --
--- Rollback:
+-- Rollback (the CHECKs and FKs go with the table):
 --   DROP TABLE IF EXISTS "AppointmentPayment";
 --   DROP TYPE IF EXISTS "PaymentKind";
 --   DROP TYPE IF EXISTS "PaymentMethod";
@@ -55,20 +55,55 @@ CREATE TABLE IF NOT EXISTS "AppointmentPayment" (
   "voidReason"       TEXT,
   "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"        TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "AppointmentPayment_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "AppointmentPayment_amount_nonneg" CHECK ("amountMinor" >= 0),
-  CONSTRAINT "AppointmentPayment_discount_nonneg" CHECK ("discountMinor" >= 0),
-  CONSTRAINT "AppointmentPayment_tip_nonneg" CHECK ("tipMinor" >= 0),
-  CONSTRAINT "AppointmentPayment_moves_something" CHECK ("amountMinor" + "discountMinor" > 0),
-  -- A refund is money going back out: it carries no discount and no tip.
-  CONSTRAINT "AppointmentPayment_refund_is_plain" CHECK (
-    "kind" <> 'REFUND' OR ("discountMinor" = 0 AND "tipMinor" = 0)
-  ),
-  -- A void is all-or-nothing: who and when travel together.
-  CONSTRAINT "AppointmentPayment_void_complete" CHECK (
-    ("voidedAt" IS NULL) = ("voidedByUserId" IS NULL)
-  )
+  CONSTRAINT "AppointmentPayment_pkey" PRIMARY KEY ("id")
 );
+
+-- The CHECKs are added separately, NOT inside CREATE TABLE IF NOT EXISTS: on a
+-- database where the table already exists that statement is a no-op and every
+-- constraint inside it would silently never be created. Each ADD is its own
+-- self-healing block, so a re-run over a half-built table finishes the job.
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_amount_nonneg" CHECK ("amountMinor" >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_discount_nonneg" CHECK ("discountMinor" >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_tip_nonneg" CHECK ("tipMinor" >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- An entry must move something: a fully comped booking is amount 0 with the
+-- discount carrying the price, and a tip alone is not a payment.
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_moves_something"
+    CHECK ("amountMinor" + "discountMinor" > 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- A refund is money going back out: it carries no discount and no tip.
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_refund_is_plain"
+    CHECK ("kind" <> 'REFUND' OR ("discountMinor" = 0 AND "tipMinor" = 0));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- A void is all-or-nothing: who and when travel together.
+DO $$ BEGIN
+  ALTER TABLE "AppointmentPayment"
+    ADD CONSTRAINT "AppointmentPayment_void_complete"
+    CHECK (("voidedAt" IS NULL) = ("voidedByUserId" IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Restrict, not Cascade: a booking carrying money is a business record, and
 -- deleteCustomer already refuses to hard-delete over one.
