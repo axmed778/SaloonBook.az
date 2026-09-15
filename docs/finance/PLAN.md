@@ -577,10 +577,19 @@ These are deliberate. Do not "fix" the code back to the table above.
     likewise now fails on a `useTranslations(variable)` call it cannot read,
     instead of skipping it.
 
-**Known, deliberately not fixed (backlog):** the check-then-write race on both
-ceilings; RLS keying only on the row's own `salonId` with no parent-tenant check
-(matches `AppointmentAddon`; app level covers it); `PAYMENT_KEYS` not covering
-the `DayTotals` strip.
+**Known, deliberately not fixed (backlog):**
+
+- The check-then-write race on both ceilings.
+- **Concurrent voids of two different payments on the same booking can still
+  leave the net negative** — the same check-then-write class, but this one
+  re-enters the exact state `refuseVoid` exists to prevent. Fix with a
+  transaction or an aggregate guard when phase 3 touches this code.
+- **Deleting a customer keeps the payment amounts in `AuditLog`.** Defensible
+  for financial records, but the data-deletion page promises more than that;
+  reword that page in a later phase.
+- RLS keying only on the row's own `salonId` with no parent-tenant check
+  (matches `AppointmentAddon`; app level covers it).
+- `PAYMENT_KEYS` not covering the `DayTotals` strip.
 
 ---
 
