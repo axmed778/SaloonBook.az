@@ -5,6 +5,7 @@ import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
 import { resolveWhatsAppSender } from "../../src/lib/whatsapp-sender";
 import { buildComponents } from "../../src/lib/whatsapp-templates";
 import { deferNotification, type NotificationJob } from "../../src/lib/queue";
+import { isCancellationNotice, salonMaySend } from "../../src/lib/notification-gate";
 import { messagingStillPermitted } from "../consent";
 
 const DONE = new Set(["SENT", "DELIVERED", "READ"]);
@@ -61,10 +62,9 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   // (Delayed BullMQ jobs can't be reliably removed, so the guard lives here.)
   // Cancellation NOTICES are exempt — they exist precisely because the
   // appointment is cancelled.
-  const isCancellationNotice =
-    n.template === "appointment_cancelled" || n.template === "booking_cancelled_alert";
+  const isCancellation = isCancellationNotice(n.template);
   const apptStatus = n.appointment?.status;
-  if ((apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") && !isCancellationNotice) {
+  if ((apptStatus === "CANCELLED" || apptStatus === "NO_SHOW") && !isCancellation) {
     await finalize(n.id, { status: "CANCELLED" });
     return;
   }
@@ -75,9 +75,30 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   // tomorrow at 15:00" reminders for visits that already happened. Cancellation
   // notices are exempt for the same reason as above — they exist precisely
   // because the appointment isn't happening.
-  if (!isCancellationNotice && n.appointment && n.appointment.endsAt <= new Date()) {
+  if (!isCancellation && n.appointment && n.appointment.endsAt <= new Date()) {
     await finalize(n.id, { status: "CANCELLED", lastError: "appointment already ended" });
     return;
+  }
+
+  // Nor may it fire for a salon that has closed. Suspending a branch stops it
+  // taking new commitments (the public /book route and the manage link's
+  // reschedule both refuse), but nothing was stopping the messages already
+  // queued for it: a T-24h reminder lives in Redis for up to weeks, so a branch
+  // suspended today kept telling customers to come in for bookings taken while
+  // it was open. Read per send, never cached with the row, because the whole
+  // point is that the branch closes long after the reminder was queued.
+  //
+  // Cancellation notices are exempt (see salonMaySend) — a closing branch is
+  // exactly when a customer needs to hear their appointment is off.
+  if (!isCancellation) {
+    const salon = await prisma.salon.findUnique({
+      where: { id: n.salonId },
+      select: { status: true },
+    });
+    if (!salonMaySend(salon?.status, n.template)) {
+      await finalize(n.id, { status: "CANCELLED", lastError: "salon not active" });
+      return;
+    }
   }
 
   // Consent can be withdrawn between enqueue and send — a customer who replies

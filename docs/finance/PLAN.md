@@ -33,13 +33,33 @@ warnings) · typecheck clean · locales in sync at 1,352 keys.
 
 Phase 0 baseline, for comparison: 303 tests, 1,310 keys.
 
-### Open leftovers from 1b
+### Leftovers from 1b — closed by `fix/1b-leftovers`
 
-- `session-state.test.ts` has an unreachable case to rewrite around reachable
-  ones: owner and finance keep working when a non-home branch is suspended; a
-  switcher cookie pointing at a suspended branch falls back to an active one.
-- Check whether the notification worker skips suspended salons; if not, fix it as
-  its own commit and PR.
+- `session-state.test.ts` asserted that the owner and finance keep working when
+  **their own** home branch is suspended. Neither can: the owner's home branch is
+  the primary, which `setBranchStatus` refuses to suspend (`primaryLocked`), and a
+  finance membership is created with `salonId: null`. Rewritten around the two
+  reachable cases — a *non-home* branch is suspended under them, and the switcher
+  cookie still names a branch that has since been suspended (it falls back to an
+  active one).
+- **The notification worker did not skip suspended salons.** `processNotification`
+  re-checked the appointment and the recipient's consent but never the salon, so a
+  suspended branch kept sending T-24h reminders — queued in Redis for up to weeks
+  — telling customers to come to a salon that is shut. Fixed with a pure
+  `salonMaySend()` (`src/lib/notification-gate.ts`), read per send. Cancellation
+  notices stay exempt, on the rule the manage route already draws: a suspended
+  salon takes no new commitments, but cancelling stays allowed.
+
+### Open question — lapsed-plan salons keep sending
+
+Found while fixing the above, **left alone deliberately**: nothing in the worker
+or in `booking.ts` gates WhatsApp reminders on the plan. A salon that lapses to
+FREE goes on sending reminders indefinitely, and the per-tier
+`waRemindersPerMonth` in `MARKETING_PLANS` is not enforced anywhere. That is a
+billing-behaviour decision, not a bug, so it needs an answer before anything
+changes. Related, smaller: `push-sync.ts` re-checks the appointment but not the
+salon either — those pushes go to the salon's own staff devices, whose logins 1b
+already closes, so it is a much narrower gap.
 
 ---
 
