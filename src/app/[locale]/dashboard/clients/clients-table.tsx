@@ -209,6 +209,7 @@ export function ClientsTable({
   sort,
   dir,
   salonIsEmpty,
+  canCreate,
 }: {
   rows: ClientRow[];
   total: number;
@@ -218,6 +219,8 @@ export function ClientsTable({
   sort: SortKey;
   dir: "asc" | "desc";
   salonIsEmpty: boolean;
+  /** clients.write: the "add client" button. */
+  canCreate: boolean;
 }) {
   const t = useTranslations("Clients");
   const router = useRouter();
@@ -291,7 +294,7 @@ export function ClientsTable({
           </button>
         )}
       </div>
-        <AddClientButton />
+        {canCreate && <AddClientButton />}
       </div>
     </div>
   );
@@ -314,7 +317,7 @@ export function ClientsTable({
             {t("emptyBody")}
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <AddClientButton />
+            {canCreate && <AddClientButton />}
             <Link
               href="/dashboard"
               className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"

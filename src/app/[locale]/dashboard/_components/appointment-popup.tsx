@@ -17,14 +17,18 @@ import {
 
 // Detail popup for a single appointment. A CONFIRMED booking can be completed,
 // marked no-show, or cancelled; once it's in a terminal state we just show it.
+// Without bookings.write (finance) the popup is read-only: no status or move
+// controls are rendered.
 
 export function AppointmentPopup({
   block,
   salonName,
+  canWrite,
   onClose,
 }: {
   block: CalendarBlock;
   salonName: string;
+  canWrite: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("Calendar");
@@ -224,7 +228,7 @@ export function AppointmentPopup({
           </a>
         )}
 
-        {block.status === "COMPLETED" && block.autoCompleted && (
+        {canWrite && block.status === "COMPLETED" && block.autoCompleted && (
           <div className="mt-4 rounded-xl border border-violet-500/40 bg-violet-500/10 p-3">
             <p className="text-xs font-medium text-violet-800 dark:text-violet-200">
               {t("popup.autoCompleted")}
@@ -270,7 +274,7 @@ export function AppointmentPopup({
           </div>
         )}
 
-        {block.status === "CONFIRMED" && mode === "view" && (
+        {canWrite && block.status === "CONFIRMED" && mode === "view" && (
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -311,7 +315,7 @@ export function AppointmentPopup({
           </div>
         )}
 
-        {block.status === "CONFIRMED" && mode === "reschedule" && (
+        {canWrite && block.status === "CONFIRMED" && mode === "reschedule" && (
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-muted-foreground">

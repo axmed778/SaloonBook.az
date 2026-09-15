@@ -83,34 +83,73 @@ describe("isStaffScope", () => {
 });
 
 describe("staffBlockedReason", () => {
-  const active = { employeeLogin: true, staffRolesEnabled: true, employeeIsActive: true };
+  const master = {
+    roleOnPlan: true,
+    branchActive: true,
+    disabled: false,
+    employeeLogin: true,
+    employeeIsActive: true,
+  };
+  // Reception or finance: not an employee's login, so no employee to consult.
+  const team = {
+    roleOnPlan: true,
+    branchActive: true,
+    disabled: false,
+    employeeLogin: false,
+    employeeIsActive: undefined,
+  };
 
-  it("never blocks a login that is not an employee's", () => {
+  it("closes a login whose branch is not active", () => {
+    expect(staffBlockedReason({ ...master, branchActive: false })).toBe("branch");
+    expect(staffBlockedReason({ ...team, branchActive: false })).toBe("branch");
+  });
+
+  it("reports the branch before a switch-off or a deactivated master", () => {
     expect(
-      staffBlockedReason({ employeeLogin: false, staffRolesEnabled: false, employeeIsActive: false }),
-    ).toBeNull();
+      staffBlockedReason({ ...master, branchActive: false, disabled: true, employeeIsActive: false }),
+    ).toBe("branch");
   });
 
   it("lets a working master in", () => {
-    expect(staffBlockedReason(active)).toBeNull();
+    expect(staffBlockedReason(master)).toBeNull();
   });
 
-  it("closes the login when the plan loses the feature", () => {
-    expect(staffBlockedReason({ ...active, staffRolesEnabled: false })).toBe("plan");
+  it("lets a working team login in without an employee behind it", () => {
+    expect(staffBlockedReason(team)).toBeNull();
   });
 
-  it("closes the login when the master is deactivated", () => {
-    expect(staffBlockedReason({ ...active, employeeIsActive: false })).toBe("inactive");
+  it("closes any login whose plan does not include its role", () => {
+    expect(staffBlockedReason({ ...master, roleOnPlan: false })).toBe("plan");
+    expect(staffBlockedReason({ ...team, roleOnPlan: false })).toBe("plan");
   });
 
-  it("closes the login when the employee record no longer resolves", () => {
-    expect(staffBlockedReason({ ...active, employeeIsActive: null })).toBe("inactive");
-    expect(staffBlockedReason({ ...active, employeeIsActive: undefined })).toBe("inactive");
+  it("closes any login the owner switched off", () => {
+    expect(staffBlockedReason({ ...master, disabled: true })).toBe("inactive");
+    expect(staffBlockedReason({ ...team, disabled: true })).toBe("inactive");
+  });
+
+  it("closes a master's login when the master is deactivated", () => {
+    expect(staffBlockedReason({ ...master, employeeIsActive: false })).toBe("inactive");
+  });
+
+  it("closes a master's login when the employee record no longer resolves", () => {
+    expect(staffBlockedReason({ ...master, employeeIsActive: null })).toBe("inactive");
+    expect(staffBlockedReason({ ...master, employeeIsActive: undefined })).toBe("inactive");
+  });
+
+  it("does not close a team login because the employee it is linked to was deactivated", () => {
+    expect(staffBlockedReason({ ...team, employeeIsActive: false })).toBeNull();
   });
 
   it("reports the plan first — that is the one the owner can act on", () => {
     expect(
-      staffBlockedReason({ employeeLogin: true, staffRolesEnabled: false, employeeIsActive: false }),
+      staffBlockedReason({
+        roleOnPlan: false,
+        branchActive: false,
+        disabled: true,
+        employeeLogin: true,
+        employeeIsActive: false,
+      }),
     ).toBe("plan");
   });
 });

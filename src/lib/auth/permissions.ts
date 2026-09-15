@@ -7,12 +7,24 @@
 // else. guard-coverage.test.ts fails if a role-name comparison appears anywhere
 // outside this file.
 //
-// Two questions stay apart:
-//   may this ROLE do it?       rolePermissions(), carried on the session
-//   does the PLAN include it?  planIncludes(), which reads the same
-//                              PLAN_FEATURES every existing gate reads
-// A page needs the answers separately: a role without the permission is sent
-// back to its own day, a plan without it gets the upgrade card. can() is both.
+// THE RULE FOR PLAN CHECKS. There are exactly two, and both live in this file:
+//
+//   roleOnPlan(role, plan)       Can this role EXIST on this plan? The login gate.
+//                                buildSession() closes a login whose plan fails it,
+//                                and canAssignRole() refuses to create one.
+//   accessRefusal() / can()      Can this role DO this on this plan? The permission
+//                                gate. accessRefusal() asks the role (the permission
+//                                table, carried on the session), then the plan
+//                                (planIncludes), and says which refused: a page needs
+//                                to know, because a role without the permission is
+//                                sent back to its own day and a plan without it gets
+//                                the upgrade card. can() is the yes/no.
+//
+// No other plan check for a permission is allowed. Guards, routes, pages and
+// actions go through these two — never featuresFor(plan).payroll beside a
+// requirePermission("payroll.manage"). A plan feature that gates a permission or
+// a role is read here and nowhere else (guard-coverage.test.ts fails on a direct
+// read), and permissions.test.ts checks the two gates agree.
 //
 // PURE, like ./access: no cookies, no Prisma client, no next/headers.
 
@@ -24,17 +36,39 @@ export const APP_ROLES = ["OWNER", "ADMIN", "FINANCE", "MASTER"] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 /**
- * The product role behind a stored Membership.role. STAFF stays the stored value
- * for MASTER, so existing logins need no data rewrite. When ADMIN and FINANCE
- * join the database enum this switch stops compiling until they are mapped.
+ * The product role behind a stored Membership.role, or null for a value this
+ * code does not know. STAFF stays the stored value for MASTER, so existing logins
+ * needed no data rewrite.
+ *
+ * Takes a string, not Role: the enum can gain a value in the database before the
+ * code that maps it is deployed, and such a login must fail closed — getSession()
+ * blocks it — rather than reach a permission table with a hole in it.
  */
-export function appRoleOf(role: Role): AppRole {
+export function appRoleOf(role: string): AppRole | null {
   switch (role) {
     case "OWNER":
       return "OWNER";
+    case "ADMIN":
+      return "ADMIN";
+    case "FINANCE":
+      return "FINANCE";
     case "STAFF":
       return "MASTER";
+    default:
+      return null;
   }
+}
+
+/**
+ * The logins the owner hands out besides a master's: reception and finance. They
+ * are stored under the same names, have no calendar column and take no staff
+ * seat.
+ */
+export const TEAM_ROLES = ["ADMIN", "FINANCE"] as const satisfies readonly Role[];
+export type TeamRole = (typeof TEAM_ROLES)[number];
+
+export function isTeamRole(role: AppRole): role is TeamRole {
+  return (TEAM_ROLES as readonly AppRole[]).includes(role);
 }
 
 export const PERMISSIONS = [
@@ -47,7 +81,7 @@ export const PERMISSIONS = [
   "schedule.read", // working hours, time off
   "schedule.write",
   "services.write", // catalogue and prices
-  "staff.manage", // employees and master logins
+  "staff.manage", // employees, master logins, switching any login off
   "roles.assign", // ADMIN and FINANCE logins
   "settings.write", // salon profile, booking link, hours, branches
   "billing.manage", // subscription, and accepting revised terms for the account
@@ -150,9 +184,11 @@ export function rolePermissions(
 /**
  * The plan feature a permission needs; a permission not listed is on every plan.
  * Reads stay ungated on purpose: a salon that downgrades keeps its finance
- * history readable, it just can't add to it.
+ * history readable, it just can't add to it. Switching a login off (staff.manage)
+ * stays ungated too, so an account that lapsed can still take access away.
  */
 export const PERMISSION_PLAN_FEATURE: Partial<Record<Permission, keyof PlanFeatures>> = {
+  "roles.assign": "staffRoles",
   "exports.data": "exports",
   "payroll.manage": "payroll",
   "payments.write": "payments",
@@ -175,7 +211,7 @@ export function planIncludes(plan: Plan, permission: Permission): boolean {
   return feature === undefined || featuresFor(plan)[feature];
 }
 
-/** Does the session's role hold `permission`? The one way to ask. */
+/** Does the session's role hold `permission`? Says nothing about the plan. */
 export function hasPermission(
   subject: { permissions: readonly Permission[] },
   permission: Permission,
@@ -183,12 +219,75 @@ export function hasPermission(
   return subject.permissions.includes(permission);
 }
 
+/** Which question refused: the role's, or — only once the role passed — the plan's. */
+export type Refusal = "role" | "plan";
+
+/**
+ * Why `subject` may not do all of `permissions`, or null when it may. The role is
+ * asked first, so a role that could never do it is not shown an upgrade card.
+ */
+export function accessRefusal(
+  subject: { permissions: readonly Permission[]; plan: Plan },
+  permissions: readonly Permission[],
+): Refusal | null {
+  if (!permissions.every((p) => hasPermission(subject, p))) return "role";
+  if (!permissions.every((p) => planIncludes(subject.plan, p))) return "plan";
+  return null;
+}
+
+/**
+ * May this role change the plan when one is missing? Only billing.manage (the
+ * owner) can act on an upgrade card; anyone else is told to ask the owner.
+ */
+export function canUpgradePlan(subject: { permissions: readonly Permission[] }): boolean {
+  return hasPermission(subject, "billing.manage");
+}
+
 /** The role holds it AND the plan includes it. */
 export function can(
   subject: { permissions: readonly Permission[]; plan: Plan },
   permission: Permission,
 ): boolean {
-  return hasPermission(subject, permission) && planIncludes(subject.plan, permission);
+  return accessRefusal(subject, [permission]) === null;
+}
+
+/**
+ * The plan feature a login of each role needs, or null for none. A login whose
+ * plan lacks it is closed on the next request (see staffBlockedReason): staff,
+ * reception and finance logins all stop when the account lapses to FREE, and
+ * finance logins are Pro.
+ */
+export const ROLE_PLAN_FEATURE: Record<AppRole, keyof PlanFeatures | null> = {
+  OWNER: null,
+  ADMIN: "staffRoles",
+  FINANCE: "financeLogins",
+  MASTER: "staffRoles",
+};
+
+/** Does `plan` include logins of this role? */
+export function roleOnPlan(role: AppRole, plan: Plan): boolean {
+  const feature = ROLE_PLAN_FEATURE[role];
+  return feature === null || featuresFor(plan)[feature];
+}
+
+/** The roles a login can be created for, and the permission that creates each. */
+const ASSIGN_PERMISSION = {
+  ADMIN: "roles.assign",
+  FINANCE: "roles.assign",
+  MASTER: "staff.manage",
+} as const satisfies Record<Exclude<AppRole, "OWNER">, Permission>;
+export type AssignableRole = keyof typeof ASSIGN_PERMISSION;
+
+/**
+ * May `subject` create (or re-open) a login of this role? Its permission, on its
+ * plan, and a plan that includes the role itself: a Salon-plan owner may hand out
+ * reception logins but not finance ones.
+ */
+export function canAssignRole(
+  subject: { permissions: readonly Permission[]; plan: Plan },
+  role: AssignableRole,
+): boolean {
+  return can(subject, ASSIGN_PERMISSION[role]) && roleOnPlan(role, subject.plan);
 }
 
 interface RoleTraits {
@@ -224,13 +323,17 @@ export function isEmployeeLogin(role: AppRole): boolean {
  * The permission each dashboard section needs. One table for the navigation and
  * the page gates both, so a screen cannot be listed but refused, or reachable
  * but hidden — guard-coverage.test.ts checks every page against it. Sections not
- * listed (Today, Calendar) are open to every role; the platform admin panel
- * checks its own flag.
+ * listed (Today, Calendar) need only bookings.read, which every role holds; the
+ * platform admin panel checks its own flag.
  */
 export const SECTION_PERMISSIONS = {
   "/dashboard/clients": "clients.read",
   "/dashboard/services": "services.write",
-  "/dashboard/workers": "schedule.read",
+  // Staff management: phones, login emails, and the controls that create and
+  // close logins.
+  "/dashboard/workers": "staff.manage",
+  // Time off on its own, for roles that plan the schedule without managing staff.
+  "/dashboard/time-off": "schedule.read",
   "/dashboard/analytics": "analytics.view",
   "/dashboard/payroll": "payroll.manage",
   "/dashboard/settings": "settings.write",

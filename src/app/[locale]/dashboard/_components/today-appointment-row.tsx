@@ -20,6 +20,7 @@ export function TodayAppointmentRow({
   pending,
   salonName,
   dateLabel,
+  canWrite,
   onComplete,
   onNoShow,
   onCancel,
@@ -29,6 +30,8 @@ export function TodayAppointmentRow({
   pending: boolean;
   salonName: string;
   dateLabel: string;
+  /** Without bookings.write the row shows the booking and its message link only. */
+  canWrite: boolean;
   onComplete: () => void;
   onNoShow: () => void;
   onCancel: () => void;
@@ -39,6 +42,8 @@ export function TodayAppointmentRow({
   const isConfirmed = appt.status === "CONFIRMED";
   const upcoming = isConfirmed && !appt.overdue;
   const needsClosing = isConfirmed && appt.overdue;
+  const showUpcomingActions = canWrite && upcoming;
+  const showClosingActions = canWrite && needsClosing;
 
   // Contextual WhatsApp message: a reminder while the booking is still upcoming,
   // a thank-you/review request once it's completed (or a no-show follow-up).
@@ -90,7 +95,7 @@ export function TodayAppointmentRow({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {needsClosing && (
+        {showClosingActions && (
           <>
             <button onClick={onComplete} disabled={pending} className={BTN_COMPLETE}>
               <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -104,7 +109,7 @@ export function TodayAppointmentRow({
           </>
         )}
 
-        {upcoming && (
+        {showUpcomingActions && (
           <>
             <button onClick={onReschedule} disabled={pending} className={BTN_NEUTRAL}>
               <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -119,7 +124,7 @@ export function TodayAppointmentRow({
           </>
         )}
 
-        {needsClosing && (
+        {showClosingActions && (
           <button onClick={onCancel} disabled={pending} className={BTN_DANGER}>
             {t("cancel")}
           </button>

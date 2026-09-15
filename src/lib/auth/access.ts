@@ -2,7 +2,7 @@
 //
 // WHAT a role may do lives in ./permissions. This file answers the narrower
 // question every bookings query asks — the whole salon, or only the login's own
-// employee — plus the rule that closes an employee's login.
+// employee — plus the rule that closes a login.
 //
 // Everything here is PURE: no cookies, no Prisma, no next/headers. The async
 // wrappers that read the session live in ./guards. Keeping the decisions pure is
@@ -70,27 +70,45 @@ export function canActForEmployee(scope: SalonScope, employeeId: string): boolea
 }
 
 /**
- * Why an employee's own login (a master's) stops working. Re-derived on EVERY
- * request, so revoking access is immediate: no claim cached in the session
- * cookie can outlive it.
- *   plan     — the account fell to a tier without staffRoles (lapsed trial,
- *              missed payment). Staff logins are a paid feature.
- *   inactive — the owner deactivated the master, or their employee record is
- *              gone. Deactivating someone is how a salon says "not any more",
- *              and it has to close the login too, not just the calendar column.
+ * Why a login stops working. Re-derived on EVERY request, so closing access is
+ * immediate: no claim cached in the session cookie can outlive it.
+ *   plan     — the account's plan does not include logins of this role: it fell
+ *              to FREE (lapsed trial, missed payment), or it is not Pro and the
+ *              login is a finance one.
+ *   branch   — the login is pinned to a branch (reception, a master) and that
+ *              branch is not ACTIVE: the owner suspended it. Suspending a branch
+ *              has to close the people who work only there, the same way a
+ *              lapsed plan does, or they keep working a salon that is closed.
+ *   inactive — the owner switched the login off, or — for a master's own login —
+ *              deactivated the master or deleted their employee record.
+ *              Deactivating someone is how a salon says "not any more", and it
+ *              has to close the login too, not just the calendar column.
+ *   role     — the stored role is one this code does not know (see appRoleOf).
  */
-export type StaffBlockedReason = "plan" | "inactive";
+export type StaffBlockedReason = "plan" | "branch" | "inactive" | "role";
 
 export function staffBlockedReason(opts: {
+  /** The plan includes logins of this role (roleOnPlan). Always true for the owner. */
+  roleOnPlan: boolean;
+  /**
+   * The branch the login is pinned to is ACTIVE. Always true for a role that
+   * spans the account (owner, finance), which is not tied to one branch.
+   */
+  branchActive: boolean;
+  /** The owner switched this login off (Membership.disabledAt is set). */
+  disabled: boolean;
   /** The login belongs to an employee (see isEmployeeLogin). */
   employeeLogin: boolean;
-  staffRolesEnabled: boolean;
   /** Employee.isActive; null/undefined when the record no longer resolves. */
   employeeIsActive: boolean | null | undefined;
 }): StaffBlockedReason | null {
-  if (!opts.employeeLogin) return null;
-  if (!opts.staffRolesEnabled) return "plan";
+  // The account-wide reasons first — plan, then branch: they are the ones the
+  // owner acts on, and they explain every login they close at once.
+  if (!opts.roleOnPlan) return "plan";
+  if (!opts.branchActive) return "branch";
+  if (opts.disabled) return "inactive";
   // Anything other than an explicit `true` — false, null, a membership whose
-  // employee was deleted — closes the login. Fail closed, not open.
-  return opts.employeeIsActive === true ? null : "inactive";
+  // employee was deleted — closes an employee's login. Fail closed, not open.
+  if (opts.employeeLogin && opts.employeeIsActive !== true) return "inactive";
+  return null;
 }

@@ -3,10 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { getSession, setActiveBranch } from "@/lib/auth/session";
-import { requireScope } from "@/lib/auth/guards";
+import { setActiveBranch } from "@/lib/auth/session";
+import { requirePermissionOrNull, requireScope } from "@/lib/auth/guards";
 import { appointmentScope, canActForEmployee } from "@/lib/auth/access";
-import { hasPermission, spansAllBranches } from "@/lib/auth/permissions";
+import { spansAllBranches } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasContact } from "@/lib/serializers/redact-notes";
 import { acceptSalonConsents } from "@/lib/legal-consent";
@@ -197,7 +197,8 @@ const switchBranchSchema = z.object({ salonId: z.string().uuid() });
  * — everything else is a silent no-op error.
  */
 export async function switchBranch(input: unknown): Promise<ActionResult> {
-  const session = await getSession();
+  // bookings.read is what every working login holds: a closed one gets null here.
+  const session = await requirePermissionOrNull("bookings.read");
   const t = await getTranslations("Actions");
   const parsed = switchBranchSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
@@ -500,8 +501,8 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
  * on it (see the layout), so this stays a silent no-op for them, not an error.
  */
 export async function acceptLegalConsents(): Promise<void> {
-  const session = await getSession();
-  if (!session?.accountId || !hasPermission(session, "billing.manage")) return;
+  const session = await requirePermissionOrNull("billing.manage");
+  if (!session?.accountId) return;
   await acceptSalonConsents(session.accountId);
   revalidatePath("/dashboard");
 }

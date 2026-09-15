@@ -58,12 +58,15 @@
     "roleFinance": "Finance",
     "branch": "Branch",
     "branchSwitcherLabel": "Active branch",
-    "manageBranches": "Manage branches"
+    "manageBranches": "Manage branches",
+    "timeOff": "Time off"
   },
   "StaffBlocked": {
     "title": "Access closed",
-    "plan": "The salon's plan no longer includes staff logins. Ask the salon owner.",
-    "inactive": "The salon owner has switched this login off."
+    "plan": "The salon's plan no longer includes this login. Ask the salon owner.",
+    "inactive": "The salon owner has switched this login off.",
+    "role": "This login's role isn't recognised. Ask the salon owner to check it.",
+    "branch": "This login's branch is suspended. Ask the salon owner."
   },
   "Pwa": {
     "installTitle": "Add SalonBook to your home screen",
@@ -559,6 +562,41 @@
       "errors": {
         "selectDates": "Select the dates.",
         "endBeforeStart": "The end date can't be before the start."
+      }
+    },
+    "team": {
+      "title": "Team logins",
+      "subtitle": "Reception and finance sign in with their own email. They don't take a calendar column or a staff seat.",
+      "add": "Add login",
+      "empty": "No team logins yet.",
+      "role": "Role",
+      "roles": {
+        "ADMIN": "Reception",
+        "FINANCE": "Finance"
+      },
+      "roleHint": {
+        "ADMIN": "Bookings, clients and time off at this branch. No prices, staff, settings or analytics.",
+        "FINANCE": "Analytics and data exports across all branches. Bookings, clients and time off are read-only."
+      },
+      "planAdmin": "Reception logins are part of the paid plans.",
+      "planFinance": "Finance logins are part of the Pro plan.",
+      "fullName": "Name",
+      "fullNamePlaceholder": "e.g. Aysel",
+      "employee": "Linked staff member (optional)",
+      "employeeNone": "Not linked",
+      "employeeHint": "Link them if they also work as a specialist, so they can see their own payout statement.",
+      "linkedTo": "Linked: {name}",
+      "allBranches": "All branches",
+      "disabled": "Switched off",
+      "resetPassword": "Change password",
+      "revokeConfirm": "Delete the login for {name}? They are signed out immediately.",
+      "create": "Create login",
+      "issued": "Password saved — hand it over now:",
+      "errors": {
+        "nameRequired": "Enter a name.",
+        "notFound": "Login not found.",
+        "employeeTaken": "This staff member already has a login.",
+        "employeeNotFound": "Staff member not found."
       }
     }
   },
@@ -1384,7 +1422,8 @@
     "guard": {
       "noSalon": "Your session is not linked to a salon. Please sign in again.",
       "forbidden": "You don't have access to this action. Refresh the page, or sign in with an account that does.",
-      "sessionInvalid": "This session is not valid. Sign out and sign in again."
+      "sessionInvalid": "This session is not valid. Sign out and sign in again.",
+      "planRequired": "The salon's plan doesn't include this. The salon owner can upgrade the plan."
     },
     "api": {
       "invalidCredentials": "Email or password is incorrect.",
@@ -1772,5 +1811,18 @@
         "a": "A fixed monthly subscription — with no commissions on bookings. Annual billing is also available. Payments are currently manual: you pick your plan, we activate it. Automatic online payments and deposits (no-show protection) are in the works for Pro."
       }
     ]
+  },
+  "TimeOff": {
+    "title": "Time off",
+    "subtitle": "Days off for each specialist. Online booking skips these days.",
+    "empty": "No active staff yet.",
+    "manage": "Manage",
+    "view": "View",
+    "upcoming": "{count, plural, =0 {No time off planned} one {# period planned} other {# periods planned}}"
+  },
+  "PlanRequired": {
+    "title": "Not in your salon's plan",
+    "body": "This feature isn't included in your salon's plan. Ask the salon owner — they can upgrade the plan.",
+    "back": "Back to today"
   }
 }

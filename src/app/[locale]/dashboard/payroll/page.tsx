@@ -1,17 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { requirePagePermission } from "@/lib/auth/guards";
+import { requirePageAccess } from "@/lib/auth/guards";
+import { PlanRequired } from "../_components/plan-required";
+import { AccessClosed } from "../_components/access-closed";
 import { prisma } from "@/lib/prisma";
 import { bakuToday, bakuDayBoundsUtc } from "@/lib/time";
-import { featuresFor } from "@/lib/plans";
-import { effectivePlan } from "@/lib/subscription";
 import { PayrollManager, type PayrollRow, type PayoutItem } from "./payroll-manager";
 
 export const dynamic = "force-dynamic";
 
 // PRO payroll: per-employee earnings for a Baku month (fixed salary +
 // commission % of COMPLETED appointment revenue) and the payouts recorded
-// against them. Plan-gated here for the UI and again in every server action.
+// against them. payroll.manage carries the Pro gate: requirePageAccess hands a
+// non-Pro owner the upgrade card below, and every server action refuses too.
 
 function shiftYm(ym: string, delta: number): string {
   const [y, m] = ym.split("-").map(Number);
@@ -24,31 +25,13 @@ export default async function PayrollPage({
 }: {
   searchParams: Promise<{ ay?: string }>;
 }) {
-  const session = await requirePagePermission("payroll.manage");
+  const access = await requirePageAccess("payroll.manage");
   const t = await getTranslations("Payroll");
 
-  if (session.isAdmin || !session.salonId) {
-    const td = await getTranslations("Dashboard");
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-xl font-semibold text-foreground">
-          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
-        </h1>
-        <p className="mt-2 max-w-sm text-sm text-faint-foreground">
-          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
-        </p>
-      </div>
-    );
-  }
-  const salonId = session.salonId;
-
-  const salon = await prisma.salon.findUnique({
-    where: { id: salonId },
-    select: { account: { select: { subscription: true } } },
-  });
-  const plan = effectivePlan(salon?.account.subscription ?? null);
-
-  if (!featuresFor(plan).payroll) {
+  if (!access.granted && access.reason === "blocked") return <AccessClosed reason={access.blocked} />;
+  // The upgrade card links to Billing, so only whoever can open it gets the card.
+  if (!access.granted && !access.canUpgrade) return <PlanRequired />;
+  if (!access.granted) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
@@ -69,6 +52,22 @@ export default async function PayrollPage({
       </div>
     );
   }
+
+  const { session } = access;
+  if (session.isAdmin || !session.salonId) {
+    const td = await getTranslations("Dashboard");
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <h1 className="text-xl font-semibold text-foreground">
+          {session.isAdmin ? t("adminTitle") : td("noSalonTitle")}
+        </h1>
+        <p className="mt-2 max-w-sm text-sm text-faint-foreground">
+          {session.isAdmin ? t("adminBody") : td("noSalonBody")}
+        </p>
+      </div>
+    );
+  }
+  const salonId = session.salonId;
 
   // Month selection (?ay=YYYY-MM), defaulting to the current Baku month.
   const { ay } = await searchParams;

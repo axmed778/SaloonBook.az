@@ -11,6 +11,8 @@ type NavItem = {
   href: string;
   labelKey: string;
   icon: React.ReactNode;
+  /** Not listed for a role holding this permission, which reaches the same thing elsewhere. */
+  hideWith?: Permission;
 };
 
 const ICON = "h-[18px] w-[18px] shrink-0";
@@ -63,6 +65,20 @@ const items: NavItem[] = [
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/dashboard/time-off",
+    labelKey: "timeOff",
+    // The owner manages time off on the Staff screen, next to everything else
+    // about each person; this entry is for roles that plan the schedule without
+    // managing staff.
+    hideWith: "staff.manage",
+    icon: (
+      <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4" />
       </svg>
     ),
   },
@@ -130,7 +146,11 @@ export function SidebarNav({
   // closes in the user's face.
   const navItems = isAdmin
     ? adminItems
-    : items.filter((i) => canOpenSection(permissions, i.href));
+    : items.filter(
+        (i) =>
+          canOpenSection(permissions, i.href) &&
+          !(i.hideWith && permissions.includes(i.hideWith)),
+      );
 
   return (
     <nav className="flex flex-col gap-1">
