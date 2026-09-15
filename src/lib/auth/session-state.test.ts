@@ -106,14 +106,43 @@ describe("a login pinned to a branch that is not active", () => {
     expect(buildSession(source("ADMIN", "FREE", { salonId: SUSPENDED })).session.staffBlocked).toBe("plan");
   });
 
-  it("does not close the owner or finance, who span the account, when their home salon is suspended", () => {
-    for (const role of ["OWNER", "FINANCE"]) {
-      const { session } = buildSession(source(role, "PRO", { salonId: SUSPENDED }));
-      expect(session.staffBlocked, role).toBeNull();
-      // This rule leaves their scope alone: they keep their home salon, and the
-      // branch switcher still moves them to any active one.
-      expect(session.salonId, role).toBe(SUSPENDED);
-    }
+  // The branch rule has to leave the account-spanning roles alone, but their own
+  // home branch is the wrong way to show it: neither can have one suspended. The
+  // owner's is the salon created at signup — the primary, which setBranchStatus
+  // refuses to suspend (primaryLocked) — and a finance login has no home branch
+  // at all, since its membership is created with salonId null. What does happen
+  // is a branch they are not sitting in being suspended under them, so that is
+  // what these two cover: SECOND is gone from account.salons, PRIMARY is not.
+  const onlyPrimaryActive = {
+    account: {
+      offerVersion: null,
+      privacyVersion: null,
+      subscription: { extraBranches: 0 },
+      salons: [PRIMARY],
+    },
+  };
+
+  const spanning = [
+    ["the owner, whose home branch is the primary", "OWNER", PRIMARY.id],
+    ["finance, which has no home branch", "FINANCE", null],
+  ] as const;
+
+  it.each(spanning)("leaves %s working when another branch is suspended", (_l, role, home) => {
+    const { session } = buildSession(source(role, "PRO", { ...onlyPrimaryActive, salonId: home }));
+    expect(session.staffBlocked).toBeNull();
+    expect(session.salonId).toBe(PRIMARY.id);
+  });
+
+  // The reachable version of "the cookie names a branch that isn't active": they
+  // were working in SECOND through the switcher when it was suspended, so the
+  // cookie on the next request still names it. Falling back keeps them working
+  // in an active branch instead of scoping the dashboard to a closed one.
+  it.each(spanning)("moves %s off a suspended branch the cookie still names", (_l, role, home) => {
+    const { session } = buildSession(
+      source(role, "PRO", { ...onlyPrimaryActive, salonId: home }, SECOND.id),
+    );
+    expect(session.staffBlocked).toBeNull();
+    expect(session.salonId).toBe(PRIMARY.id);
   });
 });
 
