@@ -88,13 +88,13 @@ DECLARE
   tenant_tables text[] := ARRAY[
     'Salon', 'Employee', 'Service', 'Customer', 'Appointment',
     'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review',
-    'ServiceAddon', 'AppointmentAddon',
+    'ServiceAddon', 'AppointmentAddon', 'AppointmentPayment',
     'WorkingHour', 'TimeOff', 'ServiceEmployee', 'ServiceAddonLink'
   ];
   salon_id_tables text[] := ARRAY[
     'Employee', 'Service', 'Customer', 'Appointment',
     'Notification', 'Payout', 'CustomerNote', 'UsageCounter', 'Review',
-    'ServiceAddon', 'AppointmentAddon'
+    'ServiceAddon', 'AppointmentAddon', 'AppointmentPayment'
   ];
   -- No salonId column of their own: they hang off an employee. Scoped one hop
   -- away instead of via a denormalizing migration + backfill.

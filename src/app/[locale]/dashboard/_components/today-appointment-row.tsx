@@ -38,6 +38,7 @@ export function TodayAppointmentRow({
   onReschedule: () => void;
 }) {
   const t = useTranslations("Today");
+  const tp = useTranslations("Payments");
 
   const isConfirmed = appt.status === "CONFIRMED";
   const upcoming = isConfirmed && !appt.overdue;
@@ -70,6 +71,18 @@ export function TodayAppointmentRow({
         ? { label: t("statusNoShow"), cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300" }
         : { label: t("statusConfirmed"), cls: "bg-secondary text-secondary-foreground" };
 
+  // Money badge. Rendered only when the server sent a payment status, which it
+  // does only for payments.read — a master's row has no key here, so there is
+  // nothing to conditionally hide. Unpaid is deliberately silent: almost every
+  // upcoming booking is unpaid, and a row of grey "unpaid" chips would drown the
+  // two that matter.
+  const payBadge =
+    appt.paymentStatus === "paid"
+      ? { label: tp("status.paid"), cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
+      : appt.paymentStatus === "partial"
+        ? { label: tp("status.partial"), cls: "bg-amber-500/15 text-amber-800 dark:text-amber-200" }
+        : null;
+
   return (
     <li className={"rounded-xl border border-border bg-card p-3 " + (pending ? "opacity-60" : "")}>
       <div className="flex items-start gap-3">
@@ -87,6 +100,13 @@ export function TodayAppointmentRow({
             >
               {statusBadge.label}
             </span>
+            {payBadge && (
+              <span
+                className={"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium " + payBadge.cls}
+              >
+                {payBadge.label}
+              </span>
+            )}
           </div>
           <p className="mt-0.5 truncate text-sm text-muted-foreground">
             {appt.service} · {appt.employee}

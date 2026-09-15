@@ -629,7 +629,7 @@
     "colCustomer": "Customer",
     "colVisits": "Visits",
     "colLastVisit": "Last visit",
-    "colSpent": "Spent",
+    "colSpent": "Booked value",
     "colFavEmployee": "Favorite staff",
     "colStatus": "Status",
     "noResults": "No results for \"{q}\"",
@@ -648,7 +648,8 @@
       "noteEmpty": "A note can't be empty.",
       "noteNotFound": "Note not found.",
       "deleteSettled": "This customer can't be deleted because they have completed appointments in already-paid months (payroll history is protected).",
-      "deleteFailed": "Could not delete. Please try again."
+      "deleteFailed": "Could not delete. Please try again.",
+      "deletePaid": "This client has bookings with payments on them and cannot be deleted."
     }
   },
   "ClientProfile": {
@@ -676,7 +677,7 @@
     "showingLast": "Showing the last {count} appointments.",
     "stats": {
       "visits": "Visits",
-      "ltv": "Total spent (LTV)",
+      "ltv": "Booked value (LTV)",
       "avgTicket": "Average ticket",
       "frequency": "Visit frequency",
       "frequencyValue": "~every {days} days",
@@ -955,6 +956,58 @@
       "accountNotFound": "Account not found."
     }
   },
+  "Payments": {
+    "title": "Payment",
+    "todayTitle": "Today's payments",
+    "status": {
+      "paid": "Paid",
+      "partial": "Partial",
+      "unpaid": "Unpaid"
+    },
+    "method": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "TERMINAL": "Terminal",
+      "TRANSFER": "Transfer"
+    },
+    "received": "Received",
+    "settled": "Settled",
+    "remaining": "Remaining",
+    "tips": "Tips",
+    "record": "Record payment",
+    "refund": "Refund",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirmRefund": "Confirm refund",
+    "confirmVoid": "Void",
+    "voidAction": "Void",
+    "voidReason": "Reason for voiding",
+    "voidedBecause": "Voided: {reason}",
+    "discountOf": "Discount {amount} ₼",
+    "tipOf": "Tip {amount} ₼",
+    "amount": "Amount (₼)",
+    "discount": "Discount (₼)",
+    "tip": "Tip (₼)",
+    "methodLabel": "Payment method",
+    "note": "Note",
+    "priceLocked": "The price is not editable — record a discount to reduce it.",
+    "errors": {
+      "invalidData": "Invalid data.",
+      "invalidAmount": "Invalid amount.",
+      "bookingNotFound": "Booking not found.",
+      "paymentNotFound": "Payment not found.",
+      "alreadyVoided": "This payment is already voided.",
+      "paidAtFuture": "The payment date cannot be in the future.",
+      "network": "Connection error. Please try again.",
+      "amountNegative": "The amount must be greater than zero.",
+      "discountNegative": "The discount cannot be negative.",
+      "tipNegative": "The tip cannot be negative.",
+      "emptyEntry": "Enter an amount or a discount.",
+      "exceedsPrice": "That is more than the booking costs. Record anything over it as a tip.",
+      "refundExceedsPaid": "A refund cannot exceed what was received.",
+      "refundOnEmpty": "There is nothing to refund on this booking."
+    }
+  },
   "Payroll": {
     "title": "Payroll",
     "subtitle": "Salary + commission calculation and payout tracking.",
@@ -977,7 +1030,7 @@
     "recordPayout": "Record payout",
     "row": {
       "completed": "Completed appointments",
-      "revenue": "Revenue",
+      "revenue": "Booked value",
       "commission": "Commission",
       "earned": "Earned",
       "balance": "Balance"
@@ -996,7 +1049,7 @@
     "payModelTitle": "Pay model — {name}",
     "payModelModal": {
       "salaryLabel": "Monthly salary (₼)",
-      "commissionLabel": "Commission (% of completed-appointment revenue)",
+      "commissionLabel": "Commission (% of completed-appointment booked value)",
       "hint": "For salary only, leave the percentage empty; for commission only, leave the salary empty; for hybrid, fill in both."
     },
     "payoutTitle": "Payout — {name} ({month})",
@@ -1058,9 +1111,9 @@
       "viewPlans": "View plans"
     },
     "cards": {
-      "revenue": "This month's revenue (realized)",
+      "revenue": "This month's booked value (completed)",
       "new": "new",
-      "expected": "Expected revenue",
+      "expected": "Expected booked value",
       "expectedSub": "{count} confirmed appointments ahead",
       "totalBookings": "Total appointments",
       "noShowSub": "No-shows: {count} ({rate}%)",
@@ -1077,7 +1130,7 @@
       "detail": "{publicCount} online / {totalCount} total appointments"
     },
     "topServices": {
-      "title": "Top revenue services",
+      "title": "Top services by booked value",
       "empty": "No data yet",
       "serviceFallback": "Service",
       "appointments": "{count} appointments"
@@ -1149,7 +1202,7 @@
         "name": "Name",
         "phone": "Phone",
         "visits": "Visits",
-        "spent": "Spent (AZN)",
+        "spent": "Booked value (AZN)",
         "lastVisit": "Last visit",
         "upcoming": "Upcoming",
         "favorite": "Favorite staff",

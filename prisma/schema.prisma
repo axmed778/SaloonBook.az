@@ -30,26 +30,26 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id              String               @id @default(uuid())
-  clerkId         String?              @unique // optional — local email/password auth is primary; reserved for future SSO
-  email           String               @unique // login identifier
-  passwordHash    String? // scrypt hash (see src/lib/auth/password.ts); null for any future SSO user
-  phone           String?
-  fullName        String?
-  isPlatformAdmin Boolean              @default(false)
-  memberships     Membership[]
-  resetTokens     PasswordResetToken[]
-  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
+  id                String               @id @default(uuid())
+  clerkId           String?              @unique // optional — local email/password auth is primary; reserved for future SSO
+  email             String               @unique // login identifier
+  passwordHash      String? // scrypt hash (see src/lib/auth/password.ts); null for any future SSO user
+  phone             String?
+  fullName          String?
+  isPlatformAdmin   Boolean              @default(false)
+  memberships       Membership[]
+  resetTokens       PasswordResetToken[]
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
   // Session cutoff: cookies issued before this instant are rejected (see
   // getSession). Bumped on password reset so a stolen session can't outlive it.
-  sessionsValidFrom DateTime?          @db.Timestamptz(6)
+  sessionsValidFrom DateTime?            @db.Timestamptz(6)
   // Last time this user was GRANTED a session by proving who they are: a
   // password login, a registration, or a completed password reset. Never
   // written by a session read, which is what makes it mean "came back and
   // signed in" rather than "still holds a valid cookie". Null for users who
   // have not signed in since the column was added — the admin panel shows that
   // as "unknown", not as "never".
-  lastLoginAt       DateTime?          @db.Timestamptz(6)
+  lastLoginAt       DateTime?            @db.Timestamptz(6)
 }
 
 // Single-use, expiring password-reset tokens. Only the SHA-256 of the raw token
@@ -67,23 +67,23 @@ model PasswordResetToken {
 }
 
 model Account {
-  id           String        @id @default(uuid())
-  name         String
-  status       AccountStatus @default(ACTIVE)
-  subscription Subscription?
-  salons       Salon[]
-  memberships  Membership[]
+  id              String         @id @default(uuid())
+  name            String
+  status          AccountStatus  @default(ACTIVE)
+  subscription    Subscription?
+  salons          Salon[]
+  memberships     Membership[]
   // Legal consent captured at salon registration: the user agreement (offer)
   // and the data-processing consent are accepted together; marketing is opt-in.
   // Versions (see src/lib/legal.ts) are stored so a consent stays auditable
   // after the document text changes.
-  legalAcceptedAt DateTime? @db.Timestamptz(3)
+  legalAcceptedAt DateTime?      @db.Timestamptz(3)
   offerVersion    String?
   privacyVersion  String?
-  marketingOptIn  Boolean   @default(false)
+  marketingOptIn  Boolean        @default(false)
   /// Append-only history of every acceptance, including superseded versions.
   legalConsents   LegalConsent[]
-  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(3)
 }
 
 model Membership {
@@ -126,49 +126,50 @@ enum AccountStatus {
 // ---------------------------------------------------------------------------
 
 model Salon {
-  id           String        @id @default(uuid())
-  accountId    String
-  slug         String        @unique // book link: {APP_URL}/{slug}
-  name         String
-  description  String?
-  logoUrl      String?
-  address      String?
+  id                  String               @id @default(uuid())
+  accountId           String
+  slug                String               @unique // book link: {APP_URL}/{slug}
+  name                String
+  description         String?
+  logoUrl             String?
+  address             String?
   // Pinned location for the public discovery map (WGS84 degrees). Both null
   // until the owner drops a pin in Settings; a salon only appears on the map
   // once both are set. Not an address geocode — the owner places it by hand (or
   // via device GPS), so it can be more precise than the free-text `address`.
-  latitude     Float?
-  longitude    Float?
+  latitude            Float?
+  longitude           Float?
   // Coarse locality (rayon/district), e.g. "Nəsimi" — a label on the discovery
   // card and a coarse filter. Free text; not a geocode.
-  district     String?
-  phone        String?
-  timezone     String        @default("Asia/Baku")
-  currency     String        @default("AZN")
+  district            String?
+  phone               String?
+  timezone            String               @default("Asia/Baku")
+  currency            String               @default("AZN")
   // Weekly opening hours for display (and future staff-attendance checks):
   // [{ weekday: 0..6 (0=Sun), openMin, closeMin }] in Baku-local minutes.
   // Availability is still driven by per-employee WorkingHour, not this.
-  businessHours Json?
+  businessHours       Json?
   // Who the salon serves. MALE/FEMALE for gendered salons, ALL for unisex.
-  audience     Audience      @default(ALL)
+  audience            Audience             @default(ALL)
   // Denormalized review aggregate for the discovery min-rating filter (a cheap
   // read). Maintained in the Review write path. avg = ratingSum / ratingCount.
-  ratingCount  Int           @default(0)
-  ratingSum    Int           @default(0)
-  status       SalonStatus   @default(ACTIVE)
-  account      Account       @relation(fields: [accountId], references: [id])
-  employees    Employee[]
-  services     Service[]
-  serviceAddons ServiceAddon[]
-  customers    Customer[]
-  appointments Appointment[]
-  appointmentAddons AppointmentAddon[]
-  memberships  Membership[]
-  payouts      Payout[]
-  customerNotes CustomerNote[]
-  whatsAppSender WhatsAppSender?
-  reviews      Review[]
-  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  ratingCount         Int                  @default(0)
+  ratingSum           Int                  @default(0)
+  status              SalonStatus          @default(ACTIVE)
+  account             Account              @relation(fields: [accountId], references: [id])
+  employees           Employee[]
+  services            Service[]
+  serviceAddons       ServiceAddon[]
+  customers           Customer[]
+  appointments        Appointment[]
+  appointmentAddons   AppointmentAddon[]
+  appointmentPayments AppointmentPayment[]
+  memberships         Membership[]
+  payouts             Payout[]
+  customerNotes       CustomerNote[]
+  whatsAppSender      WhatsAppSender?
+  reviews             Review[]
+  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
 
   @@index([accountId])
   @@index([slug])
@@ -207,28 +208,28 @@ enum ServiceCategory {
 // ---------------------------------------------------------------------------
 
 model Employee {
-  id           String            @id @default(uuid())
-  salonId      String
-  name         String
-  phone        String?
-  position     String?
-  avatarUrl    String?
-  isActive     Boolean           @default(true)
+  id              String            @id @default(uuid())
+  salonId         String
+  name            String
+  phone           String?
+  position        String?
+  avatarUrl       String?
+  isActive        Boolean           @default(true)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
-  audience     Audience          @default(ALL)
+  audience        Audience          @default(ALL)
   // Compensation (PRO payroll). Two fields express all three models: fixed
   // salary (pct=0), pure commission (salary=0), or hybrid (both). Commission
   // applies to the employee's COMPLETED appointment revenue for the month.
-  baseSalaryMinor Int            @default(0) // monthly, in qəpik
-  commissionPct   Int            @default(0) // 0..100
-  salon        Salon             @relation(fields: [salonId], references: [id])
-  workingHours WorkingHour[]
-  timeOff      TimeOff[]
-  services     ServiceEmployee[]
-  appointments Appointment[]
-  membership   Membership?
-  payouts      Payout[]
-  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  baseSalaryMinor Int               @default(0) // monthly, in qəpik
+  commissionPct   Int               @default(0) // 0..100
+  salon           Salon             @relation(fields: [salonId], references: [id])
+  workingHours    WorkingHour[]
+  timeOff         TimeOff[]
+  services        ServiceEmployee[]
+  appointments    Appointment[]
+  membership      Membership?
+  payouts         Payout[]
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
 
   @@index([salonId])
 }
@@ -252,23 +253,23 @@ model Payout {
 }
 
 model Service {
-  id           String            @id @default(uuid())
+  id           String             @id @default(uuid())
   salonId      String
   name         String
   description  String?
   priceMinor   Int // qəpik
   durationMin  Int // service length, minutes
-  bufferMin    Int               @default(0) // turnover/cleanup after, minutes
-  isActive     Boolean           @default(true)
+  bufferMin    Int                @default(0) // turnover/cleanup after, minutes
+  isActive     Boolean            @default(true)
   // Broad category for the discovery-map filter (see ServiceCategory).
-  category     ServiceCategory   @default(OTHER)
+  category     ServiceCategory    @default(OTHER)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
-  audience     Audience          @default(ALL)
-  salon        Salon             @relation(fields: [salonId], references: [id])
+  audience     Audience           @default(ALL)
+  salon        Salon              @relation(fields: [salonId], references: [id])
   employees    ServiceEmployee[]
   addons       ServiceAddonLink[]
   appointments Appointment[]
-  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
 
   @@index([salonId])
 }
@@ -382,22 +383,22 @@ model CustomerNote {
 }
 
 model Appointment {
-  id            String            @id @default(uuid())
-  salonId       String
-  employeeId    String
-  serviceId     String
-  customerId    String
-  startsAt      DateTime          @db.Timestamptz(6)
-  endsAt        DateTime          @db.Timestamptz(6) // startsAt + duration + buffer
-  status        AppointmentStatus @default(CONFIRMED)
+  id             String               @id @default(uuid())
+  salonId        String
+  employeeId     String
+  serviceId      String
+  customerId     String
+  startsAt       DateTime             @db.Timestamptz(6)
+  endsAt         DateTime             @db.Timestamptz(6) // startsAt + duration + buffer
+  status         AppointmentStatus    @default(CONFIRMED)
   // Set true when the 48h reconcile sweep auto-closed a past CONFIRMED booking
   // (→ COMPLETED) that staff never marked. Surfaced as "unconfirmed" so a
   // no-show can still be corrected by hand. See worker/processors/reconcile.ts.
-  autoCompleted Boolean           @default(false)
+  autoCompleted  Boolean              @default(false)
   // Snapshot at booking time: the service's price plus every chosen add-on's
   // (itemised in `addons`). Revenue, payroll and the ROI dashboard sum this.
-  priceMinor    Int
-  source        BookingSource     @default(PUBLIC)
+  priceMinor     Int
+  source         BookingSource        @default(PUBLIC)
   // What the customer wants from the SERVICE — "tünd çalar", "allergiya var".
   // Written by the customer on the public form and by staff on a manual entry,
   // and read by the master doing the work, which is why the booking endpoints
@@ -405,27 +406,28 @@ model Appointment {
   // redact-notes.ts) and the serializer redacts one in an older row before it
   // reaches a master. Still the "notes" column: the name is a code/UI change,
   // there is nothing to migrate.
-  serviceNote   String?           @map("notes")
+  serviceNote    String?              @map("notes")
   // Who this booking is actually for. The Customer is keyed by phone (the
   // contact), so when someone books from one number for a family member
   // (self, grandma, …) this holds the attendee's name. Null → use Customer.name.
-  attendeeName  String?
+  attendeeName   String?
   // Customer's data-processing consent captured on a public self-booking (the
   // required checkbox). Null for staff-entered (DASHBOARD) bookings, where the
   // salon carries the consent obligation. Marketing consent = Customer.waOptIn.
-  consentAt     DateTime?         @db.Timestamptz(6)
+  consentAt      DateTime?            @db.Timestamptz(6)
   consentVersion String?
   // Unguessable capability token for the public self-service page (/a/{token}):
   // whoever holds the link can view, cancel or reschedule this appointment.
-  manageToken   String            @unique @default(uuid())
-  salon         Salon             @relation(fields: [salonId], references: [id])
-  employee      Employee          @relation(fields: [employeeId], references: [id])
-  service       Service           @relation(fields: [serviceId], references: [id])
-  customer      Customer          @relation(fields: [customerId], references: [id])
-  addons        AppointmentAddon[]
-  notifications Notification[]
-  review        Review?
-  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  manageToken    String               @unique @default(uuid())
+  salon          Salon                @relation(fields: [salonId], references: [id])
+  employee       Employee             @relation(fields: [employeeId], references: [id])
+  service        Service              @relation(fields: [serviceId], references: [id])
+  customer       Customer             @relation(fields: [customerId], references: [id])
+  addons         AppointmentAddon[]
+  notifications  Notification[]
+  review         Review?
+  payments       AppointmentPayment[]
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
 
   // The no-overlap exclusion constraint is added in prisma/constraints.sql
   // (Prisma can't express EXCLUDE USING gist).
@@ -435,6 +437,70 @@ model Appointment {
   @@index([customerId, startsAt(sort: Desc)])
   // Service deletion checks and the per-service analytics breakdown.
   @@index([serviceId])
+}
+
+enum PaymentKind {
+  PAYMENT
+  REFUND
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TERMINAL
+  TRANSFER
+}
+
+// Money taken on a booking. A booking has 0..n of these: split payments (part
+// cash, part card) are ordinary, and a refund is another row rather than an edit.
+//
+// NOT to be confused with `Payment`, which is SaaS subscription billing.
+//
+// Three money columns, and they are not interchangeable (D6):
+//   amountMinor    what was actually received, AFTER the discount.
+//   discountMinor  the price reduction given. Revenue never counts it; it is
+//                  recorded so "why is this booking settled for less" has an
+//                  answer, and so a fully comped booking (amount 0, discount =
+//                  price) is a row rather than a missing one.
+//   tipMinor       extra on top. Never revenue and never part of a payout base,
+//                  but it IS cash in the drawer, so the shift close (phase 3)
+//                  counts it toward expected cash.
+//
+// "Deleting" one voids it: the row stays, with who/when/why, so history and
+// later exports can still show what was undone.
+//
+// People are user-id scalars plus a name snapshot, with NO foreign key:
+// revoking a master's login deletes their User row, and an FK would make revoke
+// fail (see the plan's data-model notes).
+model AppointmentPayment {
+  id               String        @id @default(uuid())
+  salonId          String
+  appointmentId    String
+  kind             PaymentKind   @default(PAYMENT)
+  method           PaymentMethod
+  amountMinor      Int
+  discountMinor    Int           @default(0)
+  tipMinor         Int           @default(0)
+  // Baku day of paidAt. The shift key in phase 3 — deliberately the PAYMENT day,
+  // while revenue and payouts follow the BOOKING day (D7).
+  businessDate     String
+  paidAt           DateTime      @db.Timestamptz(6)
+  receivedByUserId String?
+  receivedByName   String?
+  note             String?
+  createdByUserId  String
+  voidedAt         DateTime?     @db.Timestamptz(6)
+  voidedByUserId   String?
+  voidReason       String?
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  salon            Salon         @relation(fields: [salonId], references: [id])
+  // Restrict: a booking with money on it is a business record. deleteCustomer
+  // refuses one for the same reason.
+  appointment      Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+
+  @@index([salonId, businessDate])
+  @@index([appointmentId])
 }
 
 // The add-ons chosen for one appointment, copied at booking time for the same
@@ -584,21 +650,21 @@ model PushSubscription {
 // OTP only — no password, no email. NOT a tenant table (no salonId): a client's
 // data is scoped by their own verified phone, never by salon.
 model Client {
-  id             String    @id @default(uuid())
-  phone          String    @unique // E.164, +994...
-  name           String? // optional display name, filled at first booking
+  id                String         @id @default(uuid())
+  phone             String         @unique // E.164, +994...
+  name              String? // optional display name, filled at first booking
   // Data-processing consent captured at OTP sign-up (see src/lib/legal.ts).
-  consentAt      DateTime? @db.Timestamptz(6)
-  consentVersion String?
-  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
-  lastLoginAt    DateTime? @db.Timestamptz(6)
+  consentAt         DateTime?      @db.Timestamptz(6)
+  consentVersion    String?
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  lastLoginAt       DateTime?      @db.Timestamptz(6)
   /// Session cutoff: cookies issued before this instant are rejected. Bumped on
   /// logout so signing out actually revokes the token, not just the cookie.
   /// Mirrors User.sessionsValidFrom.
-  sessionsValidFrom DateTime? @db.Timestamptz(6)
-  reviews        Review[]
+  sessionsValidFrom DateTime?      @db.Timestamptz(6)
+  reviews           Review[]
   /// Append-only history of every acceptance, including superseded versions.
-  legalConsents  LegalConsent[]
+  legalConsents     LegalConsent[]
 }
 
 // One recorded acceptance of one legal document at one version. Append-only:

@@ -188,6 +188,16 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
   });
   if (!customer) return { ok: false, error: t("notFound") };
 
+  // Block if any of their bookings carries money that was not voided. A payment
+  // is a business record: deleting the customer would take the appointment with
+  // it and leave the salon's day totals, and later its reports, short by that
+  // amount with nothing to show why. Voided entries do not count — they already
+  // represent money that was undone.
+  const paid = await prisma.appointmentPayment.count({
+    where: { salonId, voidedAt: null, appointment: { customerId: id } },
+  });
+  if (paid > 0) return { ok: false, error: t("deletePaid") };
+
   // Block if any COMPLETED appointment falls in an already-settled (paid-out)
   // employee-month.
   const completed = await prisma.appointment.findMany({

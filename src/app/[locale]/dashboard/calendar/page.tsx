@@ -16,6 +16,7 @@ import {
 } from "@/lib/time";
 import {
   bookingSelectForViewer,
+  canSeePayments,
   bookingViewer,
   serializeBookingsForViewer,
   type BookingRow,
@@ -123,6 +124,12 @@ export default async function CalendarPage({
   // Finance reads the calendar but does not book, move or close appointments:
   // those controls are not rendered for it (the actions refuse it either way).
   const canWrite = can(session, "bookings.write");
+  // Two separate money questions. `showPayments` decides whether the payment
+  // rows are READ AT ALL — a master's query does not select them, so no amount
+  // reaches the RSC payload. `canWritePayments` only decides whether the forms
+  // are drawn; the actions re-check it server-side regardless.
+  const showPayments = canSeePayments(session);
+  const canWritePayments = can(session, "payments.write");
   const { day: dayParam, view: viewParam } = await searchParams;
   const view = viewParam === "week" ? "week" : "day";
   const today = bakuToday();
@@ -178,9 +185,10 @@ export default async function CalendarPage({
           startsAt: { gte: startUtc, lt: endUtc },
         },
         orderBy: { startsAt: "asc" },
-        select: bookingSelectForViewer(viewer),
+        select: bookingSelectForViewer(viewer, { payments: showPayments }),
       })) as BookingRow[],
       viewer,
+      { payments: showPayments },
     );
 
     const weekDays: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
@@ -208,6 +216,7 @@ export default async function CalendarPage({
         catalog={catalog}
         salonName={salonName}
         canWrite={canWrite}
+        canWritePayments={canWritePayments}
         windowStartMin={win.startMin}
         windowEndMin={win.endMin}
       />
@@ -225,9 +234,10 @@ export default async function CalendarPage({
         startsAt: { gte: startUtc, lt: endUtc },
       },
       orderBy: { startsAt: "asc" },
-      select: bookingSelectForViewer(viewer),
+      select: bookingSelectForViewer(viewer, { payments: showPayments }),
     })) as BookingRow[],
     viewer,
+    { payments: showPayments },
   );
 
   const blocks = appts
@@ -266,6 +276,7 @@ export default async function CalendarPage({
       catalog={catalog}
       salonName={salonName}
       canWrite={canWrite}
+      canWritePayments={canWritePayments}
       windowStartMin={win.startMin}
       windowEndMin={win.endMin}
     />

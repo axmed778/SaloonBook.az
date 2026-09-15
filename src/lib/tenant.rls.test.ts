@@ -38,6 +38,7 @@ const SALON_ID_MODELS = [
   "review",
   "serviceAddon",
   "appointmentAddon",
+  "appointmentPayment",
 ] as const;
 
 /**
@@ -119,6 +120,18 @@ async function seedTenant(db: PrismaClient, tag: string, dayOffset: number): Pro
     },
   });
 
+  await db.appointmentPayment.create({
+    data: {
+      salonId: salon.id,
+      appointmentId: appointment.id,
+      method: "CASH",
+      amountMinor: 1500,
+      businessDate: "2030-01-01",
+      paidAt: startsAt,
+      createdByUserId: `user-${tag}`,
+    },
+  });
+
   await db.customerNote.create({
     data: { salonId: salon.id, customerId: customer.id, body: `secret note ${tag}` },
   });
@@ -159,6 +172,8 @@ async function destroyTenant(db: PrismaClient, t: Tenant): Promise<void> {
   await db.payout.deleteMany({ where: { salonId: t.salonId } });
   await db.customerNote.deleteMany({ where: { salonId: t.salonId } });
   await db.appointmentAddon.deleteMany({ where: { salonId: t.salonId } });
+  // Before the appointments: the FK is Restrict, not Cascade.
+  await db.appointmentPayment.deleteMany({ where: { salonId: t.salonId } });
   await db.appointment.deleteMany({ where: { salonId: t.salonId } });
   await db.customer.deleteMany({ where: { salonId: t.salonId } });
   await db.serviceEmployee.deleteMany({ where: { employeeId: t.employeeId } });
