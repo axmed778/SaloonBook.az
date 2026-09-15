@@ -120,6 +120,7 @@ const CLIENT_NAMESPACES = [
   "LegalReconsent",
   "Manage",
   "Nav",
+  "Payments", // payment-section and the Today totals strip
   "Payroll",
   "Pwa",
   "Reviews",
@@ -128,6 +129,9 @@ const CLIENT_NAMESPACES = [
   "Settings", // location-picker reads Settings.location
   "ThemeToggle",
   "Today",
+  // Shipped unlisted in 1b: /dashboard/time-off rendered raw keys ("TimeOff.title")
+  // for every role until the test beside this list caught it.
+  "TimeOff",
   "Weekdays",
   "Workers",
 ] as const;

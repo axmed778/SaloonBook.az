@@ -37,6 +37,7 @@ export function Calendar({
   windowEndMin,
   salonName,
   canWrite,
+  canWritePayments,
 }: {
   view: "day" | "week";
   day: string;
@@ -51,6 +52,8 @@ export function Calendar({
   salonName: string;
   /** bookings.write: create, move, change status, close the day. Read-only without it. */
   canWrite: boolean;
+  /** payments.write — the money forms in the popup. Not implied by canWrite. */
+  canWritePayments: boolean;
 }) {
   const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
@@ -169,6 +172,7 @@ export function Calendar({
           block={selected}
           salonName={salonName}
           canWrite={canWrite}
+          canWritePayments={canWritePayments}
           onClose={() => setSelected(null)}
         />
       )}

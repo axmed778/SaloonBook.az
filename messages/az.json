@@ -629,7 +629,7 @@
     "colCustomer": "Müştəri",
     "colVisits": "Vizitlər",
     "colLastVisit": "Son vizit",
-    "colSpent": "Xərclədiyi",
+    "colSpent": "Görüş dəyəri",
     "colFavEmployee": "Sevimli usta",
     "colStatus": "Status",
     "noResults": "\"{q}\" üzrə nəticə tapılmadı",
@@ -648,7 +648,8 @@
       "noteEmpty": "Qeyd boş ola bilməz.",
       "noteNotFound": "Qeyd tapılmadı.",
       "deleteSettled": "Ödənişi bağlanmış aylarda tamamlanmış görüşləri olduğu üçün bu müştəri silinə bilməz (əməkhaqqı tarixçəsi qorunur).",
-      "deleteFailed": "Silinmədi. Yenidən cəhd edin."
+      "deleteFailed": "Silinmədi. Yenidən cəhd edin.",
+      "deletePaid": "Bu müştərinin ödənişi olan görüşü var — silmək olmaz."
     }
   },
   "ClientProfile": {
@@ -676,7 +677,7 @@
     "showingLast": "Son {count} görüş göstərilir.",
     "stats": {
       "visits": "Vizitlər",
-      "ltv": "Ümumi xərclədiyi (LTV)",
+      "ltv": "Ümumi görüş dəyəri (LTV)",
       "avgTicket": "Orta çek",
       "frequency": "Vizit tezliyi",
       "frequencyValue": "~{days} gündə bir",
@@ -955,6 +956,60 @@
       "accountNotFound": "Hesab tapılmadı."
     }
   },
+  "Payments": {
+    "title": "Ödəniş",
+    "todayTitle": "Bu günün ödənişləri",
+    "status": {
+      "paid": "Ödənilib",
+      "partial": "Qismən",
+      "unpaid": "Ödənilməyib"
+    },
+    "method": {
+      "CASH": "Nağd",
+      "CARD": "Kart",
+      "TERMINAL": "Terminal",
+      "TRANSFER": "Köçürmə"
+    },
+    "received": "Alınıb",
+    "settled": "Bağlanıb",
+    "remaining": "Qalıq",
+    "tips": "Bəxşiş",
+    "record": "Ödəniş yaz",
+    "refund": "Geri qaytar",
+    "save": "Yadda saxla",
+    "cancel": "İmtina",
+    "confirmRefund": "Qaytarmanı təsdiqlə",
+    "confirmVoid": "Ləğv et",
+    "voidAction": "Ləğv et",
+    "voidReason": "Ləğv səbəbi",
+    "voidedBecause": "Ləğv edilib: {reason}",
+    "discountOf": "Endirim {amount} ₼",
+    "tipOf": "Bəxşiş {amount} ₼",
+    "amount": "Məbləğ (₼)",
+    "discount": "Endirim (₼)",
+    "tip": "Bəxşiş (₼)",
+    "methodLabel": "Ödəniş üsulu",
+    "note": "Qeyd",
+    "priceLocked": "Qiymət dəyişdirilmir — azaltmaq üçün endirim yazın.",
+    "errors": {
+      "invalidData": "Məlumat düzgün deyil.",
+      "invalidAmount": "Məbləğ düzgün deyil.",
+      "bookingNotFound": "Görüş tapılmadı.",
+      "paymentNotFound": "Ödəniş tapılmadı.",
+      "alreadyVoided": "Bu ödəniş artıq ləğv edilib.",
+      "paidAtFuture": "Ödəniş tarixi gələcəkdə ola bilməz.",
+      "network": "Əlaqə xətası. Yenidən cəhd edin.",
+      "amountNegative": "Məbləğ sıfırdan böyük olmalıdır.",
+      "amountRequired": "Məbləğ yazın.",
+      "discountNegative": "Endirim mənfi ola bilməz.",
+      "tipNegative": "Bəxşiş mənfi ola bilməz.",
+      "emptyEntry": "Məbləğ və ya endirim yazın.",
+      "exceedsPrice": "Məbləğ görüşün qiymətini aşır. Artıq qalan hissəni bəxşiş kimi yazın.",
+      "refundExceedsPaid": "Qaytarma alınan məbləğdən çox ola bilməz.",
+      "refundOnEmpty": "Bu görüş üzrə qaytarılacaq ödəniş yoxdur.",
+      "voidLeavesNegative": "Əvvəlcə qaytarmaları ləğv edin: bu ödəniş silinsə, qaytarmalar qarşılıqsız qalır."
+    }
+  },
   "Payroll": {
     "title": "Əməkhaqqı",
     "subtitle": "Maaş + komissiya hesablanması və ödənişlərin qeydiyyatı.",
@@ -977,7 +1032,7 @@
     "recordPayout": "Ödəniş qeyd et",
     "row": {
       "completed": "Tamamlanmış görüş",
-      "revenue": "Gəlir",
+      "revenue": "Görüş dəyəri",
       "commission": "Komissiya",
       "earned": "Hesablanmış",
       "balance": "Qalıq"
@@ -996,7 +1051,7 @@
     "payModelTitle": "Maaş modeli — {name}",
     "payModelModal": {
       "salaryLabel": "Aylıq maaş (₼)",
-      "commissionLabel": "Komissiya (tamamlanmış görüşlərin gəlirindən %)",
+      "commissionLabel": "Komissiya (tamamlanmış görüşlərin dəyərindən %)",
       "hint": "Yalnız maaş üçün faizi boş saxlayın; yalnız komissiya üçün maaşı boş saxlayın; hibrid üçün hər ikisini doldurun."
     },
     "payoutTitle": "Ödəniş — {name} ({month})",
@@ -1058,9 +1113,9 @@
       "viewPlans": "Planlara bax"
     },
     "cards": {
-      "revenue": "Bu ayın gəliri (realizə olunmuş)",
+      "revenue": "Bu ayın görüş dəyəri (tamamlanmış)",
       "new": "yeni",
-      "expected": "Gözlənilən gəlir",
+      "expected": "Gözlənilən görüş dəyəri",
       "expectedSub": "{count} təsdiqlənmiş görüş qarşıda",
       "totalBookings": "Ümumi görüşlər",
       "noShowSub": "Gəlmədi: {count} ({rate}%)",
@@ -1077,7 +1132,7 @@
       "detail": "{publicCount} onlayn / {totalCount} ümumi görüş"
     },
     "topServices": {
-      "title": "Ən çox gəlir gətirən xidmətlər",
+      "title": "Ən yüksək görüş dəyəri olan xidmətlər",
       "empty": "Hələ məlumat yoxdur",
       "serviceFallback": "Xidmət",
       "appointments": "{count} görüş"
@@ -1149,7 +1204,7 @@
         "name": "Ad",
         "phone": "Telefon",
         "visits": "Ziyarətlər",
-        "spent": "Xərclənib (AZN)",
+        "spent": "Görüş dəyəri (AZN)",
         "lastVisit": "Son ziyarət",
         "upcoming": "Qarşıda",
         "favorite": "Sevimli usta",
@@ -1700,7 +1755,7 @@
         },
         "roi": {
           "title": "ROI analitika",
-          "body": "Onlayn qeydiyyatın qazandırdığı gəlir, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda."
+          "body": "Onlayn qeydiyyatın gətirdiyi görüş dəyəri, qayıdan müştərilər və ən gəlirli xidmətlər — bir baxışda, bütün planlarda."
         }
       }
     },

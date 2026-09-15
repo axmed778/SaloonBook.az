@@ -10,8 +10,14 @@ import { PayrollManager, type PayrollRow, type PayoutItem } from "./payroll-mana
 export const dynamic = "force-dynamic";
 
 // PRO payroll: per-employee earnings for a Baku month (fixed salary +
-// commission % of COMPLETED appointment revenue) and the payouts recorded
-// against them. payroll.manage carries the Pro gate: requirePageAccess hands a
+// commission % of the BOOKED VALUE of their COMPLETED appointments) and the
+// payouts recorded against them.
+//
+// Booked value, not revenue (D8): this sums Appointment.priceMinor — what the
+// work was priced at — and knows nothing about what was actually paid. Revenue
+// has one definition and it lives in src/lib/finance/revenue.ts. The commission
+// below is computed off the booked value on purpose, because that is what this
+// screen has always paid on; phase 4's payout schemes replace it. payroll.manage carries the Pro gate: requirePageAccess hands a
 // non-Pro owner the upgrade card below, and every server action refuses too.
 
 function shiftYm(ym: string, delta: number): string {
@@ -115,7 +121,7 @@ export default async function PayrollPage({
   const statByEmployee = new Map(
     completedByEmployee.map((r) => [
       r.employeeId,
-      { count: r._count._all, revenueMinor: r._sum.priceMinor ?? 0 },
+      { count: r._count._all, bookedValueMinor: r._sum.priceMinor ?? 0 },
     ]),
   );
   const paidByEmployee = new Map<string, number>();
@@ -125,8 +131,8 @@ export default async function PayrollPage({
 
   const rows: PayrollRow[] = employees
     .map((e) => {
-      const stat = statByEmployee.get(e.id) ?? { count: 0, revenueMinor: 0 };
-      const commissionMinor = Math.floor((stat.revenueMinor * e.commissionPct) / 100);
+      const stat = statByEmployee.get(e.id) ?? { count: 0, bookedValueMinor: 0 };
+      const commissionMinor = Math.floor((stat.bookedValueMinor * e.commissionPct) / 100);
       const earnedMinor = e.baseSalaryMinor + commissionMinor;
       const paidMinor = paidByEmployee.get(e.id) ?? 0;
       return {
@@ -137,7 +143,7 @@ export default async function PayrollPage({
         baseSalaryMinor: e.baseSalaryMinor,
         commissionPct: e.commissionPct,
         completedCount: stat.count,
-        revenueMinor: stat.revenueMinor,
+        bookedValueMinor: stat.bookedValueMinor,
         commissionMinor,
         earnedMinor,
         paidMinor,

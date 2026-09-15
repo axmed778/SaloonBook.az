@@ -14,6 +14,7 @@ import {
   azn,
   type CalendarBlock,
 } from "./calendar-shared";
+import { PaymentSection } from "./payment-section";
 
 // Detail popup for a single appointment. A CONFIRMED booking can be completed,
 // marked no-show, or cancelled; once it's in a terminal state we just show it.
@@ -24,11 +25,18 @@ export function AppointmentPopup({
   block,
   salonName,
   canWrite,
+  canWritePayments,
   onClose,
 }: {
   block: CalendarBlock;
   salonName: string;
   canWrite: boolean;
+  /**
+   * payments.write: record, refund, void. Separate from canWrite (bookings.write)
+   * because the two do not travel together — reception holds both, finance holds
+   * neither, and the money forms must not appear for a read-only finance login.
+   */
+  canWritePayments: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("Calendar");
@@ -209,6 +217,17 @@ export function AppointmentPopup({
               {block.serviceNote}
             </p>
           </div>
+        )}
+
+        {/* Money. Rendered only when the server sent a payments block — which it
+            does only for payments.read, so a master has no section and nothing
+            in the payload behind it. */}
+        {block.payments && (
+          <PaymentSection
+            appointmentId={block.id}
+            payments={block.payments}
+            canWrite={canWritePayments}
+          />
         )}
 
         {error && <p className="mt-4 text-sm text-rose-700 dark:text-rose-400">{error}</p>}

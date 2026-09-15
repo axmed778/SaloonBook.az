@@ -188,6 +188,28 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
   });
   if (!customer) return { ok: false, error: t("notFound") };
 
+  // Block if any of their bookings carries money that was not voided. A payment
+  // is a business record: deleting the customer would take the appointment with
+  // it and leave the salon's day totals, and later its reports, short by that
+  // amount with nothing to show why.
+  //
+  // The FK is ON DELETE RESTRICT and does not know about voiding, so checking
+  // only the live rows would let a customer whose payments were ALL voided past
+  // this line and into a foreign-key error reported as a generic failure. Both
+  // counts are read, and the two cases are handled apart: live money refuses
+  // here with a message that says why, and voided-only rows are swept in the
+  // transaction below — they are already money that was undone, and the void
+  // itself stays in the audit log, which is where that history lives.
+  const [livePayments, voidedPayments] = await Promise.all([
+    prisma.appointmentPayment.count({
+      where: { salonId, voidedAt: null, appointment: { customerId: id } },
+    }),
+    prisma.appointmentPayment.count({
+      where: { salonId, voidedAt: { not: null }, appointment: { customerId: id } },
+    }),
+  ]);
+  if (livePayments > 0) return { ok: false, error: t("deletePaid") };
+
   // Block if any COMPLETED appointment falls in an already-settled (paid-out)
   // employee-month.
   const completed = await prisma.appointment.findMany({
@@ -226,6 +248,14 @@ export async function deleteCustomer(id: string): Promise<ActionResult> {
       // reviews kept counting towards the public rating and the discovery
       // min-rating filter forever.
       await deleteCustomerReviews(tx, salonId, id);
+      // Only the voided rows, never a blanket delete: if a live payment arrived
+      // between the count above and here, the FK still refuses and the whole
+      // transaction rolls back, rather than this quietly erasing real money.
+      if (voidedPayments > 0) {
+        await tx.appointmentPayment.deleteMany({
+          where: { salonId, voidedAt: { not: null }, appointment: { customerId: id } },
+        });
+      }
 
       await tx.notification.deleteMany({
         where: { salonId, appointment: { customerId: id } },

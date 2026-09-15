@@ -8,7 +8,8 @@ import { PullToRefresh } from "@/components/pwa/pull-to-refresh";
 import { ErrorToast } from "./toast";
 import { TodayAppointmentRow } from "./today-appointment-row";
 import { RescheduleSheet } from "./reschedule-sheet";
-import type { TodayAppointment, TodayApptStatus } from "./today-shared";
+import type { DayTotals, TodayAppointment, TodayApptStatus } from "./today-shared";
+import { azn } from "./calendar-shared";
 
 // The row shape lives in today-shared.ts (no "use client") so the server page
 // and its tests can build rows without importing this module. Re-exported here
@@ -24,14 +25,22 @@ export function TodayView({
   dateLabel,
   salonName,
   canWrite,
+  totals,
 }: {
   items: TodayAppointment[];
   dateLabel: string;
   salonName: string;
   /** bookings.write: complete, no-show, cancel, reschedule. Read-only without it. */
   canWrite: boolean;
+  /**
+   * Today's takings by method. Null for a login without payments.read — a
+   * master's page is not given the numbers at all, rather than given them and
+   * told not to draw them.
+   */
+  totals: DayTotals | null;
 }) {
   const t = useTranslations("Today");
+  const tp = useTranslations("Payments");
   const router = useRouter();
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +93,36 @@ export function TodayView({
         <p className="mt-0.5 text-sm capitalize text-faint-foreground">
           {dateLabel} · {t("count", { count: visible.length })}
         </p>
+
+        {/* Today's money, for the roles that may see it. Not the shift card:
+            there is no open/closed state and nothing is counted against it —
+            phase 3 replaces this strip with the real close. */}
+        {totals && totals.byMethod.length > 0 && (
+          <div className="mt-3 rounded-xl border border-border bg-card p-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-xs font-medium text-faint-foreground">{tp("todayTitle")}</p>
+              <p className="text-sm font-semibold tabular-nums text-foreground">
+                {azn(totals.netMinor)} ₼
+              </p>
+            </div>
+            <ul className="mt-1.5 space-y-0.5">
+              {totals.byMethod.map((m) => (
+                <li key={m.method} className="flex justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground">{tp(`method.${m.method}`)}</span>
+                  <span className="tabular-nums text-foreground">{azn(m.netMinor)} ₼</span>
+                </li>
+              ))}
+            </ul>
+            {/* Its own line, never inside a method total: a tip is not revenue
+                and not part of any payout base. */}
+            {totals.tipsMinor > 0 && (
+              <p className="mt-1.5 flex justify-between gap-3 border-t border-border pt-1.5 text-xs">
+                <span className="text-muted-foreground">{tp("tips")}</span>
+                <span className="tabular-nums text-foreground">{azn(totals.tipsMinor)} ₼</span>
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <PullToRefresh onRefresh={() => router.refresh()}>

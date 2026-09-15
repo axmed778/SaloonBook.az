@@ -354,11 +354,18 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
   const primary = await primarySalonOf(session.accountId!);
   if (primary?.id === id) return { ok: false, error: t("primaryDelete") };
 
-  const [appointments, customers] = await Promise.all([
+  // Payments are counted separately from appointments although a payment cannot
+  // exist without one: the money rule is "a branch holding money is not
+  // deletable", and stating it here means a future change to the appointment
+  // rule cannot quietly take the money rule with it.
+  const [appointments, customers, payments] = await Promise.all([
     prisma.appointment.count({ where: { salonId: id } }),
     prisma.customer.count({ where: { salonId: id } }),
+    prisma.appointmentPayment.count({ where: { salonId: id, voidedAt: null } }),
   ]);
-  if (appointments > 0 || customers > 0) return { ok: false, error: t("hasData") };
+  if (appointments > 0 || customers > 0 || payments > 0) {
+    return { ok: false, error: t("hasData") };
+  }
 
   // The branch's logins — masters and reception, which are pinned to a branch —
   // go with it. Collect the user rows behind those memberships too: dropping only

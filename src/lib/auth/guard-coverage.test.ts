@@ -267,3 +267,56 @@ describe("dashboard API routes", () => {
     for (const route of routes) expect(read(route), rel(route)).toMatch(/\baccessRefusal\(/);
   });
 });
+
+describe("payment data on a booking surface", () => {
+  // A master must see no money at all, and the way that holds is that the page
+  // never asks for it: bookingSelectForViewer(viewer, { payments }) decides
+  // whether the rows are READ, and the serializer whether the key EXISTS. Both
+  // default to false, so forgetting is safe — but a new surface that hardcodes
+  // `payments: true` would hand every role the money, and the unit tests would
+  // not notice, because they call the serializer directly with their own flag.
+  //
+  // So the flag has to come from canSeePayments(session), and that is checked
+  // here, on the real call sites, rather than in a test that supplies its own.
+  const HARDCODED = /payments:\s*(?:true|false)\b/;
+
+  const surfaces = filesUnder(
+    SRC,
+    (p) =>
+      /\.tsx?$/.test(p) &&
+      !isTest(p) &&
+      /\b(?:bookingSelectForViewer|serializeBookings?ForViewer)\(/.test(read(p)),
+  );
+
+  it("finds the surfaces that read bookings, so the checks below are not vacuous", () => {
+    expect(surfaces.map(rel)).toEqual(
+      expect.arrayContaining([
+        "src/app/[locale]/dashboard/page.tsx",
+        "src/app/[locale]/dashboard/calendar/page.tsx",
+        "src/app/api/dashboard/export/appointments/route.ts",
+      ]),
+    );
+  });
+
+  it("never hardcodes the payments flag", () => {
+    const offenders = surfaces.filter((f) => HARDCODED.test(read(f))).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it("takes the flag from canSeePayments() wherever it asks for payments", () => {
+    const asking = surfaces.filter((f) => /payments:/.test(read(f)));
+    // Today: Today and the calendar ask; the CSV export deliberately does not
+    // (phase 6 adds the finance exports).
+    expect(asking.length).toBeGreaterThan(0);
+    for (const file of asking) {
+      expect(read(file), rel(file)).toMatch(/\bcanSeePayments\(/);
+    }
+  });
+
+  it("catches the shapes that would slip money to a master", () => {
+    expect(HARDCODED.test("select: bookingSelectForViewer(viewer, { payments: true })")).toBe(true);
+    expect(HARDCODED.test("{ payments: false }")).toBe(true);
+    expect(HARDCODED.test("{ payments: showPayments }")).toBe(false);
+    expect(HARDCODED.test("{ payments: canSeePayments(session) }")).toBe(false);
+  });
+});

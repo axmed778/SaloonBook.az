@@ -21,17 +21,22 @@ under "As built" for anything the code settled differently.
 |---|---|---|
 | 1a | Permission engine, no visible change | **Merged** — PR #41 |
 | 1b | ADMIN and FINANCE roles | **Merged** — PR #42 |
-| 2 | Payments on bookings | Next — branch `feat/finance-2-payments` |
+| 2 | Payments on bookings | **Shipped** — PR on `feat/finance-2-payments`, not merged |
 | 3 | Shift close | Not started |
 | 4a | Payout schemes and calculations | Not started |
 | 4b | Statements | Not started |
 | 5 | Expenses | Not started |
 | 6 | Reports and exports | Not started |
 
-Checks after 1b: 430 tests pass, 11 skipped · lint 0 errors (4 pre-existing
-warnings) · typecheck clean · locales in sync at 1,352 keys.
+Checks after 2: 596 tests pass, 11 skipped · lint 0 errors (the same 4
+pre-existing warnings) · typecheck clean · locales in sync at 1,397 keys each
+(+45 this phase, none removed).
 
-Phase 0 baseline, for comparison: 303 tests, 1,310 keys.
+Earlier: 453 tests after 1b, 430 after 1a, 303 at Phase 0.
+
+> **Run `pnpm db:rls` by hand on Railway and Neon after merging phase 2.**
+> `AppointmentPayment` is a new salon table and its policy is in `rls.sql`, which
+> deploy deliberately does not apply.
 
 ### Leftovers from 1b — closed by `fix/1b-leftovers`
 
@@ -232,6 +237,8 @@ model AppointmentPayment {
   createdByUserId  String
   voidedAt         DateTime?     @db.Timestamptz(6)  // "delete" = void
   voidedByUserId   String?
+  voidReason       String?       // D3 answer: the reason belongs in the UI and
+                                 // in later exports, not only the audit log
   createdAt        DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
 
@@ -508,6 +515,81 @@ These are deliberate. Do not "fix" the code back to the table above.
 7. **`appRoleOf()` takes a `string`, not `Role`**, so a stored value this build
    does not know fails the login closed instead of reaching a permission table
    with a hole in it.
+
+### As built — phase 2
+
+8. **A comped booking is a row, not a missing one.** `amountMinor >= 0` with a
+   CHECK that `amountMinor + discountMinor > 0`, so a 100 % discount records as
+   amount 0 / discount = price. It settles the booking and earns zero revenue.
+   The tip is outside that floor: a tip alone is not a payment.
+9. **Two CHECKs beyond the plan.** A REFUND carries no discount and no tip; a
+   void is all-or-nothing (`voidedAt` and `voidedByUserId` are set together).
+10. **The overpay rule is on the SETTLED total and excludes the tip.** 50 ₼ for a
+    45 ₼ service is a 45 ₼ payment plus a 5 ₼ tip, never a 50 ₼ payment — letting
+    the amount absorb it would inflate revenue and every payout built on it.
+11. **Payment visibility is its own permission.** `canSeePayments()`
+    (`serializers/booking.ts`) is keyed on `payments.read`, NOT folded into
+    `BookingViewer`, which is keyed on `clients.read`. They coincide today; a
+    role added later must not inherit one by holding the other. The discipline is
+    the phone number's: a viewer without it gets a query that does not select the
+    payment rows and a serialized booking with **no `payments` key at all**, so a
+    master's RSC payload carries no money to read out of View Source.
+12. **`CLIENT_NAMESPACES` in `app/[locale]/layout.tsx` is an allowlist**, and a
+    client component asking for a namespace missing from it renders raw keys to
+    the user. Nothing in the unit suite noticed, because every test mocks
+    next-intl — only opening the page did. `client-namespaces.test.ts` now checks
+    it statically. It found `TimeOff` missing since 1b: `/dashboard/time-off` had
+    been showing "TimeOff.title" to every role.
+13. **The Today totals strip is keyed on the PAYMENT day** (`businessDate`), not
+    the booking day, because it answers "what is in the drawer". Revenue and
+    payouts still follow the booking day (D7). Tips sit on their own line, never
+    inside a method total. It is not the shift card — phase 3 replaces it.
+
+### As built — phase 2 review fixes
+
+14. **A void can be refused.** `refuseVoid()` blocks voiding an entry that would
+    leave refunds standing against money no longer recorded — take 100, refund
+    100, void the payment, and the net is −100, which no later total can mean
+    anything by. The refunds come off first, and the message says so.
+15. **`deleteCustomer` is aligned with the FK, which knows nothing about
+    voiding.** Live payments refuse with `deletePaid`; a customer whose payments
+    were ALL voided is still deletable, and those rows are swept inside the
+    transaction — only the voided ones, so a live payment arriving after the
+    count still hits the FK and rolls back rather than being erased. The void
+    itself remains in the audit log.
+16. **D8 is about identifiers too, not only labels.** `revenueMinor` is now
+    `bookedValueMinor` in analytics and payroll. The payroll one feeds the
+    commission calculation, so a name that said revenue and meant booked value
+    was exactly the confusion D8 exists to prevent.
+17. **`dayTotalsByMethod` delegates to `netReceivedMinor`/`tipsMinor`** instead
+    of re-deriving that a REFUND subtracts, and applies the voided filter itself
+    rather than trusting the caller's query. Phase 3's shift close reads the same
+    function over the same rows; two places signing money independently is how a
+    close comes to disagree with the strip above it.
+18. **Constraints go on with their own `ADD CONSTRAINT` blocks.** Inside
+    `CREATE TABLE IF NOT EXISTS` they would never reach a database where the
+    table already exists. Verified by dropping the six CHECKs and re-running: 0
+    back to 6.
+19. **A surface cannot hardcode `payments: true`.** `guard-coverage.test.ts`
+    checks the real call sites take the flag from `canSeePayments(session)`, so a
+    new booking screen cannot hand every role the money — the serializer tests
+    supply their own flag and would not notice. `client-namespaces.test.ts`
+    likewise now fails on a `useTranslations(variable)` call it cannot read,
+    instead of skipping it.
+
+**Known, deliberately not fixed (backlog):**
+
+- The check-then-write race on both ceilings.
+- **Concurrent voids of two different payments on the same booking can still
+  leave the net negative** — the same check-then-write class, but this one
+  re-enters the exact state `refuseVoid` exists to prevent. Fix with a
+  transaction or an aggregate guard when phase 3 touches this code.
+- **Deleting a customer keeps the payment amounts in `AuditLog`.** Defensible
+  for financial records, but the data-deletion page promises more than that;
+  reword that page in a later phase.
+- RLS keying only on the row's own `salonId` with no parent-tenant check
+  (matches `AppointmentAddon`; app level covers it).
+- `PAYMENT_KEYS` not covering the `DayTotals` strip.
 
 ---
 
