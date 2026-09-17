@@ -1,15 +1,19 @@
 import { describe, it, expect } from "vitest";
 import {
   CONTACT_KEYS,
+  PAYMENT_KEYS,
   bookingCustomerSelect,
   bookingSelectForViewer,
   bookingViewer,
   canSeeCustomerContact,
+  canSeePayments,
   findContactKeys,
+  findPaymentKeys,
   serializeBookingForViewer,
   serializeBookingsForViewer,
   type BookingRow,
   type BookingViewer,
+  type PaymentRow,
 } from "./booking";
 import { rolePermissions } from "../auth/permissions";
 import { toCalendarBlock } from "@/app/[locale]/dashboard/_components/calendar-shared";
@@ -351,5 +355,156 @@ describe("a booking the master entered themselves", () => {
 
   it("control: the owner sees the number on that same booking", () => {
     expect(serializeBookingForViewer(entered, "FULL").customerPhone).toBe("+994500000199");
+  });
+});
+
+// --- Money -----------------------------------------------------------------
+//
+// The same rule as the phone number, for a second kind of data and a second
+// permission: a master sees no payment information at all, "not even a status
+// badge". Absent, not null, not zeroed — a booking with no `payments` key cannot
+// leak an amount through the RSC payload, and there is nothing for the UI to
+// decide about.
+
+const PAID_ROW: PaymentRow = {
+  id: "pay-1",
+  kind: "PAYMENT",
+  method: "CASH",
+  amountMinor: 2000,
+  discountMinor: 500,
+  tipMinor: 300,
+  businessDate: "2026-03-04",
+  paidAt: new Date("2026-03-04T10:05:00.000Z"),
+  receivedByName: "Aysel",
+  note: null,
+  voidedAt: null,
+  voidReason: null,
+};
+
+describe("canSeePayments", () => {
+  it("is false for a master, who holds no payments.read", () => {
+    expect(canSeePayments({ isAdmin: false, permissions: rolePermissions("MASTER") })).toBe(false);
+  });
+
+  it.each(["OWNER", "ADMIN", "FINANCE"] as const)("is true for %s", (role) => {
+    expect(canSeePayments({ isAdmin: false, permissions: rolePermissions(role) })).toBe(true);
+  });
+
+  it("is true for a platform admin, who has no membership", () => {
+    expect(canSeePayments({ isAdmin: true, permissions: [] })).toBe(true);
+  });
+
+  // Keyed on its own permission, not on clients.read: the two coincide today and
+  // a role added later must not inherit one by holding the other.
+  it("does not follow clients.read", () => {
+    expect(canSeePayments({ isAdmin: false, permissions: ["clients.read"] })).toBe(false);
+    expect(canSeePayments({ isAdmin: false, permissions: ["payments.read"] })).toBe(true);
+  });
+});
+
+describe("bookingSelectForViewer and payments", () => {
+  it("does not read the payment rows unless asked", () => {
+    expect(bookingSelectForViewer("FULL")).not.toHaveProperty("payments");
+  });
+
+  it("reads them when asked", () => {
+    expect(bookingSelectForViewer("FULL", { payments: true })).toHaveProperty("payments");
+  });
+
+  // Fail closed by omission: a new surface that forgets the flag gets a booking
+  // with no money on it rather than one that leaks it.
+  it("defaults to not reading them even for a FULL viewer", () => {
+    expect(bookingSelectForViewer("FULL", {})).not.toHaveProperty("payments");
+  });
+});
+
+describe("serializing the money block", () => {
+  const withPayments = () => row({ payments: [PAID_ROW] });
+
+  it("is absent when the caller did not ask", () => {
+    const b = serializeBookingForViewer(withPayments(), "FULL");
+    expect("payments" in b).toBe(false);
+  });
+
+  // Both halves must hold. Asking without selecting must not produce an empty
+  // block claiming the booking was never paid.
+  it("is absent when the caller asked but the query read nothing", () => {
+    const b = serializeBookingForViewer(row(), "FULL", { payments: true });
+    expect("payments" in b).toBe(false);
+  });
+
+  it("carries the totals from the rule functions when asked", () => {
+    const b = serializeBookingForViewer(withPayments(), "FULL", { payments: true });
+    expect(b.payments).toMatchObject({
+      status: "paid", // 2000 received + 500 discount settles the 2500 price
+      netReceivedMinor: 2000,
+      settledMinor: 2500,
+      remainingMinor: 0,
+      tipsMinor: 300,
+    });
+    expect(b.payments?.entries).toHaveLength(1);
+  });
+
+  it("keeps a voided entry in the list but out of the totals", () => {
+    const voided: PaymentRow = { ...PAID_ROW, id: "pay-2", voidedAt: new Date(), voidReason: "yanlış" };
+    const b = serializeBookingForViewer(row({ payments: [voided] }), "FULL", { payments: true });
+    expect(b.payments?.entries).toHaveLength(1);
+    expect(b.payments).toMatchObject({ status: "unpaid", netReceivedMinor: 0 });
+  });
+});
+
+describe("a master's payload carries no money", () => {
+  // A master's page never asks for payments, so this is what their booking looks
+  // like end to end.
+  const payload = {
+    bookings: serializeBookingsForViewer([withMoney(), withMoney("appt-2")], "NO_CONTACT"),
+  };
+
+  function withMoney(id = "appt-1"): BookingRow {
+    return row({ id, payments: [PAID_ROW] });
+  }
+
+  it("contains none of the payment keys, at any depth", () => {
+    expect(findPaymentKeys(payload)).toEqual([]);
+    for (const key of PAYMENT_KEYS) {
+      expect(JSON.stringify(payload)).not.toContain(`"${key}"`);
+    }
+  });
+
+  it("contains no amount that was paid", () => {
+    // 2000 / 500 / 300 appear nowhere; the booking's own price (2500) still does,
+    // because a master has always seen what the job is worth.
+    const json = JSON.stringify(payload);
+    expect(json).not.toContain("2000");
+    expect(json).not.toContain("pay-1");
+    expect(json).toContain("2500");
+  });
+
+  it("proves the same check catches a payload that does carry money", () => {
+    const owner = {
+      bookings: serializeBookingsForViewer([withMoney()], "FULL", { payments: true }),
+    };
+    expect(findPaymentKeys(owner)).toContain("$.bookings[0].payments");
+    expect(JSON.stringify(owner)).toContain("2000");
+  });
+
+  it("gives the today row no payment status, so no badge is rendered", () => {
+    const todayRow = toTodayAppointment(serializeBookingForViewer(withMoney(), "NO_CONTACT"));
+    expect("paymentStatus" in todayRow).toBe(false);
+  });
+
+  it("gives the calendar block no payments, so the popup renders no section", () => {
+    const b = toCalendarBlock(
+      serializeBookingForViewer(withMoney(), "NO_CONTACT"),
+      "emp-1",
+      "4 mart",
+    );
+    expect("payments" in b).toBe(false);
+  });
+
+  it("carries both through for a viewer who may see them", () => {
+    const serialized = serializeBookingForViewer(withMoney(), "FULL", { payments: true });
+    expect(toTodayAppointment(serialized).paymentStatus).toBe("paid");
+    expect(toCalendarBlock(serialized, "emp-1", "4 mart").payments).toBeDefined();
   });
 });

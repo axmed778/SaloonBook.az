@@ -27,7 +27,9 @@
 // the client base (clients.read) sees contacts, and nobody else does. There is
 // deliberately no setting or toggle that turns this off.
 
+import type { PaymentKind, PaymentMethod } from "@prisma/client";
 import type { Permission } from "../auth/permissions";
+import { summarize, type PaymentEntry, type PaymentStatus } from "../finance/payments";
 import { redactContactsOrNull } from "./redact-notes";
 
 /**
@@ -64,6 +66,43 @@ export function canSeeCustomerContact(viewer: BookingViewer): boolean {
 }
 
 /**
+ * May this session see what a booking was paid? A SECOND permission, asked
+ * separately from contacts: a master may read their own bookings and must see no
+ * money on them at all — not a total, not a status badge. The two happen to
+ * coincide today (a master holds neither clients.read nor payments.read) and are
+ * kept apart anyway, because a role that gains one must not inherit the other.
+ *
+ * Same discipline as the phone number: for a viewer without it the query does
+ * not select the payments and the serialized booking has NO `payments` key, so
+ * nothing reaches the RSC payload to be read with View Source.
+ */
+export function canSeePayments(session: {
+  isAdmin: boolean;
+  permissions: readonly Permission[];
+}): boolean {
+  if (session.isAdmin) return true;
+  return session.permissions.includes("payments.read");
+}
+
+/**
+ * Keys that must never appear in anything a viewer without payments.read
+ * receives. The booking's own priceMinor is deliberately NOT one of them: a
+ * master has always seen what the job is worth. What they must not see is what
+ * was taken for it.
+ */
+export const PAYMENT_KEYS = [
+  "payments",
+  "amountMinor",
+  "discountMinor",
+  "tipMinor",
+  "netReceivedMinor",
+  "settledMinor",
+  "remainingMinor",
+  "tipsMinor",
+  "paymentStatus",
+] as const;
+
+/**
  * Keys that must never appear in anything a NO_CONTACT viewer receives. The
  * service note is NOT one of them — a master needs it to do the job, and it
  * arrives with any contact inside it already cut out (redact-notes.ts).
@@ -90,8 +129,41 @@ export function bookingCustomerSelect(viewer: BookingViewer) {
  * means one place to audit, and a new surface that copies it gets the rule for
  * free.
  */
-export function bookingSelectForViewer(viewer: BookingViewer) {
+/**
+ * The payment columns a booking query reads, for a viewer allowed them. Voided
+ * rows are selected too: the popup shows what was undone, greyed out, and the
+ * rule functions filter them out of every total.
+ */
+export function bookingPaymentsSelect() {
   return {
+    select: {
+      id: true,
+      kind: true,
+      method: true,
+      amountMinor: true,
+      discountMinor: true,
+      tipMinor: true,
+      businessDate: true,
+      paidAt: true,
+      receivedByName: true,
+      note: true,
+      voidedAt: true,
+      voidReason: true,
+    },
+    orderBy: { paidAt: "asc" as const },
+  };
+}
+
+/**
+ * `payments` defaults to FALSE on purpose: a surface that forgets to ask for
+ * them gets a booking with no money on it, rather than one that leaks it.
+ */
+export function bookingSelectForViewer(
+  viewer: BookingViewer,
+  opts: { payments?: boolean } = {},
+) {
+  return {
+    ...(opts.payments ? { payments: bookingPaymentsSelect() } : {}),
     id: true,
     employeeId: true,
     startsAt: true,
@@ -136,6 +208,50 @@ export interface BookingRow {
   employee: { name: string; position: string | null };
   customer: { id: string; name: string; phone?: string };
   serviceNote: string | null;
+  /** Present only when the query asked for them (see bookingSelectForViewer). */
+  payments?: PaymentRow[];
+}
+
+/** One AppointmentPayment as bookingPaymentsSelect() returns it. */
+export interface PaymentRow extends PaymentEntry {
+  id: string;
+  method: PaymentMethod;
+  businessDate: string;
+  paidAt: Date;
+  receivedByName: string | null;
+  note: string | null;
+  voidReason: string | null;
+}
+
+/** One payment as the client may see it. Dates stay Date; the UI formats them. */
+export interface SerializedPayment {
+  id: string;
+  kind: PaymentKind;
+  method: PaymentMethod;
+  amountMinor: number;
+  discountMinor: number;
+  tipMinor: number;
+  businessDate: string;
+  paidAt: Date;
+  receivedByName: string | null;
+  note: string | null;
+  /** Non-null when this entry was undone; it stays in the list, struck through. */
+  voidedAt: Date | null;
+  voidReason: string | null;
+}
+
+/**
+ * The money block on a booking. Totals come from the rule functions, never from
+ * the UI adding the list up, so the popup and the badge cannot disagree with
+ * revenue.
+ */
+export interface SerializedPayments {
+  status: PaymentStatus;
+  netReceivedMinor: number;
+  settledMinor: number;
+  remainingMinor: number;
+  tipsMinor: number;
+  entries: SerializedPayment[];
 }
 
 export type BookingStatus = "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
@@ -177,6 +293,12 @@ export interface SerializedBooking {
    * the RSC payload. FULL viewers get it verbatim.
    */
   serviceNote: string | null;
+  /**
+   * What was paid. ABSENT — not null, not zeroed — for a viewer without
+   * payments.read, so a master's payload carries no money at all. Check with
+   * `if (booking.payments)`; their UI simply has no payment section and no badge.
+   */
+  payments?: SerializedPayments;
 }
 
 /**
@@ -187,6 +309,7 @@ export interface SerializedBooking {
 export function serializeBookingForViewer(
   booking: BookingRow,
   viewer: BookingViewer,
+  opts: { payments?: boolean } = {},
 ): SerializedBooking {
   const base: SerializedBooking = {
     id: booking.id,
@@ -213,6 +336,12 @@ export function serializeBookingForViewer(
       ? (booking.serviceNote ?? null)
       : redactContactsOrNull(booking.serviceNote),
   };
+  // Both halves must hold: the caller has to have asked AND the query has to
+  // have read them. A caller that asked without selecting gets no key, not an
+  // empty block claiming the booking was never paid.
+  if (opts.payments && booking.payments !== undefined) {
+    base.payments = serializePayments(booking.payments, booking.priceMinor);
+  }
   if (!canSeeCustomerContact(viewer)) return base;
   // FULL. The phone is still only added when the query actually read it, so a
   // caller that forgot the right select gets a missing key rather than
@@ -223,12 +352,40 @@ export function serializeBookingForViewer(
   };
 }
 
+/**
+ * A booking's payment rows plus the totals the rule functions derive from them.
+ * Exported for the actions, which re-read a booking after writing to it.
+ */
+export function serializePayments(
+  rows: readonly PaymentRow[],
+  priceMinor: number,
+): SerializedPayments {
+  return {
+    ...summarize(rows, priceMinor),
+    entries: rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      method: r.method,
+      amountMinor: r.amountMinor,
+      discountMinor: r.discountMinor,
+      tipMinor: r.tipMinor,
+      businessDate: r.businessDate,
+      paidAt: r.paidAt,
+      receivedByName: r.receivedByName,
+      note: r.note,
+      voidedAt: r.voidedAt,
+      voidReason: r.voidReason,
+    })),
+  };
+}
+
 /** serializeBookingForViewer over a list. */
 export function serializeBookingsForViewer(
   bookings: BookingRow[],
   viewer: BookingViewer,
+  opts: { payments?: boolean } = {},
 ): SerializedBooking[] {
-  return bookings.map((b) => serializeBookingForViewer(b, viewer));
+  return bookings.map((b) => serializeBookingForViewer(b, viewer, opts));
 }
 
 /**
@@ -237,14 +394,23 @@ export function serializeBookingsForViewer(
  * response carries none of them.
  */
 export function findContactKeys(value: unknown, path = "$"): string[] {
+  return findKeysIn(value, CONTACT_KEYS, path);
+}
+
+/** findContactKeys for the money block: the same test for a master's payload. */
+export function findPaymentKeys(value: unknown, path = "$"): string[] {
+  return findKeysIn(value, PAYMENT_KEYS, path);
+}
+
+function findKeysIn(value: unknown, keys: readonly string[], path: string): string[] {
   if (Array.isArray(value)) {
-    return value.flatMap((v, i) => findContactKeys(v, `${path}[${i}]`));
+    return value.flatMap((v, i) => findKeysIn(v, keys, `${path}[${i}]`));
   }
   if (value !== null && typeof value === "object") {
     return Object.entries(value as Record<string, unknown>).flatMap(([k, v]) => {
       const here = `${path}.${k}`;
-      const hit = (CONTACT_KEYS as readonly string[]).includes(k) ? [here] : [];
-      return [...hit, ...findContactKeys(v, here)];
+      const hit = keys.includes(k) ? [here] : [];
+      return [...hit, ...findKeysIn(v, keys, here)];
     });
   }
   return [];

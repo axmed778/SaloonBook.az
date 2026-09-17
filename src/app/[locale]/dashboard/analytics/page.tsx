@@ -105,9 +105,10 @@ export default async function AnalyticsPage() {
       _count: { _all: true },
       _sum: { priceMinor: true },
     }),
-    // Realized revenue this month (COMPLETED only). _count doubles as the
-    // no-show-rate denominator (completed + no-show = appointments that reached
-    // their time).
+    // Booked value of this month's COMPLETED appointments — the sum of what
+    // they were priced at, NOT what was paid (D8; revenue has one definition
+    // and it is src/lib/finance/revenue.ts). _count doubles as the no-show-rate
+    // denominator (completed + no-show = appointments that reached their time).
     prisma.appointment.aggregate({
       where: {
         salonId,
@@ -117,8 +118,8 @@ export default async function AnalyticsPage() {
       _sum: { priceMinor: true },
       _count: { _all: true },
     }),
-    // Realized revenue over the SAME elapsed slice of last month (month-to-date),
-    // so the MoM delta is like-for-like.
+    // The same booked value over the SAME elapsed slice of last month
+    // (month-to-date), so the MoM delta is like-for-like.
     prisma.appointment.aggregate({
       where: {
         salonId,
@@ -172,7 +173,7 @@ export default async function AnalyticsPage() {
     }),
     // All-time notification count — distinguishes "worker not live yet" from a quiet month.
     prisma.notification.count({ where: { salonId } }),
-    // Top revenue services this month.
+    // Top services by booked value this month (D8 — not revenue).
     prisma.appointment.groupBy({
       by: ["serviceId"],
       where: {
@@ -287,7 +288,7 @@ export default async function AnalyticsPage() {
     ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
     : null;
 
-  // --- Realized revenue + MoM delta ---
+  // --- Booked value + MoM delta (see D8: this is not revenue) ---
   const revCurMinor = revCur._sum.priceMinor ?? 0;
   const revPrevMinor = revPrev._sum.priceMinor ?? 0;
   let revDelta: Delta | null = null;
@@ -326,12 +327,12 @@ export default async function AnalyticsPage() {
   const nameMap = new Map(serviceNames.map((s) => [s.id, s.name]));
   const maxSum = topRows[0]?._sum.priceMinor ?? 0;
   const topServiceRows: TopServiceRow[] = topRows.map((r) => {
-    const revenueMinor = r._sum.priceMinor ?? 0;
+    const bookedValueMinor = r._sum.priceMinor ?? 0;
     return {
       name: nameMap.get(r.serviceId) ?? t("topServices.serviceFallback"),
       count: r._count._all,
-      revenueMinor,
-      pct: maxSum > 0 ? Math.round((revenueMinor / maxSum) * 100) : 0,
+      bookedValueMinor,
+      pct: maxSum > 0 ? Math.round((bookedValueMinor / maxSum) * 100) : 0,
     };
   });
 

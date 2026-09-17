@@ -1,4 +1,5 @@
-// Top revenue services this month, with a horizontal bar per row (top row full
+// Top services by BOOKED VALUE this month (D8 — not revenue), with a
+// horizontal bar per row (top row full
 // rose, the rest muted rose). Spans two columns on lg. Empty salons get a
 // graceful "Hələ məlumat yoxdur" instead of a bare card.
 import { getTranslations } from "next-intl/server";
@@ -7,7 +8,9 @@ import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 export type TopServiceRow = {
   name: string;
   count: number;
-  revenueMinor: number;
+  /** Sum of the service's booked prices this month — booked value, not
+   *  revenue (D8). */
+  bookedValueMinor: number;
   pct: number; // 0..100, relative to the top row
 };
 
@@ -28,7 +31,7 @@ export async function TopServices({ rows }: { rows: TopServiceRow[] }) {
               <div className="flex items-baseline justify-between gap-3">
                 <span className="truncate text-sm text-secondary-foreground">{r.name}</span>
                 <span className="whitespace-nowrap text-sm font-medium text-foreground">
-                  {azn(r.revenueMinor)} ₼
+                  {azn(r.bookedValueMinor)} ₼
                 </span>
               </div>
               <div className="mt-1 flex items-center gap-2">

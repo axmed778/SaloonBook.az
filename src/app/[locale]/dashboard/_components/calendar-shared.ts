@@ -4,7 +4,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { bakuMinutesOfDayOn, bakuYmd } from "@/lib/time";
-import type { SerializedBooking } from "@/lib/serializers/booking";
+import type { SerializedBooking, SerializedPayments } from "@/lib/serializers/booking";
 
 // DEFAULT visible window. The grids expand it from the data so bookings outside
 // these hours (a barber working till 23:00) still render — these are just the
@@ -57,6 +57,12 @@ export type CalendarBlock = {
   manageToken: string; // customer self-service link: /a/{manageToken}
   employeeName: string; // shown in the detail popup (and week-view blocks)
   dateLabel: string; // this appointment's Baku date label (for the popup)
+  // What was paid. OWNER/ADMIN/FINANCE only: for a master's login this key is
+  // ABSENT, exactly like customerPhone — the server neither selects the payment
+  // rows nor serializes the block, so there is no money in the RSC payload to
+  // read with View Source. The popup renders its payment section only when the
+  // value is actually here, and a master sees no section and no badge.
+  payments?: SerializedPayments;
 };
 
 const MINUTES_IN_DAY = 24 * 60;
@@ -100,6 +106,8 @@ export function toCalendarBlock(
     // present-but-undefined key is exactly the kind of detail that turns a
     // redaction into a leak.
     ...(b.customerPhone !== undefined ? { customerPhone: b.customerPhone } : {}),
+    // Same conditional spread, same reason.
+    ...(b.payments !== undefined ? { payments: b.payments } : {}),
   };
 }
 

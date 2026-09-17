@@ -8,9 +8,11 @@ import { bakuToday, bakuDayBoundsUtc, formatBakuDate } from "@/lib/time";
 import {
   bookingSelectForViewer,
   bookingViewer,
+  canSeePayments,
   serializeBookingsForViewer,
   type BookingRow,
 } from "@/lib/serializers/booking";
+import { dayTotalsByMethod, type DayTotals } from "./_components/today-shared";
 import { TodayView } from "./_components/today-view";
 import { toTodayAppointment, type TodayAppointment } from "./_components/today-shared";
 
@@ -56,6 +58,9 @@ export default async function DashboardTodayPage() {
   // query never reads the customer's phone, so nothing downstream — this page,
   // the RSC payload, the client component — can leak it.
   const viewer = bookingViewer(session);
+  // Whether the payment rows are read at all. A master's query does not select
+  // them, so no amount reaches this page or the payload it streams.
+  const showPayments = canSeePayments(session);
   const today = bakuToday();
   const { startUtc, endUtc } = bakuDayBoundsUtc(today);
   const now = Date.now();
@@ -74,12 +79,36 @@ export default async function DashboardTodayPage() {
       startsAt: { gte: startUtc, lt: endUtc },
     },
     orderBy: { startsAt: "asc" },
-    select: bookingSelectForViewer(viewer),
+    select: bookingSelectForViewer(viewer, { payments: showPayments }),
   })) as BookingRow[];
 
-  const items: TodayAppointment[] = serializeBookingsForViewer(appts, viewer).map((b) =>
-    toTodayAppointment(b, now),
-  );
+  const items: TodayAppointment[] = serializeBookingsForViewer(appts, viewer, {
+    payments: showPayments,
+  }).map((b) => toTodayAppointment(b, now));
+
+  // Today's takings by method, for the header strip. Keyed on the PAYMENT day
+  // (businessDate), not the booking day: this is what is in the drawer right
+  // now, which is also why it is not revenue and does not use revenue.ts.
+  //
+  // Deliberately NOT the shift card — phase 3 replaces this with one. It is a
+  // plain total with no open/closed state and no counted-vs-expected.
+  let totals: DayTotals | null = null;
+  if (showPayments) {
+    const rows = await prisma.appointmentPayment.findMany({
+      where: { salonId, businessDate: today },
+      // Voided rows are read too, and dayTotalsByMethod drops them: deciding
+      // what counts is the rule functions' job, not a query's.
+      select: {
+        kind: true,
+        method: true,
+        amountMinor: true,
+        discountMinor: true,
+        tipMinor: true,
+        voidedAt: true,
+      },
+    });
+    totals = dayTotalsByMethod(rows);
+  }
 
   return (
     <TodayView
@@ -88,6 +117,7 @@ export default async function DashboardTodayPage() {
       salonName={salon?.name ?? ""}
       // Finance sees the day but does not change it: no status or move buttons.
       canWrite={can(session, "bookings.write")}
+      totals={totals}
     />
   );
 }

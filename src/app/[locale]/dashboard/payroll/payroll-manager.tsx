@@ -22,7 +22,9 @@ export type PayrollRow = {
   baseSalaryMinor: number;
   commissionPct: number;
   completedCount: number;
-  revenueMinor: number;
+  /** Sum of the employee's COMPLETED appointment prices — booked value, not
+   *  revenue (D8). The commission is a percentage of this. */
+  bookedValueMinor: number;
   commissionMinor: number;
   earnedMinor: number;
   paidMinor: number;
@@ -221,7 +223,7 @@ export function PayrollManager({
                   </div>
                   <div>
                     <dt className="text-xs text-faint-foreground">{t("row.revenue")}</dt>
-                    <dd className="text-secondary-foreground">{azn(r.revenueMinor)} ₼</dd>
+                    <dd className="text-secondary-foreground">{azn(r.bookedValueMinor)} ₼</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-faint-foreground">{t("row.commission")}</dt>
