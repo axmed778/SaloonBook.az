@@ -34,9 +34,11 @@ pre-existing warnings) · typecheck clean · locales in sync at 1,397 keys each
 
 Earlier: 453 tests after 1b, 430 after 1a, 303 at Phase 0.
 
-> **Run `pnpm db:rls` by hand on Railway and Neon after merging phase 2.**
-> `AppointmentPayment` is a new salon table and its policy is in `rls.sql`, which
-> deploy deliberately does not apply.
+> **Done for phase 2**, 19 September 2026. `pnpm db:rls` had not been run for
+> some time: `AppointmentPayment` had no policy, and neither did six older tables
+> (`AppointmentAddon`, `ServiceAddon`, `ServiceAddonLink`, `ServiceEmployee`,
+> `TimeOff`, `WorkingHour`). All seventeen carry `tenant_isolation` now, verified
+> with `pnpm db:rls:verify`.
 
 ### Leftovers from 1b — closed by `fix/1b-leftovers`
 
@@ -86,9 +88,23 @@ already closes, so it is a much narrower gap.
   the RLS test fixture in the same PR.
 - Every new string in az, ru and en, with key counts in sync.
 
-> **A step only the owner can do:** after each phase that adds tables, run
-> `pnpm db:rls` by hand on **both Railway and Neon**. It is deliberately not part
-> of deploy.
+> **A step only the owner can do:** after merging any phase that adds a table,
+> run `pnpm db:rls` against Neon. It is deliberately not part of deploy.
+> Then confirm it landed with `pnpm db:rls:verify`.
+
+**Where things run.** There is ONE production database: the Neon project
+`SaloonBook.az` (`fragrant-sea-14891144`), single branch `production`, owned by
+`neondb_owner`. Railway runs the services only — `SaloonBook.az` (web, serving
+salonbook.az) and `authentic-wisdom` (the worker), both built from `main`, plus
+Redis. **Railway has no Postgres**, so "run it on Railway and Neon" — as this
+file used to say — named two places to run a command from, not two databases,
+and invited exactly the drift found on 17 September: every check green while
+seven tenant tables had no policy in production.
+
+`pnpm db:rls:verify` is the answer to that. It is read-only and safe against
+production at any time, it reads its table list out of `rls.sql` so it cannot go
+stale, and it exits non-zero when a table is missing its policy. It is
+deliberately NOT wired into deploy yet.
 
 ---
 
