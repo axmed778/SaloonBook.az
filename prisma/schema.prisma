@@ -864,3 +864,18 @@ model IgToken {
   expiresAt   DateTime? @db.Timestamptz(6)
   refreshedAt DateTime  @updatedAt @db.Timestamptz(3)
 }
+
+/// One run of the daily Direct digest (worker/processors/ig-digest.ts): the
+/// leads worth following up, each with Claude's suggested next step and a draft
+/// reply. Only the newest row is shown; older ones are history.
+///
+/// `items` is a JSON array of IgDigestItem (src/lib/ig-digest.ts), already
+/// sorted hot → warm → cold with "skip" dropped. Only `done` changes after the
+/// row is written, and only through an atomic jsonb_set.
+model IgDigest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  items     Json
+
+  @@index([createdAt])
+}

@@ -51,7 +51,8 @@ BEGIN
   -- plaintext and IgThread/IgMessage hold every lead's DM history; RLS cannot
   -- scope either (no salonId), and withTenantScope — the only user of this role
   -- — never touches them. Least privilege by revocation instead of by policy.
-  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage']) LOOP
+  -- IgDigest quotes the same leads and conversations, so it goes with them.
+  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage', 'IgDigest']) LOOP
     IF EXISTS (
       SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relname = t

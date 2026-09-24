@@ -115,6 +115,7 @@ const CLIENT_NAMESPACES = [
   "Export",
   "Faq",
   "History",
+  "IgDigest", // the platform-admin digest checklist
   "Landing", // salon-map reads Landing.map
   "LanguageSwitcher",
   "LegalReconsent",

@@ -301,6 +301,32 @@ export function assertEnv(service: ServiceRole = "web"): void {
     ],
   ];
 
+  // Daily Instagram Direct digest (worker/processors/ig-digest.ts). Warn-only,
+  // on purpose: it is the founder's own sales tool, and refusing to boot the
+  // worker over it would stop every customer's booking confirmations to protect
+  // one internal message. Unset, the job logs the skip each morning instead.
+  // Worker-only: the web service just reads the stored digest.
+  if (isWorker) {
+    warnings.push(
+      [
+        process.env.ANTHROPIC_API_KEY,
+        "ANTHROPIC_API_KEY is unset on the worker — the daily Instagram digest is skipped.",
+      ],
+      [
+        process.env.DIGEST_PHONE,
+        "DIGEST_PHONE is unset on the worker — the Instagram digest is generated but " +
+          "no WhatsApp notice is sent.",
+      ],
+    );
+    const digestPhone = process.env.DIGEST_PHONE?.trim() ?? "";
+    if (digestPhone !== "" && !/^\+?\d{10,15}$/.test(digestPhone)) {
+      console.warn(
+        `[env] WARNING: DIGEST_PHONE="${digestPhone}" doesn't look like an E.164 number ` +
+          "(e.g. +994501234567) — the digest's WhatsApp notice will be rejected.",
+      );
+    }
+  }
+
   // WHATSAPP_ENCRYPTION_KEY encrypts per-salon "own number" access tokens at rest
   // (src/lib/crypto.ts). Only needed once a salon is switched to its own number;
   // until then it's harmless to omit — warn-only, and the admin activation action

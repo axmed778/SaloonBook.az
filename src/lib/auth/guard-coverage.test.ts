@@ -232,8 +232,11 @@ describe("dashboard pages", () => {
   // profile had no role check of its own, so a master — whose bookings carry
   // each customer's id — could open a customer's phone and history directly.
   const pages = filesUnder(DASHBOARD, (p) => /[\\/]page\.tsx$/.test(p)).map(rel);
-  // The platform admin panel checks its own flag.
-  const EXEMPT = ["src/app/[locale]/dashboard/admin/page.tsx"];
+  // Platform-admin pages check their own flag.
+  const EXEMPT = [
+    "src/app/[locale]/dashboard/admin/page.tsx",
+    "src/app/[locale]/dashboard/ig-digest/page.tsx",
+  ];
 
   it("finds the pages, so the check below is not vacuous", () => {
     expect(pages).toEqual(

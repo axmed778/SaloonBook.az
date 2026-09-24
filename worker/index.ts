@@ -99,10 +99,11 @@ void (async () => {
   }
 })();
 
-// Instagram Direct: profile lookups for new leads, plus the monthly access-token
-// renewal. Concurrency 2 because both job types spend one Instagram access token
-// against Graph's per-token rate limit — parallelism here buys throttling, not
-// throughput.
+// Instagram Direct: profile lookups for new leads, the monthly access-token
+// renewal, and the daily lead digest. Concurrency 2 because the first two spend
+// one Instagram access token against Graph's per-token rate limit — parallelism
+// here buys throttling, not throughput. The digest makes no Graph call; it just
+// holds one slot for the minute or two its Claude request takes, once a day.
 const igWorker = new Worker<IgJob>(QUEUE_NAMES.instagram, processIg, {
   connection,
   concurrency: 2,
@@ -131,6 +132,24 @@ void (async () => {
     console.log("[worker] instagram token refresh scheduled (monthly, 1st 04:10 UTC)");
   } catch (e) {
     console.error("[worker] failed to schedule instagram token refresh", e);
+  }
+})();
+
+// Daily Direct digest for the founder: 09:50 Baku = 05:50 UTC (Baku keeps no
+// DST, so the offset never moves). Like the token refresh, no run-on-boot: each
+// run is a paid Claude call and a WhatsApp message, and a worker restarting a
+// few times a day would repeat both. A failed day is logged by the job itself
+// and the page keeps showing the previous digest.
+void (async () => {
+  try {
+    await igQueue.upsertJobScheduler(
+      "ig-digest",
+      { pattern: "50 5 * * *" },
+      { name: IG_JOB_NAME, data: { type: "digest" } },
+    );
+    console.log("[worker] instagram digest scheduled (daily 05:50 UTC = 09:50 Baku)");
+  } catch (e) {
+    console.error("[worker] failed to schedule instagram digest", e);
   }
 })();
 
