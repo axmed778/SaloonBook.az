@@ -59,7 +59,8 @@
     "branch": "Branch",
     "branchSwitcherLabel": "Active branch",
     "manageBranches": "Manage branches",
-    "timeOff": "Time off"
+    "timeOff": "Time off",
+    "igDigest": "Instagram digest"
   },
   "StaffBlocked": {
     "title": "Access closed",
@@ -1879,5 +1880,32 @@
     "title": "Not in your salon's plan",
     "body": "This feature isn't included in your salon's plan. Ask the salon owner — they can upgrade the plan.",
     "back": "Back to today"
+  },
+  "IgDigest": {
+    "title": "Instagram Direct digest",
+    "subtitle": "Direct leads worth messaging today.",
+    "generatedAt": "Generated {when}",
+    "empty": "No digest yet. A new one appears every day at 09:50.",
+    "noTasks": "Nobody to message today.",
+    "progress": "{done} of {total} done",
+    "priority": {
+      "hot": "hot",
+      "warm": "warm",
+      "cold": "cold"
+    },
+    "idleDays": "silent {days} d",
+    "idleNever": "hasn't written yet",
+    "waiting": "waiting for reply {days} d",
+    "reason": "What's going on",
+    "action": "What to do",
+    "copy": "Copy",
+    "copied": "Copied",
+    "done": "Done",
+    "errors": {
+      "unauthorized": "Access denied.",
+      "invalidData": "Invalid data.",
+      "notFound": "The digest has been updated — reload the page.",
+      "generic": "Couldn't save. Please try again."
+    }
   }
 }

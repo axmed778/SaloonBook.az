@@ -7,7 +7,7 @@ the URL-button suffixes in this exact order — **create the templates exactly a
 written here (including the buttons), or every send will fail with a component
 mismatch.**
 
-Shared settings for all six templates:
+Shared settings for all seven templates:
 
 - **Category:** Utility
 - **Language:** Azerbaijani (`az`)
@@ -130,6 +130,29 @@ Vaxt dəyişdi: {{1}} — {{2}} görüşünü yeni vaxta keçirdi: {{3}}.
 
 Variables: same order as `new_booking_alert` ({{1}} customer, {{2}} service,
 {{3}} the NEW time). No buttons.
+
+---
+
+## 7. `ig_digest_ready` — to the founder (`DIGEST_PHONE`), daily at 09:50 Baku
+
+Internal, not customer-facing: the daily Instagram Direct digest
+(`worker/processors/ig-digest.ts`) sends it once the digest is saved. Not a
+Notification row, so it doesn't go through `buildComponents` — its parameters
+come from `digestTemplateComponents` in `src/lib/ig-digest.ts`.
+
+**Body**
+
+```
+Instagram Direct xülasəsi hazırdır: bu gün {{1}} tapşırıq var. Siyahı: {{2}} — uğurlu gün!
+```
+
+| Var | Meaning | Sample value |
+| --- | --- | --- |
+| {{1}} | number of leads to act on | 7 |
+| {{2}} | link to the digest page | https://salonbook.az/dashboard/ig-digest |
+
+No buttons. The link is a body variable rather than a URL button so it follows
+`APP_URL` without re-submitting the template.
 
 ---
 

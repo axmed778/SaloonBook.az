@@ -262,7 +262,13 @@ export async function cancelPushReminder(appointmentId: string): Promise<void> {
 //                   and so cannot make this call inline.
 //   token-refresh — monthly renewal of the 60-day long-lived token. Scheduled
 //                   by worker/index.ts, never enqueued by the request path.
-export type IgJob = { type: "profile"; igUserId: string } | { type: "token-refresh" };
+//   digest        — the founder's daily lead digest (Claude + WhatsApp nudge).
+//                   Also scheduled by worker/index.ts. Makes no Graph call; it
+//                   lives here because it reads the same tables.
+export type IgJob =
+  | { type: "profile"; igUserId: string }
+  | { type: "token-refresh" }
+  | { type: "digest" };
 
 /** Single BullMQ job name for the queue; the discriminator lives in the data. */
 export const IG_JOB_NAME = "ig";

@@ -59,7 +59,8 @@
     "branch": "Filial",
     "branchSwitcherLabel": "Aktiv filial",
     "manageBranches": "Filialları idarə et",
-    "timeOff": "Məzuniyyət"
+    "timeOff": "Məzuniyyət",
+    "igDigest": "Instagram xülasəsi"
   },
   "StaffBlocked": {
     "title": "Giriş bağlıdır",
@@ -1879,5 +1880,32 @@
     "title": "Salonun planına daxil deyil",
     "body": "Bu funksiya salonun planına daxil deyil. Salon sahibinə müraciət edin — o, planı yüksəldə bilər.",
     "back": "Bu günə qayıt"
+  },
+  "IgDigest": {
+    "title": "Instagram Direct: xülasə",
+    "subtitle": "Bu gün yazmağa dəyən Direct müraciətləri.",
+    "generatedAt": "Hazırlanıb: {when}",
+    "empty": "Xülasə hələ hazır deyil. Hər gün saat 09:50-də yaranır.",
+    "noTasks": "Bu gün yazılacaq kimsə yoxdur.",
+    "progress": "{total} tapşırıqdan {done} edilib",
+    "priority": {
+      "hot": "isti",
+      "warm": "ılıq",
+      "cold": "soyuq"
+    },
+    "idleDays": "{days} gündür susur",
+    "idleNever": "hələ yazmayıb",
+    "waiting": "{days} gündür cavab gözləyir",
+    "reason": "Nə baş verir",
+    "action": "Nə etməli",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "done": "Edildi",
+    "errors": {
+      "unauthorized": "Giriş icazəsi yoxdur.",
+      "invalidData": "Yanlış məlumat.",
+      "notFound": "Xülasə yenilənib — səhifəni yeniləyin.",
+      "generic": "Yadda saxlamaq alınmadı. Yenidən cəhd edin."
+    }
   }
 }

@@ -324,7 +324,7 @@ export function isEmployeeLogin(role: AppRole): boolean {
  * the page gates both, so a screen cannot be listed but refused, or reachable
  * but hidden — guard-coverage.test.ts checks every page against it. Sections not
  * listed (Today, Calendar) need only bookings.read, which every role holds; the
- * platform admin panel checks its own flag.
+ * platform-admin pages (admin panel, Instagram digest) check their own flag.
  */
 export const SECTION_PERMISSIONS = {
   "/dashboard/clients": "clients.read",

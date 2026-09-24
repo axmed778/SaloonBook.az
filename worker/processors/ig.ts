@@ -4,6 +4,7 @@ import { fetchIgProfile } from "../../src/lib/instagram";
 import { igAccessToken, refreshAndStoreIgToken } from "../../src/lib/ig-token";
 import { fillIgThreadProfile } from "../../src/lib/ig-store";
 import type { IgJob } from "../../src/lib/queue";
+import { runIgDigest } from "./ig-digest";
 
 /**
  * Background work for Instagram Direct. Both job types are Graph calls that the
@@ -16,6 +17,8 @@ export async function processIg(job: Job<IgJob>): Promise<void> {
       return fillProfile(job.data.igUserId);
     case "token-refresh":
       return refreshToken();
+    case "digest":
+      return runIgDigest();
     default:
       // A job enqueued by a newer deploy than this worker. Drop it rather than
       // failing: retrying an unknown shape cannot make it known.
