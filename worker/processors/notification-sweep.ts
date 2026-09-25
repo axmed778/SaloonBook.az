@@ -101,6 +101,7 @@ export async function sweepNotifications(): Promise<void> {
 
   let ok = 0;
   let revived = 0;
+  let failed = 0;
   for (const n of stuck) {
     try {
       // Due now (sendAfter already passed) — enqueue with no delay. Bounded so a
@@ -121,13 +122,28 @@ export async function sweepNotifications(): Promise<void> {
       }
       ok++;
     } catch (e) {
-      // A timeout almost always means Redis is unreachable — the remaining rows
+      // A TIMEOUT almost always means Redis is unreachable — the remaining rows
       // would fail the same way, so stop and let the next tick retry.
-      console.error(`[sweep] enqueue failed for ${n.id}; aborting this pass`, e);
-      break;
+      //
+      // Anything else is about THIS row, and aborting on it is how a single bad
+      // row took the whole sweep down: reviveNotification built a jobId with a
+      // colon in it, BullMQ rejected it from inside add(), and because that
+      // threw on the first FAILED row in the batch, every healthy row behind it
+      // was skipped too. Production logged "re-enqueued 0/4" every ten minutes
+      // for days while Redis was perfectly fine. So: skip the row, keep going,
+      // and let the count below make the failures visible.
+      const timedOut = e instanceof Error && e.message === "enqueue timed out";
+      if (timedOut) {
+        console.error(`[sweep] enqueue timed out for ${n.id}; aborting this pass`, e);
+        break;
+      }
+      failed++;
+      // Only the first is logged with its stack: a systematic fault would
+      // otherwise print the same trace up to BATCH times per tick.
+      if (failed === 1) console.error(`[sweep] enqueue failed for ${n.id}; skipping it`, e);
     }
   }
   console.log(
-    `[sweep] re-enqueued ${ok}/${stuck.length} stuck notifications (${revived} revived from FAILED)`,
+    `[sweep] re-enqueued ${ok}/${stuck.length} stuck notifications (${revived} revived from FAILED${failed > 0 ? `, ${failed} skipped after errors` : ""})`,
   );
 }

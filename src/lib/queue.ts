@@ -1,5 +1,15 @@
 import { Queue } from "bullmq";
 import { connection } from "./redis";
+// Every custom jobId comes from here. BullMQ rejects an id containing ":" from
+// inside add(), so the shape of an id is a production failure rather than a
+// compile error — see the header of job-ids.ts for what that cost.
+import {
+  deferJobId,
+  igProfileJobId,
+  notificationJobId,
+  pushJobId,
+  reviveJobId,
+} from "./job-ids";
 
 export const QUEUE_NAMES = {
   notifications: "notifications",
@@ -94,7 +104,7 @@ export async function enqueueNotification(notificationId: string, delayMs?: numb
     // creating a duplicate that would send the same WhatsApp message twice.
     // Safe because a notification is only ever sent once: after it completes,
     // its row is SENT and no path re-enqueues it.
-    { jobId: notificationId, ...(delayMs ? { delay: delayMs } : {}) },
+    { jobId: notificationJobId(notificationId), ...(delayMs ? { delay: delayMs } : {}) },
   );
 }
 
@@ -111,6 +121,12 @@ export async function enqueueNotification(notificationId: string, delayMs?: numb
  * wanted and none where it isn't: two sweep passes before the worker touches the
  * row produce the same id and collapse into one job, while a genuine new round
  * of attempts changes the count and so mints a fresh id.
+ *
+ * That id was `${notificationId}:r${attempts}` until the colon rule bit: BullMQ
+ * rejected it from inside add(), so this function threw on every call. The sweep
+ * aborts its pass on an enqueue error, so one FAILED row stopped every other
+ * stuck notification from being re-enqueued too — "[sweep] re-enqueued 0/4" in
+ * production, every ten minutes, for days. See job-ids.ts.
  */
 export async function reviveNotification(
   notificationId: string,
@@ -119,7 +135,7 @@ export async function reviveNotification(
   await notificationsQueue().add(
     "send",
     { notificationId },
-    { jobId: `${notificationId}:r${attempts}` },
+    { jobId: reviveJobId(notificationId, attempts) },
   );
 }
 
@@ -141,7 +157,7 @@ export async function deferNotification(notificationId: string, dueAt: Date): Pr
     "send",
     { notificationId },
     {
-      jobId: `${notificationId}:w${Math.floor(dueMs / 60_000)}`,
+      jobId: deferJobId(notificationId, dueAt),
       // +1s so the job lands after the row is genuinely due rather than on the
       // exact boundary, where it would defer itself once more.
       delay: Math.max(dueMs - Date.now(), 0) + 1_000,
@@ -180,17 +196,19 @@ export const PUSH_REMINDER_LEAD_MS = 2 * 60 * 60_000;
 // not a timer.
 const PUSH_REMINDER_DRIFT_MS = 2 * 60_000;
 
-// Deterministic per (event, appointment): the id is what lets a pending delayed
-// job be found again after a reschedule or a cancellation, and what dedupes a
-// retried trigger.
-function pushJobId(type: PushEventType, appointmentId: string): string {
-  return `${type}:${appointmentId}`;
-}
-
 /**
  * Enqueue a Web Push event for a salon's installed devices. `delayMs` schedules
- * it for later (used for the T-2h reminder). jobId = `type:appointmentId` dedupes
- * so a retried trigger can't double-send the same alert.
+ * it for later (used for the T-2h reminder).
+ *
+ * The jobId (pushJobId, in job-ids.ts) is deterministic per (event, appointment):
+ * it dedupes a retried trigger, and it is what lets a pending delayed job be
+ * found again after a reschedule or a cancellation.
+ *
+ * NOTE: that id was `${type}:${appointmentId}` until the colon rule bit, which
+ * means every call here threw inside add() and Web Push has never actually
+ * enqueued anything — bullmq has been pinned ^6.1.2, with the check, since the
+ * initial commit. Nothing stale is left in Redis under the old shape for the
+ * same reason: none of those jobs was ever created. See job-ids.ts.
  */
 export async function enqueuePush(job: PushJob, delayMs?: number): Promise<void> {
   await pushQueue().add("push", job, {
@@ -296,7 +314,7 @@ export function instagramQueue(): Queue<IgJob, void, typeof IG_JOB_NAME> {
  *
  * The job id buckets by UTC day: a chatty lead sending twenty messages in an
  * afternoon costs one Graph call, while a lookup that failed all day still gets
- * a fresh attempt tomorrow. A stable `ig-profile:<igsid>` id would have been the
+ * a fresh attempt tomorrow. A stable `ig-profile-<igsid>` id would have been the
  * obvious choice and is a trap — BullMQ silently ignores an add() whose id is
  * still in the completed/failed set, so a lookup that exhausted its attempts
  * could never be retried by anything.
@@ -305,6 +323,6 @@ export async function enqueueIgProfile(igUserId: string): Promise<void> {
   await instagramQueue().add(
     IG_JOB_NAME,
     { type: "profile", igUserId },
-    { jobId: `ig-profile:${igUserId}:${Math.floor(Date.now() / 86_400_000)}` },
+    { jobId: igProfileJobId(igUserId) },
   );
 }
