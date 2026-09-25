@@ -84,6 +84,17 @@ export function formatBakuDate(dayYmd: string, locale = "az-AZ"): string {
   }).format(new Date(Date.UTC(y, m - 1, d, 12)));
 }
 
+/** Compact date label for dense tables, e.g. "1 iyl 2026" — no weekday. */
+export function formatBakuDateShort(dayYmd: string, locale = "az-AZ"): string {
+  const [y, m, d] = dayYmd.split("-").map(Number);
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: BAKU_TZ,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+
 /**
  * Add whole months to an instant, clamping to the last day of the target month.
  * Plain `Date.setMonth` overflows — Jan 31 + 1 month becomes Mar 3, silently

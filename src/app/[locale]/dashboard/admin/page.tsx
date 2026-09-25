@@ -2,7 +2,13 @@ import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { bakuToday, bakuYmd, daysBetweenYmd, formatBakuDate } from "@/lib/time";
+import {
+  bakuToday,
+  bakuYmd,
+  daysBetweenYmd,
+  formatBakuDate,
+  formatBakuDateShort,
+} from "@/lib/time";
 import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
@@ -139,7 +145,7 @@ export default async function AdminPage() {
       senderPhoneMasked: maskPhone(salon?.whatsAppSender?.displayPhone),
       ownNumberEligible: featuresFor(effective).ownWhatsappNumber,
       ownerEmail: a.memberships.find((m) => m.role === "OWNER")?.user.email ?? "—",
-      createdLabel: formatBakuDate(bakuYmd(a.createdAt), df),
+      createdLabel: formatBakuDateShort(bakuYmd(a.createdAt), df),
       plan: sub?.plan ?? "FREE",
       effective,
       status: sub?.status ?? null,
@@ -149,9 +155,9 @@ export default async function AdminPage() {
       branchLimit:
         limitsFor(effective).maxBranches +
         (featuresFor(effective).multiBranch ? extraBranches : 0),
-      trialEndsLabel: sub?.trialEndsAt ? formatBakuDate(bakuYmd(sub.trialEndsAt), df) : null,
+      trialEndsLabel: sub?.trialEndsAt ? formatBakuDateShort(bakuYmd(sub.trialEndsAt), df) : null,
       periodEndLabel: sub?.currentPeriodEnd
-        ? formatBakuDate(bakuYmd(sub.currentPeriodEnd), df)
+        ? formatBakuDateShort(bakuYmd(sub.currentPeriodEnd), df)
         : null,
       bookingsThisMonth: salon ? (bookingsBySalon.get(salon.id) ?? 0) : 0,
       totalPaidMinor: paid?._sum.amountMinor ?? 0,
