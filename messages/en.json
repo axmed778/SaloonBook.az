@@ -1898,6 +1898,7 @@
     "waiting": "waiting for reply {days} d",
     "reason": "What's going on",
     "action": "What to do",
+    "noDraft": "No draft yet: the playbook scenario needs your decision first — see \"What's going on\".",
     "copy": "Copy",
     "copied": "Copied",
     "done": "Done",

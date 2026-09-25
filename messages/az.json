@@ -1898,6 +1898,7 @@
     "waiting": "{days} gündür cavab gözləyir",
     "reason": "Nə baş verir",
     "action": "Nə etməli",
+    "noDraft": "Hazır mətn yoxdur: playbook ssenarisi üçün sizin qərarınız lazımdır — «Nə baş verir» bölməsinə baxın.",
     "copy": "Kopyala",
     "copied": "Kopyalandı",
     "done": "Edildi",
