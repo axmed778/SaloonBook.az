@@ -115,11 +115,16 @@ export async function grantTrial(input: unknown): Promise<ActionResult> {
 
   const sub = await prisma.subscription.findUnique({
     where: { accountId: d.accountId },
-    select: { id: true, plan: true, status: true, trialEndsAt: true },
+    select: { id: true, plan: true, status: true, trialEndsAt: true, currentPeriodEnd: true },
   });
   if (!sub) return { ok: false, error: t("subNotFound") };
 
   const now = new Date();
+  // A trial would replace a paid period (effectivePlan only reads trialEndsAt
+  // while TRIALING), cutting off access the salon paid for. Refuse instead.
+  if (sub.status === "ACTIVE" && (!sub.currentPeriodEnd || sub.currentPeriodEnd > now)) {
+    return { ok: false, error: t("trialWhilePaid") };
+  }
   const base =
     sub.status === "TRIALING" && sub.trialEndsAt && sub.trialEndsAt > now ? sub.trialEndsAt : now;
   const trialEndsAt = addDays(base, d.days);
@@ -177,6 +182,7 @@ export async function deletePayment(input: unknown): Promise<ActionResult> {
       id: true,
       amountMinor: true,
       periodMonths: true,
+      purpose: true,
       method: true,
       paidAt: true,
       subscription: {
@@ -188,6 +194,10 @@ export async function deletePayment(input: unknown): Promise<ActionResult> {
   const sub = payment.subscription;
 
   let subUpdate: { status?: "FREE_DOWNGRADED"; currentPeriodEnd: Date } | null = null;
+  // Branch-slot payments never extended the period, so there is nothing to undo.
+  if (d.shortenPeriod && payment.purpose !== "plan") {
+    return { ok: false, error: t("invalidData") };
+  }
   if (d.shortenPeriod && sub.currentPeriodEnd) {
     const newEnd = addMonths(sub.currentPeriodEnd, -payment.periodMonths);
     subUpdate =
@@ -211,6 +221,7 @@ export async function deletePayment(input: unknown): Promise<ActionResult> {
           amountMinor: payment.amountMinor,
           periodMonths: payment.periodMonths,
           method: payment.method,
+          purpose: payment.purpose,
           paidAt: payment.paidAt.toISOString(),
           shortenPeriod: d.shortenPeriod,
           previousStatus: sub.status,
@@ -399,6 +410,7 @@ export async function setExtraBranches(input: unknown): Promise<ActionResult> {
               amountMinor,
               method: "manual",
               periodMonths: 1,
+              purpose: "branches",
               recordedBy: adminId,
             },
           }),

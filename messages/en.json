@@ -873,7 +873,7 @@
     "trialNote": "No payment is recorded. The trial runs {from}.",
     "fromTrialEnd": "from the current trial's end",
     "trialDaysLabel": "Days",
-    "trialActiveWarning": "This salon has an active paid plan — granting a trial switches its status to Trial.",
+    "trialActiveWarning": "This salon's paid period is still running — a trial would replace it. Delete the payment first (shortening the period) or wait for it to end.",
     "errTrialDaysRange": "Days must be between 1 and 90.",
     "deletePayment": "Delete",
     "deletePaymentTitle": "Delete payment — {name}",
@@ -967,7 +967,8 @@
       "senderPending": "Credentials saved, but Meta validation failed — the number is pending.",
       "senderNotFound": "WhatsApp number not found.",
       "accountNotFound": "Account not found.",
-      "paymentNotFound": "Payment not found."
+      "paymentNotFound": "Payment not found.",
+      "trialWhilePaid": "The paid period hasn't ended — a trial can't be granted."
     }
   },
   "Payments": {

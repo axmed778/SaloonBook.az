@@ -56,7 +56,13 @@ export default async function AdminPage() {
             payments: {
               orderBy: { paidAt: "desc" },
               take: 5,
-              select: { id: true, amountMinor: true, periodMonths: true, paidAt: true },
+              select: {
+                id: true,
+                amountMinor: true,
+                periodMonths: true,
+                purpose: true,
+                paidAt: true,
+              },
             },
           },
         },
@@ -178,6 +184,7 @@ export default async function AdminPage() {
       payments: (sub?.payments ?? []).map((p) => ({
         id: p.id,
         months: p.periodMonths,
+        isPlan: p.purpose === "plan",
         label: t("paymentLabel", {
           amount: (p.amountMinor / 100).toFixed(2),
           months: p.periodMonths,

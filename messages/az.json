@@ -876,7 +876,7 @@
     "trialNote": "Ödəniş yaradılmır. Sınaq {from} hesablanır.",
     "fromTrialEnd": "hazırkı sınağın bitməsindən",
     "trialDaysLabel": "Gün",
-    "trialActiveWarning": "Salonun ödənişli planı aktivdir — sınaq verilsə, status «Sınaq»a keçəcək.",
+    "trialActiveWarning": "Salonun ödənişli planı hələ aktivdir — sınaq ödənilmiş müddəti əvəz edərdi. Əvvəlcə ödənişi silin (müddəti qısaldaraq) və ya müddətin bitməsini gözləyin.",
     "errTrialDaysRange": "Gün 1–90 arası olmalıdır.",
     "deletePayment": "Sil",
     "deletePaymentTitle": "Ödənişi sil — {name}",
@@ -967,7 +967,8 @@
       "senderPending": "Məlumatlar saxlandı, amma Meta yoxlaması alınmadı — nömrə gözləmədədir.",
       "senderNotFound": "WhatsApp nömrəsi tapılmadı.",
       "accountNotFound": "Hesab tapılmadı.",
-      "paymentNotFound": "Ödəniş tapılmadı."
+      "paymentNotFound": "Ödəniş tapılmadı.",
+      "trialWhilePaid": "Ödənişli müddət hələ bitməyib — sınaq verilə bilməz."
     }
   },
   "Payments": {

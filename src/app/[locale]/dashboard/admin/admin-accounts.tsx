@@ -57,7 +57,7 @@ export type AccountRow = {
   lastLoginAgoDays: number | null;
   /** Exact date of that sign-in, for the cell's tooltip. */
   lastLoginLabel: string | null;
-  payments: { id: string; label: string; months: number }[];
+  payments: { id: string; label: string; months: number; isPlan: boolean }[];
 };
 
 const STATUS_CHIP: Record<string, string> = {
@@ -491,7 +491,7 @@ function DeletePaymentModal({
         </h2>
         <p className="mt-1 text-sm text-secondary-foreground">{payment.label}</p>
         <form onSubmit={submit} className="mt-4 space-y-4">
-          {row.periodEndLabel && (
+          {payment.isPlan && row.periodEndLabel && (
             <label
               htmlFor={`${fid}-shorten`}
               className="flex items-start gap-2 text-sm text-secondary-foreground"
@@ -686,6 +686,10 @@ function TrialModal({ row, onClose }: { row: AccountRow; onClose: () => void }) 
   const [error, setError] = useState<string | null>(null);
 
   const trialRunning = row.status === "TRIALING" && row.effective !== "FREE";
+  // Mirrors the server: a trial can't replace a paid period that is still running.
+  const [paidRunning] = useState(
+    () => row.status === "ACTIVE" && (row.endsAtMs === null || row.endsAtMs > Date.now()),
+  );
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -722,7 +726,7 @@ function TrialModal({ row, onClose }: { row: AccountRow; onClose: () => void }) 
             from: trialRunning ? t("fromTrialEnd") : t("fromToday"),
           })}
         </p>
-        {row.status === "ACTIVE" && (
+        {paidRunning && (
           <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
             {t("trialActiveWarning")}
           </p>
@@ -775,7 +779,7 @@ function TrialModal({ row, onClose }: { row: AccountRow; onClose: () => void }) 
             </button>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || paidRunning}
               className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? tc("pleaseWait") : t("confirm")}
