@@ -867,6 +867,18 @@
     "branchesNote": "Каждый доп. филиал — {price} ₼. Уменьшение не создаёт платёж.",
     "extrasLabel": "Доп. слоты (всего)",
     "errExtrasRange": "Доп. слоты должны быть от 0 до 50.",
+    "trialBtn": "Пробный",
+    "trialBtnTitle": "Выдать бесплатный пробный период",
+    "trialTitle": "Пробный период — {name}",
+    "trialNote": "Платёж не создаётся. Пробный период отсчитывается {from}.",
+    "fromTrialEnd": "от окончания текущего пробного",
+    "trialDaysLabel": "Дней",
+    "trialActiveWarning": "У салона ещё идёт оплаченный период — пробный заменил бы его. Сначала удалите платёж (с сокращением периода) или дождитесь окончания срока.",
+    "errTrialDaysRange": "Количество дней — от 1 до 90.",
+    "deletePayment": "Удалить",
+    "deletePaymentTitle": "Удалить платёж — {name}",
+    "deletePaymentShorten": "Сократить оплаченный период на {months} мес.",
+    "deletePaymentShortenHint": "Только для оплаты плана. Если срок окажется в прошлом, аккаунт перейдёт на бесплатный план.",
     "waSender": {
       "button": "WhatsApp",
       "buttonTitle": "Свой номер WhatsApp салона",
@@ -954,7 +966,9 @@
       "salonNotFound": "Салон не найден.",
       "senderPending": "Данные сохранены, но проверка Meta не прошла — номер в ожидании.",
       "senderNotFound": "Номер WhatsApp не найден.",
-      "accountNotFound": "Аккаунт не найден."
+      "accountNotFound": "Аккаунт не найден.",
+      "paymentNotFound": "Платёж не найден.",
+      "trialWhilePaid": "Оплаченный период ещё не закончился — пробный выдать нельзя."
     }
   },
   "Payments": {

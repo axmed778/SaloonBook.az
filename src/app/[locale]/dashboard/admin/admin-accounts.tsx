@@ -3,13 +3,15 @@
 import { useId, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { EXTRA_BRANCH_PRICE_MINOR } from "@/lib/plans";
+import { EXTRA_BRANCH_PRICE_MINOR, TRIAL_DAYS } from "@/lib/plans";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import { SalonCardModal } from "./admin-salon-card";
 import { nextSort, sortRows, type SortDir, type SortKey } from "./admin-sort";
 import { filterRows } from "./admin-search";
 import {
   activateSubscription,
+  grantTrial,
+  deletePayment,
   setExtraBranches,
   setWhatsAppSender,
   disableWhatsAppSender,
@@ -55,7 +57,7 @@ export type AccountRow = {
   lastLoginAgoDays: number | null;
   /** Exact date of that sign-in, for the cell's tooltip. */
   lastLoginLabel: string | null;
-  payments: { id: string; label: string }[];
+  payments: { id: string; label: string; months: number; isPlan: boolean }[];
 };
 
 const STATUS_CHIP: Record<string, string> = {
@@ -66,11 +68,15 @@ const STATUS_CHIP: Record<string, string> = {
   FREE_DOWNGRADED: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 };
 
-
 export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const t = useTranslations("Admin");
   const locale = useLocale();
   const [activateFor, setActivateFor] = useState<AccountRow | null>(null);
+  const [trialFor, setTrialFor] = useState<AccountRow | null>(null);
+  const [deleting, setDeleting] = useState<{
+    row: AccountRow;
+    payment: AccountRow["payments"][number];
+  } | null>(null);
   const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
   const [senderFor, setSenderFor] = useState<AccountRow | null>(null);
   const [cardFor, setCardFor] = useState<AccountRow | null>(null);
@@ -103,7 +109,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+    <div className="w-full space-y-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
@@ -137,7 +143,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full min-w-[1250px] text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-faint-foreground">
                 {th("salon", t("colSalon"))}
@@ -149,7 +155,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                 {th("lastLogin", t("colLastLogin"))}
                 {th("paid", t("colPaid"), "right")}
                 {th("bookings", t("colBookings"), "right")}
-                <th className="px-4 py-3 font-medium" />
+                <th className="px-3 py-3 font-medium" />
               </tr>
             </thead>
             <tbody>
@@ -158,13 +164,13 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                   key={r.accountId}
                   row={r}
                   expanded={expanded === r.accountId}
-                  onToggle={() =>
-                    setExpanded(expanded === r.accountId ? null : r.accountId)
-                  }
+                  onToggle={() => setExpanded(expanded === r.accountId ? null : r.accountId)}
                   onActivate={() => setActivateFor(r)}
+                  onTrial={() => setTrialFor(r)}
                   onBranches={() => setBranchesFor(r)}
                   onSender={() => setSenderFor(r)}
                   onCard={() => setCardFor(r)}
+                  onDeletePayment={(payment) => setDeleting({ row: r, payment })}
                 />
               ))}
             </tbody>
@@ -172,15 +178,17 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
         </div>
       )}
 
-      {activateFor && (
-        <ActivateModal row={activateFor} onClose={() => setActivateFor(null)} />
+      {activateFor && <ActivateModal row={activateFor} onClose={() => setActivateFor(null)} />}
+      {deleting && (
+        <DeletePaymentModal
+          row={deleting.row}
+          payment={deleting.payment}
+          onClose={() => setDeleting(null)}
+        />
       )}
-      {branchesFor && (
-        <ExtraBranchesModal row={branchesFor} onClose={() => setBranchesFor(null)} />
-      )}
-      {senderFor && (
-        <WhatsAppSenderModal row={senderFor} onClose={() => setSenderFor(null)} />
-      )}
+      {trialFor && <TrialModal row={trialFor} onClose={() => setTrialFor(null)} />}
+      {branchesFor && <ExtraBranchesModal row={branchesFor} onClose={() => setBranchesFor(null)} />}
+      {senderFor && <WhatsAppSenderModal row={senderFor} onClose={() => setSenderFor(null)} />}
       {cardFor && (
         <SalonCardModal
           accountId={cardFor.accountId}
@@ -238,7 +246,9 @@ function SortableTh({
     <th
       scope="col"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      className={"px-4 py-3 font-medium " + (align === "right" ? "text-right" : "")}
+      className={
+        "px-3 py-3 font-medium whitespace-nowrap " + (align === "right" ? "text-right" : "")
+      }
     >
       <button
         type="button"
@@ -263,23 +273,27 @@ function RowGroup({
   expanded,
   onToggle,
   onActivate,
+  onTrial,
   onBranches,
   onSender,
   onCard,
+  onDeletePayment,
 }: {
   row: AccountRow;
   expanded: boolean;
   onToggle: () => void;
   onActivate: () => void;
+  onTrial: () => void;
   onBranches: () => void;
   onSender: () => void;
   onCard: () => void;
+  onDeletePayment: (p: AccountRow["payments"][number]) => void;
 }) {
   const t = useTranslations("Admin");
   return (
     <>
       <tr className="border-b border-border last:border-0 hover:bg-hover">
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           {/* The name is the way in: everything read-only about this salon —
               subscription countdown, branches, staff, contacts — is one click
               deep instead of spread across four action modals. */}
@@ -300,20 +314,25 @@ function RowGroup({
             )}
           </p>
         </td>
-        <td className="px-4 py-3 text-muted-foreground">{r.createdLabel}</td>
-        <td className="px-4 py-3 text-secondary-foreground">{r.ownerEmail}</td>
-        <td className="px-4 py-3">
+        <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{r.createdLabel}</td>
+        <td className="max-w-[14rem] break-all px-3 py-3 text-secondary-foreground">
+          {r.ownerEmail}
+        </td>
+        <td className="px-3 py-3">
           <span className="text-secondary-foreground">{r.plan}</span>
           {r.effective !== r.plan && (
-            <span className="ml-1.5 text-xs text-amber-700 dark:text-amber-400" title={t("effectiveTooltip")}>
+            <span
+              className="ml-1.5 text-xs text-amber-700 dark:text-amber-400"
+              title={t("effectiveTooltip")}
+            >
               → {r.effective}
             </span>
           )}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           {r.status ? (
             <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[r.status] ?? "bg-secondary text-muted-foreground"}`}
+              className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CHIP[r.status] ?? "bg-secondary text-muted-foreground"}`}
             >
               {t.has(`subStatus.${r.status}`) ? t(`subStatus.${r.status}`) : r.status}
             </span>
@@ -321,14 +340,14 @@ function RowGroup({
             <span className="text-faint-foreground">—</span>
           )}
         </td>
-        <td className="px-4 py-3 text-muted-foreground">
+        <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
           {r.status === "TRIALING" ? (r.trialEndsLabel ?? "—") : (r.periodEndLabel ?? "—")}
         </td>
-        <td className="px-4 py-3" title={r.lastLoginLabel ?? undefined}>
+        <td className="whitespace-nowrap px-3 py-3" title={r.lastLoginLabel ?? undefined}>
           <LastLogin days={r.lastLoginAgoDays} />
         </td>
         <td
-          className="px-4 py-3 text-right tabular-nums text-secondary-foreground"
+          className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-secondary-foreground"
           title={t("details.paidValue", {
             amount: (r.totalPaidMinor / 100).toFixed(2),
             count: r.paymentsCount,
@@ -340,11 +359,13 @@ function RowGroup({
             t("paidCell", { amount: (r.totalPaidMinor / 100).toFixed(0) })
           )}
         </td>
-        <td className="px-4 py-3 text-right tabular-nums text-secondary-foreground">
+        <td className="px-3 py-3 text-right tabular-nums text-secondary-foreground">
           {r.bookingsThisMonth}
         </td>
-        <td className="px-4 py-3">
-          <div className="flex justify-end gap-2">
+        <td className="px-3 py-3">
+          {/* Two columns instead of one long row: the table has to fit a laptop
+              screen next to the sidebar without scrolling sideways. */}
+          <div className="ml-auto grid w-max grid-cols-2 gap-1.5 [&>button]:whitespace-nowrap">
             <button
               onClick={onToggle}
               className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
@@ -353,7 +374,10 @@ function RowGroup({
             </button>
             <button
               onClick={onBranches}
-              title={t("branchesUsage", { count: r.branchCount, limit: r.branchLimit })}
+              title={t("branchesUsage", {
+                count: r.branchCount,
+                limit: r.branchLimit,
+              })}
               className="rounded-lg border border-border-strong px-2.5 py-1 text-xs text-secondary-foreground transition hover:border-border-strong"
             >
               {t("branchesBtn", { count: r.branchCount, limit: r.branchLimit })}
@@ -374,6 +398,13 @@ function RowGroup({
               </button>
             )}
             <button
+              onClick={onTrial}
+              title={t("trialBtnTitle")}
+              className="rounded-lg border border-sky-500/40 px-2.5 py-1 text-xs text-sky-700 transition hover:bg-sky-500/5 dark:text-sky-300"
+            >
+              {t("trialBtn")}
+            </button>
+            <button
               onClick={onActivate}
               className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-rose-700"
             >
@@ -391,7 +422,15 @@ function RowGroup({
             ) : (
               <ul className="mt-1 space-y-1 text-sm text-secondary-foreground">
                 {r.payments.map((p) => (
-                  <li key={p.id}>{p.label}</li>
+                  <li key={p.id} className="flex items-center gap-3">
+                    <span>{p.label}</span>
+                    <button
+                      onClick={() => onDeletePayment(p)}
+                      className="rounded-md border border-rose-500/40 px-2 py-0.5 text-xs text-rose-700 transition hover:bg-rose-500/5 dark:text-rose-400"
+                    >
+                      {t("deletePayment")}
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
@@ -399,6 +438,99 @@ function RowGroup({
         </tr>
       )}
     </>
+  );
+}
+
+// Remove a payment recorded by mistake. Shortening the paid period is opt-in:
+// extra-branch payments are rows too, and those never extended the period.
+function DeletePaymentModal({
+  row,
+  payment,
+  onClose,
+}: {
+  row: AccountRow;
+  payment: AccountRow["payments"][number];
+  onClose: () => void;
+}) {
+  const t = useTranslations("Admin");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
+  const [pending, startTransition] = useTransition();
+  const [shorten, setShorten] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await deletePayment({
+        paymentId: payment.id,
+        shortenPeriod: shorten,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {t("deletePaymentTitle", { name: r_name(row) })}
+        </h2>
+        <p className="mt-1 text-sm text-secondary-foreground">{payment.label}</p>
+        <form onSubmit={submit} className="mt-4 space-y-4">
+          {payment.isPlan && row.periodEndLabel && (
+            <label
+              htmlFor={`${fid}-shorten`}
+              className="flex items-start gap-2 text-sm text-secondary-foreground"
+            >
+              <input
+                id={`${fid}-shorten`}
+                type="checkbox"
+                className="mt-0.5"
+                checked={shorten}
+                onChange={(e) => setShorten(e.target.checked)}
+              />
+              <span>
+                {t("deletePaymentShorten", { months: payment.months })}
+                <span className="mt-0.5 block text-xs text-faint-foreground">
+                  {t("deletePaymentShortenHint")}
+                </span>
+              </span>
+            </label>
+          )}
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
+            >
+              {tc("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+            >
+              {pending ? tc("pleaseWait") : t("deletePayment")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -538,6 +670,127 @@ function ActivateModal({ row, onClose }: { row: AccountRow; onClose: () => void 
   );
 }
 
+// Grant a repeat free trial. No payment is recorded; a still-running trial is
+// extended from its end date, anything else restarts the trial from today.
+function TrialModal({ row, onClose }: { row: AccountRow; onClose: () => void }) {
+  const t = useTranslations("Admin");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
+  const [pending, startTransition] = useTransition();
+  const [plan, setPlan] = useState<"START" | "BASIC" | "PRO">(
+    row.plan === "PRO" ? "PRO" : row.plan === "START" ? "START" : "BASIC",
+  );
+  const [days, setDays] = useState(String(TRIAL_DAYS));
+  const [error, setError] = useState<string | null>(null);
+
+  const trialRunning = row.status === "TRIALING" && row.effective !== "FREE";
+  // Mirrors the server: a trial can't replace a paid period that is still running.
+  const [paidRunning] = useState(
+    () => row.status === "ACTIVE" && (row.endsAtMs === null || row.endsAtMs > Date.now()),
+  );
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const n = Number(days);
+    if (!Number.isInteger(n) || n < 1 || n > 90) return setError(t("errTrialDaysRange"));
+    startTransition(async () => {
+      const res = await grantTrial({ accountId: row.accountId, plan, days: n });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  const inputCls =
+    "rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {t("trialTitle", { name: r_name(row) })}
+        </h2>
+        <p className="mt-1 text-xs text-faint-foreground">
+          {t("trialNote", {
+            from: trialRunning ? t("fromTrialEnd") : t("fromToday"),
+          })}
+        </p>
+        {paidRunning && (
+          <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+            {t("trialActiveWarning")}
+          </p>
+        )}
+
+        <form onSubmit={submit} className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor={`${fid}-plan`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                {t("planLabel")}
+              </label>
+              <select
+                id={`${fid}-plan`}
+                className={inputCls + " w-full"}
+                value={plan}
+                onChange={(e) => setPlan(e.target.value as "START" | "BASIC" | "PRO")}
+              >
+                <option value="START">Start</option>
+                <option value="BASIC">Salon</option>
+                <option value="PRO">Pro</option>
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor={`${fid}-days`}
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                {t("trialDaysLabel")}
+              </label>
+              <input
+                id={`${fid}-days`}
+                className={inputCls + " w-full"}
+                inputMode="numeric"
+                value={days}
+                onChange={(e) => setDays(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              />
+            </div>
+          </div>
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
+            >
+              {tc("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={pending || paidRunning}
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+            >
+              {pending ? tc("pleaseWait") : t("confirm")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Grant/revoke paid extra branch slots (each EXTRA_BRANCH_PRICE_MINOR). The
 // input is the new TOTAL of extras; raising it records a Payment for the added
 // slots (amount overridable for discounts), lowering it records nothing.
@@ -598,9 +851,14 @@ function ExtraBranchesModal({ row, onClose }: { row: AccountRow; onClose: () => 
           {t("branchesTitle", { name: r_name(row) })}
         </h2>
         <p className="mt-1 text-xs text-faint-foreground">
-          {t("branchesUsage", { count: row.branchCount, limit: row.branchLimit })}
+          {t("branchesUsage", {
+            count: row.branchCount,
+            limit: row.branchLimit,
+          })}
           {" · "}
-          {t("branchesNote", { price: (EXTRA_BRANCH_PRICE_MINOR / 100).toFixed(0) })}
+          {t("branchesNote", {
+            price: (EXTRA_BRANCH_PRICE_MINOR / 100).toFixed(0),
+          })}
         </p>
 
         <form onSubmit={submit} className="mt-4 space-y-4">

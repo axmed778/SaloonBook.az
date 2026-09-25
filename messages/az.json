@@ -870,6 +870,18 @@
     "branchesNote": "Hər əlavə filial — {price} ₼. Azaltmaq ödəniş yaratmır.",
     "extrasLabel": "Əlavə slot (cəmi)",
     "errExtrasRange": "Əlavə slot 0–50 arası olmalıdır.",
+    "trialBtn": "Sınaq",
+    "trialBtnTitle": "Pulsuz sınaq müddəti ver",
+    "trialTitle": "Sınaq müddəti — {name}",
+    "trialNote": "Ödəniş yaradılmır. Sınaq {from} hesablanır.",
+    "fromTrialEnd": "hazırkı sınağın bitməsindən",
+    "trialDaysLabel": "Gün",
+    "trialActiveWarning": "Salonun ödənişli planı hələ aktivdir — sınaq ödənilmiş müddəti əvəz edərdi. Əvvəlcə ödənişi silin (müddəti qısaldaraq) və ya müddətin bitməsini gözləyin.",
+    "errTrialDaysRange": "Gün 1–90 arası olmalıdır.",
+    "deletePayment": "Sil",
+    "deletePaymentTitle": "Ödənişi sil — {name}",
+    "deletePaymentShorten": "Ödənişli müddəti {months} ay qısalt",
+    "deletePaymentShortenHint": "Yalnız plan ödənişi üçün. Müddət keçmişdə qalarsa, hesab pulsuz plana keçir.",
     "waSender": {
       "button": "WhatsApp",
       "buttonTitle": "Salonun öz WhatsApp nömrəsi",
@@ -954,7 +966,9 @@
       "salonNotFound": "Salon tapılmadı.",
       "senderPending": "Məlumatlar saxlandı, amma Meta yoxlaması alınmadı — nömrə gözləmədədir.",
       "senderNotFound": "WhatsApp nömrəsi tapılmadı.",
-      "accountNotFound": "Hesab tapılmadı."
+      "accountNotFound": "Hesab tapılmadı.",
+      "paymentNotFound": "Ödəniş tapılmadı.",
+      "trialWhilePaid": "Ödənişli müddət hələ bitməyib — sınaq verilə bilməz."
     }
   },
   "Payments": {

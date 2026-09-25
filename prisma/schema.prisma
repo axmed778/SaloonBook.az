@@ -762,6 +762,8 @@ model Payment {
   method         String       @default("manual") // manual | cash | card_to_card | (future) psp
   recordedBy     String? // admin user id; null once automated
   periodMonths   Int          @default(1)
+  // "plan" (extended currentPeriodEnd) | "branches" (extra branch slots only).
+  purpose        String       @default("plan")
   paidAt         DateTime     @default(now()) @db.Timestamptz(6)
   subscription   Subscription @relation(fields: [subscriptionId], references: [id])
 

@@ -7,7 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { intlLocale } from "@/i18n/format";
 import { PLAN_LIMITS, EXTRA_BRANCH_PRICE_MINOR, featuresFor, limitsFor } from "@/lib/plans";
-import { addMonths, bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
+import { addDays, addMonths, bakuToday, bakuYmd, formatBakuDate } from "@/lib/time";
 import { effectivePlan, subscriptionWindow } from "@/lib/subscription";
 import { encryptSecret, hasEncryptionKey } from "@/lib/crypto";
 import { fetchWhatsAppNumberInfo } from "@/lib/whatsapp";
@@ -84,6 +84,154 @@ export async function activateSubscription(input: unknown): Promise<ActionResult
           previousStatus: sub.status,
           previousPlan: sub.plan,
           currentPeriodEnd: periodEnd.toISOString(),
+        },
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+const trialSchema = z.object({
+  accountId: z.string().uuid(),
+  plan: z.enum(["START", "BASIC", "PRO"]),
+  days: z.number().int().min(1).max(90),
+});
+
+/**
+ * Grant a (repeat) free trial by hand: status → TRIALING with a fresh end date.
+ * A trial that is still running is extended from its current end; otherwise the
+ * new trial starts today. No Payment is written — a trial is free — but the
+ * AuditLog keeps who granted it and what the account was on before.
+ */
+export async function grantTrial(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = trialSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  const sub = await prisma.subscription.findUnique({
+    where: { accountId: d.accountId },
+    select: { id: true, plan: true, status: true, trialEndsAt: true, currentPeriodEnd: true },
+  });
+  if (!sub) return { ok: false, error: t("subNotFound") };
+
+  const now = new Date();
+  // A trial would replace a paid period (effectivePlan only reads trialEndsAt
+  // while TRIALING), cutting off access the salon paid for. Refuse instead.
+  if (sub.status === "ACTIVE" && (!sub.currentPeriodEnd || sub.currentPeriodEnd > now)) {
+    return { ok: false, error: t("trialWhilePaid") };
+  }
+  const base =
+    sub.status === "TRIALING" && sub.trialEndsAt && sub.trialEndsAt > now ? sub.trialEndsAt : now;
+  const trialEndsAt = addDays(base, d.days);
+
+  await prisma.$transaction([
+    prisma.subscription.update({
+      where: { id: sub.id },
+      data: { plan: d.plan, status: "TRIALING", trialEndsAt },
+    }),
+    prisma.auditLog.create({
+      data: {
+        accountId: d.accountId,
+        actorUserId: adminId,
+        action: "subscription.trial",
+        target: sub.id,
+        meta: {
+          plan: d.plan,
+          days: d.days,
+          previousStatus: sub.status,
+          previousPlan: sub.plan,
+          trialEndsAt: trialEndsAt.toISOString(),
+        },
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+const deletePaymentSchema = z.object({
+  paymentId: z.string().uuid(),
+  /** Also take the payment's months back off the paid period. */
+  shortenPeriod: z.boolean(),
+});
+
+/**
+ * Remove a payment recorded by mistake. By default only the Payment row goes
+ * (revenue and history are corrected, access is untouched). With
+ * `shortenPeriod` the paid period is pulled back by the payment's months; if
+ * that leaves nothing in the future the account drops to FREE_DOWNGRADED.
+ * The deleted row is kept in full in the AuditLog.
+ */
+export async function deletePayment(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = deletePaymentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: d.paymentId },
+    select: {
+      id: true,
+      amountMinor: true,
+      periodMonths: true,
+      purpose: true,
+      method: true,
+      paidAt: true,
+      subscription: {
+        select: { id: true, accountId: true, status: true, currentPeriodEnd: true },
+      },
+    },
+  });
+  if (!payment) return { ok: false, error: t("paymentNotFound") };
+  const sub = payment.subscription;
+
+  let subUpdate: { status?: "FREE_DOWNGRADED"; currentPeriodEnd: Date } | null = null;
+  // Branch-slot payments never extended the period, so there is nothing to undo.
+  if (d.shortenPeriod && payment.purpose !== "plan") {
+    return { ok: false, error: t("invalidData") };
+  }
+  if (d.shortenPeriod && sub.currentPeriodEnd) {
+    const newEnd = addMonths(sub.currentPeriodEnd, -payment.periodMonths);
+    subUpdate =
+      newEnd > new Date()
+        ? { currentPeriodEnd: newEnd }
+        : { currentPeriodEnd: newEnd, status: "FREE_DOWNGRADED" };
+  }
+
+  await prisma.$transaction([
+    prisma.payment.delete({ where: { id: payment.id } }),
+    ...(subUpdate
+      ? [prisma.subscription.update({ where: { id: sub.id }, data: subUpdate })]
+      : []),
+    prisma.auditLog.create({
+      data: {
+        accountId: sub.accountId,
+        actorUserId: adminId,
+        action: "payment.delete",
+        target: payment.id,
+        meta: {
+          amountMinor: payment.amountMinor,
+          periodMonths: payment.periodMonths,
+          method: payment.method,
+          purpose: payment.purpose,
+          paidAt: payment.paidAt.toISOString(),
+          shortenPeriod: d.shortenPeriod,
+          previousStatus: sub.status,
+          previousPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+          ...(subUpdate
+            ? {
+                currentPeriodEnd: subUpdate.currentPeriodEnd.toISOString(),
+                status: subUpdate.status ?? sub.status,
+              }
+            : {}),
         },
       },
     }),
@@ -262,6 +410,7 @@ export async function setExtraBranches(input: unknown): Promise<ActionResult> {
               amountMinor,
               method: "manual",
               periodMonths: 1,
+              purpose: "branches",
               recordedBy: adminId,
             },
           }),
