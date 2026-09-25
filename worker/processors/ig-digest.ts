@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
 import { captureError } from "../../src/lib/observability";
+import { withDbRetry } from "../../src/lib/db-retry";
 import {
   IG_DIGEST_MESSAGES_PER_THREAD,
   IG_DIGEST_MODEL,
@@ -28,8 +29,18 @@ const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, 
  * the page simply keeps showing yesterday's digest — so every failure is logged
  * (and reported, when Sentry/the alert webhook is configured) and the job
  * completes. No WhatsApp message goes out for a day that produced no digest.
+ *
+ * Every path through this function logs exactly one "start" line and one "done"
+ * or "failed" line. That bracketing is the point: until it existed, the earliest
+ * trace of a run was the line written AFTER the Claude call — on 2026-09-25 that
+ * was 06:06 for a job scheduled at 05:50, because triaging ~80 threads in one
+ * request takes minutes. Looking at 05:50 therefore showed nothing at all for a
+ * job that had in fact started and would go on to succeed, which made "the
+ * scheduler never fired" and "the digest is still thinking" indistinguishable.
  */
 export async function runIgDigest(now: Date = new Date()): Promise<void> {
+  console.log("[ig-digest] start");
+
   let saved: { id: string; count: number } | null;
   try {
     saved = await generateIgDigest(now);
@@ -37,7 +48,10 @@ export async function runIgDigest(now: Date = new Date()): Promise<void> {
     logFailure("generate", e);
     return;
   }
-  if (!saved) return;
+  if (!saved) {
+    console.log("[ig-digest] done, skipped (no digest generated)");
+    return;
+  }
 
   try {
     await notifyDigest(saved.count);
@@ -45,22 +59,31 @@ export async function runIgDigest(now: Date = new Date()): Promise<void> {
     // The digest is already saved and visible; only the nudge was lost.
     logFailure("notify", e);
   }
+  console.log(`[ig-digest] done, ${saved.count} items`);
 }
 
 async function generateIgDigest(now: Date): Promise<{ id: string; count: number } | null> {
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
-    console.warn("[worker:ig-digest] ANTHROPIC_API_KEY is unset — skipping today's digest");
+    console.warn("[ig-digest] ANTHROPIC_API_KEY is unset — skipping today's digest");
     return null;
   }
 
-  const threads = await loadThreads(now);
+  // The first database touch of the day's run, and so the one that meets a
+  // suspended Neon compute: it autosuspends after five idle minutes, and the
+  // query that wakes it fails outright ("Can't reach database server") rather
+  // than waiting. A scheduled job is by definition what arrives after an idle
+  // stretch, and a day lost that way is not retried at all, since runIgDigest
+  // deliberately never throws and the scheduler fires only once a day.
+  // Retrying only the read is safe (both queries inside are selects), and once it
+  // succeeds the compute is awake for the write that follows.
+  const threads = await withDbRetry("ig-digest", () => loadThreads(now));
 
   let items: ReturnType<typeof buildDigestItems> = [];
   if (threads.length > 0) {
     const text = await askClaude(buildDigestPrompt(threads, now));
     const { verdicts, rejected } = parseDigestResponse(text);
     if (rejected > 0) {
-      console.warn(`[worker:ig-digest] dropped ${rejected} malformed item(s) from the answer`);
+      console.warn(`[ig-digest] dropped ${rejected} malformed item(s) from the answer`);
     }
     items = buildDigestItems(verdicts, threads, now);
   }
@@ -72,7 +95,7 @@ async function generateIgDigest(now: Date): Promise<{ id: string; count: number 
     select: { id: true },
   });
   console.log(
-    `[worker:ig-digest] digest ${digest.id}: ${items.length} task(s) from ${threads.length} thread(s)`,
+    `[ig-digest] digest ${digest.id}: ${items.length} task(s) from ${threads.length} thread(s)`,
   );
   return { id: digest.id, count: items.length };
 }
@@ -150,7 +173,7 @@ async function askClaude(prompt: string): Promise<string> {
 async function notifyDigest(count: number): Promise<void> {
   const phone = process.env.DIGEST_PHONE?.trim();
   if (!phone) {
-    console.warn("[worker:ig-digest] DIGEST_PHONE is unset — digest saved, no WhatsApp sent");
+    console.warn("[ig-digest] DIGEST_PHONE is unset — digest saved, no WhatsApp sent");
     return;
   }
   const result = await sendWhatsAppTemplate({
@@ -159,7 +182,7 @@ async function notifyDigest(count: number): Promise<void> {
     languageCode: "az",
     components: digestTemplateComponents(count, `${APP_URL}${IG_DIGEST_PATH}`),
   });
-  if (!result.sandbox) console.log("[worker:ig-digest] WhatsApp notice sent");
+  if (!result.sandbox) console.log("[ig-digest] WhatsApp notice sent");
 }
 
 function logFailure(stage: "generate" | "notify", e: unknown): void {
@@ -171,7 +194,11 @@ function logFailure(stage: "generate" | "notify", e: unknown): void {
       : e instanceof Error
         ? e.message
         : String(e);
-  console.error(`[worker:ig-digest] ${stage} failed — ${detail}`);
+  // Reads as "[ig-digest] failed: …" so it pairs with the "start" line above and
+  // one grep for `[ig-digest]` shows a run's whole outcome; the stage says which
+  // half of the job died, which matters because a failed `notify` still leaves a
+  // saved, visible digest behind.
+  console.error(`[ig-digest] failed: ${stage} — ${detail}`);
   void captureError(e, {
     source: "worker",
     level: "warning",
