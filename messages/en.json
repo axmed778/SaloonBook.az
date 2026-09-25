@@ -875,6 +875,10 @@
     "trialDaysLabel": "Days",
     "trialActiveWarning": "This salon has an active paid plan — granting a trial switches its status to Trial.",
     "errTrialDaysRange": "Days must be between 1 and 90.",
+    "deletePayment": "Delete",
+    "deletePaymentTitle": "Delete payment — {name}",
+    "deletePaymentShorten": "Shorten the paid period by {months} mo.",
+    "deletePaymentShortenHint": "Plan payments only. If the end date falls in the past, the account drops to the free plan.",
     "waSender": {
       "button": "WhatsApp",
       "buttonTitle": "Salon's own WhatsApp number",
@@ -962,7 +966,8 @@
       "salonNotFound": "Salon not found.",
       "senderPending": "Credentials saved, but Meta validation failed — the number is pending.",
       "senderNotFound": "WhatsApp number not found.",
-      "accountNotFound": "Account not found."
+      "accountNotFound": "Account not found.",
+      "paymentNotFound": "Payment not found."
     }
   },
   "Payments": {

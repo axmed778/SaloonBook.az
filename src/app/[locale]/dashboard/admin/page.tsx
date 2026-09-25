@@ -177,6 +177,7 @@ export default async function AdminPage() {
       lastLoginLabel: lastLoginAt ? formatBakuDate(bakuYmd(lastLoginAt), df) : null,
       payments: (sub?.payments ?? []).map((p) => ({
         id: p.id,
+        months: p.periodMonths,
         label: t("paymentLabel", {
           amount: (p.amountMinor / 100).toFixed(2),
           months: p.periodMonths,

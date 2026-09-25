@@ -878,6 +878,10 @@
     "trialDaysLabel": "Gün",
     "trialActiveWarning": "Salonun ödənişli planı aktivdir — sınaq verilsə, status «Sınaq»a keçəcək.",
     "errTrialDaysRange": "Gün 1–90 arası olmalıdır.",
+    "deletePayment": "Sil",
+    "deletePaymentTitle": "Ödənişi sil — {name}",
+    "deletePaymentShorten": "Ödənişli müddəti {months} ay qısalt",
+    "deletePaymentShortenHint": "Yalnız plan ödənişi üçün. Müddət keçmişdə qalarsa, hesab pulsuz plana keçir.",
     "waSender": {
       "button": "WhatsApp",
       "buttonTitle": "Salonun öz WhatsApp nömrəsi",
@@ -962,7 +966,8 @@
       "salonNotFound": "Salon tapılmadı.",
       "senderPending": "Məlumatlar saxlandı, amma Meta yoxlaması alınmadı — nömrə gözləmədədir.",
       "senderNotFound": "WhatsApp nömrəsi tapılmadı.",
-      "accountNotFound": "Hesab tapılmadı."
+      "accountNotFound": "Hesab tapılmadı.",
+      "paymentNotFound": "Ödəniş tapılmadı."
     }
   },
   "Payments": {

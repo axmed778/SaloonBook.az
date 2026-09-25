@@ -875,6 +875,10 @@
     "trialDaysLabel": "Дней",
     "trialActiveWarning": "У салона активен платный план — после выдачи пробного статус сменится на «Пробный».",
     "errTrialDaysRange": "Количество дней — от 1 до 90.",
+    "deletePayment": "Удалить",
+    "deletePaymentTitle": "Удалить платёж — {name}",
+    "deletePaymentShorten": "Сократить оплаченный период на {months} мес.",
+    "deletePaymentShortenHint": "Только для оплаты плана. Если срок окажется в прошлом, аккаунт перейдёт на бесплатный план.",
     "waSender": {
       "button": "WhatsApp",
       "buttonTitle": "Свой номер WhatsApp салона",
@@ -962,7 +966,8 @@
       "salonNotFound": "Салон не найден.",
       "senderPending": "Данные сохранены, но проверка Meta не прошла — номер в ожидании.",
       "senderNotFound": "Номер WhatsApp не найден.",
-      "accountNotFound": "Аккаунт не найден."
+      "accountNotFound": "Аккаунт не найден.",
+      "paymentNotFound": "Платёж не найден."
     }
   },
   "Payments": {

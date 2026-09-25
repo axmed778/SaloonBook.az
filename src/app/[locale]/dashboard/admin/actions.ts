@@ -150,6 +150,86 @@ export async function grantTrial(input: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+const deletePaymentSchema = z.object({
+  paymentId: z.string().uuid(),
+  /** Also take the payment's months back off the paid period. */
+  shortenPeriod: z.boolean(),
+});
+
+/**
+ * Remove a payment recorded by mistake. By default only the Payment row goes
+ * (revenue and history are corrected, access is untouched). With
+ * `shortenPeriod` the paid period is pulled back by the payment's months; if
+ * that leaves nothing in the future the account drops to FREE_DOWNGRADED.
+ * The deleted row is kept in full in the AuditLog.
+ */
+export async function deletePayment(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = deletePaymentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  const payment = await prisma.payment.findUnique({
+    where: { id: d.paymentId },
+    select: {
+      id: true,
+      amountMinor: true,
+      periodMonths: true,
+      method: true,
+      paidAt: true,
+      subscription: {
+        select: { id: true, accountId: true, status: true, currentPeriodEnd: true },
+      },
+    },
+  });
+  if (!payment) return { ok: false, error: t("paymentNotFound") };
+  const sub = payment.subscription;
+
+  let subUpdate: { status?: "FREE_DOWNGRADED"; currentPeriodEnd: Date } | null = null;
+  if (d.shortenPeriod && sub.currentPeriodEnd) {
+    const newEnd = addMonths(sub.currentPeriodEnd, -payment.periodMonths);
+    subUpdate =
+      newEnd > new Date()
+        ? { currentPeriodEnd: newEnd }
+        : { currentPeriodEnd: newEnd, status: "FREE_DOWNGRADED" };
+  }
+
+  await prisma.$transaction([
+    prisma.payment.delete({ where: { id: payment.id } }),
+    ...(subUpdate
+      ? [prisma.subscription.update({ where: { id: sub.id }, data: subUpdate })]
+      : []),
+    prisma.auditLog.create({
+      data: {
+        accountId: sub.accountId,
+        actorUserId: adminId,
+        action: "payment.delete",
+        target: payment.id,
+        meta: {
+          amountMinor: payment.amountMinor,
+          periodMonths: payment.periodMonths,
+          method: payment.method,
+          paidAt: payment.paidAt.toISOString(),
+          shortenPeriod: d.shortenPeriod,
+          previousStatus: sub.status,
+          previousPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+          ...(subUpdate
+            ? {
+                currentPeriodEnd: subUpdate.currentPeriodEnd.toISOString(),
+                status: subUpdate.status ?? sub.status,
+              }
+            : {}),
+        },
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
 // --- Per-salon WhatsApp sender ("own number", Pro) ---------------------------
 // Store a salon's own Meta WhatsApp credentials, validate them against Meta, and
 // flip the sender to ACTIVE (so resolveWhatsAppSender routes this salon's sends
