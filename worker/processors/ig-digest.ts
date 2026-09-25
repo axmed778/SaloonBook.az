@@ -8,15 +8,16 @@ import {
   IG_DIGEST_MESSAGES_PER_THREAD,
   IG_DIGEST_MODEL,
   IG_DIGEST_PATH,
-  IG_DIGEST_SYSTEM_PROMPT,
   IG_DIGEST_TEMPLATE,
   IG_DIGEST_WINDOW_DAYS,
   buildDigestItems,
   buildDigestPrompt,
+  buildDigestSystemPrompt,
   digestTemplateComponents,
   parseDigestResponse,
   type IgDigestThread,
 } from "../../src/lib/ig-digest";
+import { loadDmPlaybook } from "../playbook";
 
 const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
@@ -80,7 +81,10 @@ async function generateIgDigest(now: Date): Promise<{ id: string; count: number 
 
   let items: ReturnType<typeof buildDigestItems> = [];
   if (threads.length > 0) {
-    const text = await askClaude(buildDigestPrompt(threads, now));
+    // Read before the request, and allowed to throw: a digest whose drafts did
+    // not come from the playbook is worse than no digest (see worker/playbook.ts).
+    const playbook = loadDmPlaybook();
+    const text = await askClaude(buildDigestSystemPrompt(playbook), buildDigestPrompt(threads, now));
     const { verdicts, rejected } = parseDigestResponse(text);
     if (rejected > 0) {
       console.warn(`[ig-digest] dropped ${rejected} malformed item(s) from the answer`);
@@ -114,7 +118,9 @@ async function loadThreads(now: Date): Promise<IgDigestThread[]> {
       messages: {
         orderBy: { sentAt: "desc" },
         take: IG_DIGEST_MESSAGES_PER_THREAD,
-        select: { fromMe: true, text: true, attach: true },
+        // sentAt drives daysAwaitingLead: when the last message is mine, its
+        // timestamp is when the follow-up clock started.
+        select: { fromMe: true, text: true, attach: true, sentAt: true },
       },
     },
   });
@@ -150,14 +156,14 @@ async function loadThreads(now: Date): Promise<IgDigestThread[]> {
  * natural end — hitting max_tokens mid-array, a refusal — is a failed run: a
  * truncated array would silently lose the leads at its tail.
  */
-async function askClaude(prompt: string): Promise<string> {
+async function askClaude(system: string, prompt: string): Promise<string> {
   const client = new Anthropic();
   const message = await client.messages
     .stream({
       model: IG_DIGEST_MODEL,
       max_tokens: 64_000,
       thinking: { type: "adaptive" },
-      system: IG_DIGEST_SYSTEM_PROMPT,
+      system,
       messages: [{ role: "user", content: prompt }],
     })
     .finalMessage();

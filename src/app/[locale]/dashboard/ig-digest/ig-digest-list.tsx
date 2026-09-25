@@ -144,16 +144,27 @@ function DigestCard({
             </div>
           </dl>
 
-          <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
-            <p className="whitespace-pre-wrap break-words text-sm text-foreground">{item.draft}</p>
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className="mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition hover:bg-muted"
-            >
-              {copied ? t("copied") : t("copy")}
-            </button>
-          </div>
+          {/* No draft means the playbook scenario still needs a decision (an
+              unresolved [ПРОВЕРЬ] / [РЕШИ]); `reason` names what. An empty box
+              with a Copy button would just look broken. */}
+          {item.draft ? (
+            <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                {item.draft}
+              </p>
+              <button
+                type="button"
+                onClick={() => void copy()}
+                className="mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition hover:bg-muted"
+              >
+                {copied ? t("copied") : t("copy")}
+              </button>
+            </div>
+          ) : (
+            <p className="mt-3 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+              {t("noDraft")}
+            </p>
+          )}
         </div>
       </div>
     </li>
