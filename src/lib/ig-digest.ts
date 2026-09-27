@@ -19,6 +19,25 @@ export const IG_DIGEST_WINDOW_DAYS = 30;
 export const IG_DIGEST_MESSAGES_PER_THREAD = 12;
 
 /**
+ * The most IG_DIGEST_MODEL can write in one response, thinking included — the
+ * two constants move together. At 64K, the first two days with the whole
+ * playbook in the system prompt (2026-09-26/27, ~80 threads in one request) ran
+ * out of room mid-array, and the truncated answer failed the run after it had
+ * been paid for.
+ */
+export const IG_DIGEST_MAX_TOKENS = 128_000;
+
+/**
+ * The most threads one Claude request carries. The answer grows with the thread
+ * count (a verdict and a playbook draft for each) and the thread count grows
+ * with Direct traffic, so no single max_tokens would hold forever; batches keep
+ * each response far below the ceiling. At the ~800 output tokens per thread the
+ * failed runs imply, 25 threads use about a sixth of IG_DIGEST_MAX_TOKENS.
+ * Each batch resends the playbook, so smaller is not free either.
+ */
+export const IG_DIGEST_BATCH_SIZE = 25;
+
+/**
  * Meta-approved WhatsApp template sent to DIGEST_PHONE once the digest is saved.
  * Body: {{1}} number of tasks, {{2}} link to the page. See
  * docs/whatsapp-templates.md — the parameter order here must match it.
@@ -252,7 +271,7 @@ export function formatTranscript(messages: IgDigestThread["messages"]): string {
 }
 
 /**
- * The single user message: every thread under a header carrying its igUserId,
+ * The user message for one batch: every thread under a header carrying its igUserId,
  * which is how an answer is matched back to a lead. The system prompt is the
  * founder's text verbatim; the field list for the answer lives here instead, so
  * the two can be edited independently.
@@ -275,6 +294,54 @@ export function buildDigestPrompt(threads: IgDigestThread[], now: Date): string 
     `где igUserId скопирован из заголовка переписки без изменений.\n\n` +
     blocks.join("\n\n")
   );
+}
+
+/**
+ * Split the threads into as few batches as IG_DIGEST_BATCH_SIZE allows, evenly:
+ * 82 threads at 25 become 21 + 21 + 20 + 20, not 25 + 25 + 25 + 7. Order is
+ * kept, so the freshest threads stay together in the first batch.
+ */
+export function splitIntoBatches<T>(items: T[], maxSize: number = IG_DIGEST_BATCH_SIZE): T[][] {
+  if (items.length === 0) return [];
+  const count = Math.ceil(items.length / maxSize);
+  const base = Math.floor(items.length / count);
+  const extra = items.length % count;
+  const batches: T[][] = [];
+  let start = 0;
+  for (let i = 0; i < count; i++) {
+    const size = base + (i < extra ? 1 : 0);
+    batches.push(items.slice(start, start + size));
+    start += size;
+  }
+  return batches;
+}
+
+/** How big the run was when it failed — filled in as the run learns it. */
+export interface IgDigestRunContext {
+  threads?: number;
+  batches?: number;
+  /** The Claude request in flight, if the failure came from one. */
+  batch?: { number: number; threads: number; systemChars: number; promptChars: number };
+}
+
+/**
+ * The size half of a "[ig-digest] failed" line. A failure's cause is usually
+ * the request's size, and the error alone does not say how big that was — so
+ * the thread count and the prompt length ride along with every failure.
+ */
+export function formatRunContext(ctx: IgDigestRunContext): string {
+  if (ctx.threads === undefined) return "threads=? (failed before they were loaded)";
+  const parts = [`threads=${ctx.threads}`];
+  if (ctx.batches !== undefined) parts.push(`batches=${ctx.batches}`);
+  const b = ctx.batch;
+  if (b) {
+    parts.push(
+      `batch ${b.number}/${ctx.batches ?? "?"}: ${b.threads} thread(s), ` +
+        `prompt ≈ ${b.systemChars + b.promptChars} chars ` +
+        `(system ${b.systemChars} + threads ${b.promptChars})`,
+    );
+  }
+  return parts.join(", ");
 }
 
 const verdictSchema = z.object({

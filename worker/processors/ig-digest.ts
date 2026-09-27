@@ -5,6 +5,7 @@ import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
 import { captureError } from "../../src/lib/observability";
 import { withDbRetry } from "../../src/lib/db-retry";
 import {
+  IG_DIGEST_MAX_TOKENS,
   IG_DIGEST_MESSAGES_PER_THREAD,
   IG_DIGEST_MODEL,
   IG_DIGEST_PATH,
@@ -14,8 +15,12 @@ import {
   buildDigestPrompt,
   buildDigestSystemPrompt,
   digestTemplateComponents,
+  formatRunContext,
   parseDigestResponse,
+  splitIntoBatches,
+  type IgDigestRunContext,
   type IgDigestThread,
+  type IgDigestVerdict,
 } from "../../src/lib/ig-digest";
 import { loadDmPlaybook } from "../playbook";
 
@@ -23,8 +28,8 @@ const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, 
 
 /**
  * The daily Direct digest: load the last month's conversations, have Claude
- * triage them in one request, store the result, then ping the founder on
- * WhatsApp with the count and a link.
+ * triage them in batches of IG_DIGEST_BATCH_SIZE, store the merged result, then
+ * ping the founder on WhatsApp with the count and a link.
  *
  * Never throws. A failed day is not worth a retry storm or a crashed worker —
  * the page simply keeps showing yesterday's digest — so every failure is logged
@@ -42,11 +47,12 @@ const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, 
 export async function runIgDigest(now: Date = new Date()): Promise<void> {
   console.log("[ig-digest] start");
 
+  const ctx: IgDigestRunContext = {};
   let saved: { id: string; count: number } | null;
   try {
-    saved = await generateIgDigest(now);
+    saved = await generateIgDigest(now, ctx);
   } catch (e) {
-    logFailure("generate", e);
+    logFailure("generate", e, ctx);
     return;
   }
   if (!saved) {
@@ -63,7 +69,10 @@ export async function runIgDigest(now: Date = new Date()): Promise<void> {
   console.log(`[ig-digest] done, ${saved.count} items`);
 }
 
-async function generateIgDigest(now: Date): Promise<{ id: string; count: number } | null> {
+async function generateIgDigest(
+  now: Date,
+  ctx: IgDigestRunContext,
+): Promise<{ id: string; count: number } | null> {
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
     console.warn("[ig-digest] ANTHROPIC_API_KEY is unset — skipping today's digest");
     return null;
@@ -78,18 +87,14 @@ async function generateIgDigest(now: Date): Promise<{ id: string; count: number 
   // Retrying only the read is safe (both queries inside are selects), and once it
   // succeeds the compute is awake for the write that follows.
   const threads = await withDbRetry("ig-digest", () => loadThreads(now));
+  ctx.threads = threads.length;
 
   let items: ReturnType<typeof buildDigestItems> = [];
   if (threads.length > 0) {
     // Read before the request, and allowed to throw: a digest whose drafts did
     // not come from the playbook is worse than no digest (see worker/playbook.ts).
-    const playbook = loadDmPlaybook();
-    const text = await askClaude(buildDigestSystemPrompt(playbook), buildDigestPrompt(threads, now));
-    const { verdicts, rejected } = parseDigestResponse(text);
-    if (rejected > 0) {
-      console.warn(`[ig-digest] dropped ${rejected} malformed item(s) from the answer`);
-    }
-    items = buildDigestItems(verdicts, threads, now);
+    const system = buildDigestSystemPrompt(loadDmPlaybook());
+    items = buildDigestItems(await triage(system, threads, now, ctx), threads, now);
   }
 
   // A quiet month still gets a row: "nothing to do today" is an answer, and
@@ -151,29 +156,78 @@ async function loadThreads(now: Date): Promise<IgDigestThread[]> {
 }
 
 /**
- * One request, every thread in it. Streamed because the answer carries a draft
- * per lead and can run long; finalMessage() just collects it. Anything but a
- * natural end — hitting max_tokens mid-array, a refusal — is a failed run: a
- * truncated array would silently lose the leads at its tail.
+ * Every thread's verdict, one Claude request per batch, merged in batch order.
+ *
+ * Batches run one after another, not in parallel: the total output is the same
+ * either way, and parallel requests would meet the output-tokens-per-minute
+ * limit sooner. All or nothing, as before — a failed batch fails the run rather
+ * than saving a digest that quietly lacks a batch's worth of leads.
  */
-async function askClaude(system: string, prompt: string): Promise<string> {
+async function triage(
+  system: string,
+  threads: IgDigestThread[],
+  now: Date,
+  ctx: IgDigestRunContext,
+): Promise<IgDigestVerdict[]> {
+  const batches = splitIntoBatches(threads);
+  ctx.batches = batches.length;
+
+  const verdicts: IgDigestVerdict[] = [];
+  for (const [i, batch] of batches.entries()) {
+    const prompt = buildDigestPrompt(batch, now);
+    ctx.batch = {
+      number: i + 1,
+      threads: batch.length,
+      systemChars: system.length,
+      promptChars: prompt.length,
+    };
+    const { text, outputTokens } = await askClaude(system, prompt);
+    const parsed = parseDigestResponse(text);
+    verdicts.push(...parsed.verdicts);
+    // Output tokens per batch, logged on success too: the number that crept up
+    // to max_tokens is visible here long before it gets there.
+    console.log(
+      `[ig-digest] batch ${i + 1}/${batches.length}: ${batch.length} thread(s), ` +
+        `prompt ≈ ${system.length + prompt.length} chars, ${outputTokens} output tokens` +
+        (parsed.rejected > 0 ? `, dropped ${parsed.rejected} malformed item(s)` : ""),
+    );
+  }
+  ctx.batch = undefined;
+  return verdicts;
+}
+
+/**
+ * One request. Streamed because the answer carries a draft per lead and can run
+ * long; finalMessage() just collects it. Anything but a natural end — hitting
+ * max_tokens mid-array, a refusal — is a failed run: a truncated array would
+ * silently lose the leads at its tail.
+ */
+async function askClaude(
+  system: string,
+  prompt: string,
+): Promise<{ text: string; outputTokens: number }> {
   const client = new Anthropic();
   const message = await client.messages
     .stream({
       model: IG_DIGEST_MODEL,
-      max_tokens: 64_000,
+      max_tokens: IG_DIGEST_MAX_TOKENS,
       thinking: { type: "adaptive" },
       system,
       messages: [{ role: "user", content: prompt }],
     })
     .finalMessage();
 
+  const outputTokens = message.usage.output_tokens;
   if (message.stop_reason !== "end_turn") {
-    throw new Error(`Claude stopped with stop_reason=${message.stop_reason}`);
+    throw new Error(
+      `Claude stopped with stop_reason=${message.stop_reason} ` +
+        `after ${outputTokens} output tokens (max_tokens=${IG_DIGEST_MAX_TOKENS})`,
+    );
   }
-  return message.content
+  const text = message.content
     .flatMap((block) => (block.type === "text" ? [block.text] : []))
     .join("");
+  return { text, outputTokens };
 }
 
 async function notifyDigest(count: number): Promise<void> {
@@ -191,7 +245,7 @@ async function notifyDigest(count: number): Promise<void> {
   if (!result.sandbox) console.log("[ig-digest] WhatsApp notice sent");
 }
 
-function logFailure(stage: "generate" | "notify", e: unknown): void {
+function logFailure(stage: "generate" | "notify", e: unknown, ctx?: IgDigestRunContext): void {
   // Status first when it's an API error: 401 (bad key), 429 and 529 (overloaded)
   // each call for something different, and the message alone buries it.
   const detail =
@@ -204,10 +258,16 @@ function logFailure(stage: "generate" | "notify", e: unknown): void {
   // one grep for `[ig-digest]` shows a run's whole outcome; the stage says which
   // half of the job died, which matters because a failed `notify` still leaves a
   // saved, visible digest behind.
-  console.error(`[ig-digest] failed: ${stage} — ${detail}`);
+  //
+  // A generate failure also carries the run's size (threads, and the batch and
+  // prompt length in flight): "stop_reason=max_tokens" alone never said that
+  // ~80 threads had outgrown one response, and seeing that cost paid runs.
+  const size = ctx ? ` | ${formatRunContext(ctx)}` : "";
+  console.error(`[ig-digest] failed: ${stage} — ${detail}${size}`);
   void captureError(e, {
     source: "worker",
     level: "warning",
     tags: { kind: "ig-digest", stage },
+    ...(ctx ? { extra: { ...ctx } } : {}),
   });
 }
