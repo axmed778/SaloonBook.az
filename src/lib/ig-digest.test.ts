@@ -5,11 +5,14 @@ import {
   buildDigestPrompt,
   buildDigestSystemPrompt,
   digestTemplateComponents,
+  IG_DIGEST_BATCH_SIZE,
   flattenMarkdownLinks,
+  formatRunContext,
   formatTranscript,
   idleStats,
   parseDigestResponse,
   readDigestItems,
+  splitIntoBatches,
   unresolvedPlaceholders,
   type IgDigestThread,
   type IgDigestVerdict,
@@ -224,6 +227,46 @@ describe("buildDigestPrompt", () => {
       "### igUserId: 333 | Name 333 | daysIdle: null | daysSinceMyReply: 0 | daysAwaitingLead: 2",
     );
     expect(prompt).toContain("LEAD: Salam");
+  });
+});
+
+describe("splitIntoBatches", () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => i);
+
+  it("splits evenly instead of leaving a runt batch at the end", () => {
+    const batches = splitIntoBatches(ids(82), 25);
+    expect(batches.map((b) => b.length)).toEqual([21, 21, 20, 20]);
+    expect(batches.flat()).toEqual(ids(82));
+  });
+
+  it("keeps a run that fits in one request as one batch", () => {
+    expect(splitIntoBatches(ids(IG_DIGEST_BATCH_SIZE)).map((b) => b.length)).toEqual([
+      IG_DIGEST_BATCH_SIZE,
+    ]);
+    expect(splitIntoBatches(ids(26), 25).map((b) => b.length)).toEqual([13, 13]);
+  });
+
+  it("returns no batches for no threads", () => {
+    expect(splitIntoBatches([], 25)).toEqual([]);
+  });
+});
+
+describe("formatRunContext", () => {
+  it("names the thread count, the batch and its prompt length", () => {
+    expect(
+      formatRunContext({
+        threads: 82,
+        batches: 4,
+        batch: { number: 3, threads: 20, systemChars: 50_000, promptChars: 12_345 },
+      }),
+    ).toBe(
+      "threads=82, batches=4, batch 3/4: 20 thread(s), prompt ≈ 62345 chars (system 50000 + threads 12345)",
+    );
+  });
+
+  it("still says what it knows when no request was in flight", () => {
+    expect(formatRunContext({ threads: 82, batches: 4 })).toBe("threads=82, batches=4");
+    expect(formatRunContext({})).toBe("threads=? (failed before they were loaded)");
   });
 });
 

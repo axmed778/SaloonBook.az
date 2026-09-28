@@ -103,7 +103,7 @@ void (async () => {
 // renewal, and the daily lead digest. Concurrency 2 because the first two spend
 // one Instagram access token against Graph's per-token rate limit — parallelism
 // here buys throttling, not throughput. The digest makes no Graph call; it just
-// holds one slot for the minute or two its Claude request takes, once a day.
+// holds one slot for the quarter hour or so its Claude requests take, once a day.
 const igWorker = new Worker<IgJob>(QUEUE_NAMES.instagram, processIg, {
   connection,
   concurrency: 2,
