@@ -155,6 +155,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
         {!open && (
           <button
             onClick={startAdd}
+            data-tour="service.add"
             className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -173,6 +174,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             <div className="sm:col-span-2">
               <label className={labelCls}>{t("name")}</label>
               <input
+                data-tour="service.name"
                 className={inputCls}
                 placeholder={t("namePlaceholder")}
                 value={form.name}
@@ -183,6 +185,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             <div>
               <label className={labelCls}>{t("price")}</label>
               <input
+                data-tour="service.price"
                 className={inputCls}
                 inputMode="decimal"
                 placeholder="20"
@@ -194,6 +197,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
               <div>
                 <label className={labelCls}>{t("duration")}</label>
                 <input
+                  data-tour="service.duration"
                   className={inputCls}
                   inputMode="numeric"
                   placeholder="45"
@@ -237,11 +241,12 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
             </div>
           </div>
 
-          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          {error && <p data-tour="service.error" className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
             <button
               onClick={submit}
+              data-tour="service.save"
               disabled={pending}
               className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >

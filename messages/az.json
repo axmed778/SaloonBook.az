@@ -1922,5 +1922,162 @@
       "notFound": "Xülasə yenilənib — səhifəni yeniləyin.",
       "generic": "Yadda saxlamaq alınmadı. Yenidən cəhd edin."
     }
+  },
+  "Guides": {
+    "ui": {
+      "step": "Addım {current} / {total}",
+      "back": "Geri",
+      "next": "Növbəti",
+      "done": "Hazırdır",
+      "exit": "Çıx",
+      "retry": "Yenidən yoxla",
+      "openPage": "Lazımi səhifəni aç",
+      "notFound": {
+        "title": "Lazımi düyməni görmürəm",
+        "body": "Ola bilər ki, pəncərə bağlanıb və ya səhifə hələ yüklənir. Yenidən yoxlayın və ya lazımi səhifəni açın."
+      },
+      "wrongPage": {
+        "title": "Bu addım başqa səhifədədir",
+        "body": "Aşağıdakı düyməni basın, səhifəni açım."
+      },
+      "openMenu": {
+        "do": "Yuxarıda soldakı menyu düyməsini basın.",
+        "why": "Kabinetin bütün bölmələri oradadır."
+      },
+      "saveFailed": "Yadda saxlanmadı. Qırmızı yazını oxuyun, düzəldin və yenidən «Saxla» düyməsini basın."
+    },
+    "guides": {
+      "addService": {
+        "title": "Xidmət əlavə et",
+        "steps": {
+          "openPage": {
+            "do": "Menyuda «Xidmətlər» bölməsini açın.",
+            "why": "Salonunuzun gördüyü bütün işlərin siyahısı buradadır."
+          },
+          "openForm": {
+            "do": "«Yeni xidmət» düyməsini basın.",
+            "why": "Yeni xidmət üçün qısa forma açılacaq."
+          },
+          "name": {
+            "do": "Xidmətin adını yazın, məsələn «Saç kəsimi».",
+            "why": "Müştərilər yazılanda bu adı görəcəklər."
+          },
+          "price": {
+            "do": "Qiyməti manatla yazın, yalnız rəqəm.",
+            "why": "Müştəri qiyməti əvvəlcədən görəcək."
+          },
+          "duration": {
+            "do": "Xidmətin neçə dəqiqə çəkdiyini yoxlayın.",
+            "why": "Bu vaxta görə təqvim iki müştərini eyni vaxta yazmayacaq."
+          },
+          "save": {
+            "do": "«Saxla» düyməsini basın.",
+            "why": "Bundan sonra xidmət siyahıda və onlayn yazılışda görünəcək."
+          },
+          "done": {
+            "do": "Hazırdır, xidmət əlavə olundu!",
+            "why": "Digər xidmətləri də eyni qaydada əlavə edin."
+          }
+        }
+      },
+      "addAddon": {
+        "title": "Xidmətə əlavə qoş",
+        "steps": {
+          "openPage": {
+            "do": "Menyuda «Xidmətlər» bölməsini açın.",
+            "why": "Əlavələr də həmin səhifədə, xidmətlərin altında qurulur."
+          },
+          "openForm": {
+            "do": "Xidmətlər siyahısının altındakı «Yeni əlavə xidmət» düyməsini basın.",
+            "why": "Əlavə müştərinin xidmətə qoşa biləcəyi şeydir, məsələn manikürə «Fransız»."
+          },
+          "name": {
+            "do": "Əlavənin adını yazın.",
+            "why": "Müştəri onu əsas xidmətin yanında görəcək."
+          },
+          "price": {
+            "do": "Əlavə qiyməti manatla yazın.",
+            "why": "Bu məbləğ əsas xidmətin qiymətinin üstünə gələcək."
+          },
+          "services": {
+            "do": "Bu əlavənin qoşula biləcəyi xidmətləri seçin.",
+            "why": "Müştəri əlavəni yalnız bu xidmətlərdən birini seçəndə görəcək."
+          },
+          "save": {
+            "do": "«Saxla» düyməsini basın.",
+            "why": "Bundan sonra müştərilər yazılanda əlavəni seçə biləcəklər."
+          },
+          "done": {
+            "do": "Hazırdır, əlavə qoşuldu!",
+            "why": "Onun qiyməti və vaxtı yazılışa özü əlavə olunacaq."
+          }
+        }
+      },
+      "addWorker": {
+        "title": "İşçi əlavə et",
+        "steps": {
+          "openPage": {
+            "do": "Menyuda «İşçilər» bölməsini açın.",
+            "why": "Salonun bütün ustalarının siyahısı buradadır."
+          },
+          "openForm": {
+            "do": "«Yeni işçi» düyməsini basın.",
+            "why": "Yeni usta üçün forma açılacaq."
+          },
+          "name": {
+            "do": "Ustanın adını yazın.",
+            "why": "Müştərilər yazılanda bu adı görəcəklər."
+          },
+          "services": {
+            "do": "Bu ustanın gördüyü xidmətləri basıb seçin.",
+            "why": "Müştərilər ona yalnız bu xidmətlərə yazıla biləcəklər."
+          },
+          "hours": {
+            "do": "Ustanın iş günlərini və saatlarını yoxlayın.",
+            "why": "Müştərilər ona yalnız bu vaxtlarda yazıla biləcəklər."
+          },
+          "save": {
+            "do": "«Saxla» düyməsini basın.",
+            "why": "Usta dərhal təqvimdə və onlayn yazılışda görünəcək."
+          },
+          "done": {
+            "do": "Hazırdır, usta əlavə olundu!",
+            "why": "Digər ustaları da eyni qaydada əlavə edin."
+          }
+        }
+      }
+    }
+  },
+  "Help": {
+    "fab": "Kömək",
+    "title": "Kömək",
+    "greeting": "Salam! Nə etmək istəyirsiniz?",
+    "close": "Bağla",
+    "done": "Edilib",
+    "sections": {
+      "services": "Xidmətlər",
+      "team": "Komanda",
+      "schedule": "İş qrafiki",
+      "bookings": "Yazılışlar və müştərilər",
+      "billing": "Tarif"
+    },
+    "upgrade": "Tariflərə bax",
+    "askOwner": "Salon sahibindən başqa tarifə keçməyi xahiş edin.",
+    "plan": {
+      "title": "Sizin tarifdə bu yoxdur",
+      "body": "Bu imkan başqa tarifdədir."
+    },
+    "limit": {
+      "employeeSeats": {
+        "title": "Sizin tarifdə {max} aktiv ustaya qədər olar və bütün yerlər doludur.",
+        "body": "Daha birini əlavə etmək üçün daha böyük tarifə keçin və ya artıq işləməyən ustanı deaktiv edin."
+      }
+    },
+    "needs": {
+      "addService": {
+        "body": "Əvvəlcə ən azı bir xidmət əlavə edin: əlavə həmişə hansısa xidmətə qoşulur.",
+        "action": "Xidməti necə əlavə etməyi göstər"
+      }
+    }
   }
 }

@@ -143,6 +143,7 @@ export function AddonsManager({
         {!open && services.length > 0 && (
           <button
             onClick={startAdd}
+            data-tour="addon.add"
             className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -164,6 +165,7 @@ export function AddonsManager({
               </label>
               <input
                 id={`${fid}-name`}
+                data-tour="addon.name"
                 className={inputCls}
                 placeholder={t("addons.namePlaceholder")}
                 value={form.name}
@@ -177,6 +179,7 @@ export function AddonsManager({
               </label>
               <input
                 id={`${fid}-price`}
+                data-tour="addon.price"
                 className={inputCls}
                 inputMode="decimal"
                 placeholder="5"
@@ -205,7 +208,7 @@ export function AddonsManager({
             </div>
           </div>
 
-          <div className="mt-4" role="group" aria-labelledby={`${fid}-services`}>
+          <div className="mt-4" role="group" aria-labelledby={`${fid}-services`} data-tour="addon.services">
             <span id={`${fid}-services`} className={labelCls}>
               {t("addons.services")}
             </span>
@@ -232,11 +235,12 @@ export function AddonsManager({
             </div>
           </div>
 
-          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          {error && <p data-tour="addon.error" className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
             <button
               onClick={submit}
+              data-tour="addon.save"
               disabled={pending}
               className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >

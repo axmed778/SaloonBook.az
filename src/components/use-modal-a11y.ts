@@ -14,6 +14,26 @@ import { useEffect, useId, useRef } from "react";
 // closes both and the user loses the form they were filling in.
 const openDialogs: symbol[] = [];
 
+// Non-modal layers drawn ABOVE every dialog: the interactive guide's tooltip
+// (src/components/guides/). While one is registered, a dialog underneath
+// leaves Escape to it (the guide is what the person sees on top) and lets Tab
+// reach its buttons as part of the dialog's own cycle. With none registered —
+// always, outside a guide — every dialog behaves exactly as before.
+const topLayers = new Set<HTMLElement>();
+
+/** Register a layer drawn above the dialogs. Returns the unregister function. */
+export function registerTopLayer(el: HTMLElement): () => void {
+  topLayers.add(el);
+  return () => {
+    topLayers.delete(el);
+  };
+}
+
+/** Whether a layer above the dialogs is taking Escape. */
+export function topLayerActive(): boolean {
+  return topLayers.size > 0;
+}
+
 const FOCUSABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
@@ -22,6 +42,35 @@ const FOCUSABLE_SELECTOR = [
   "textarea:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
+
+/**
+ * Where Tab should move focus inside a trap, or null to let the browser move it.
+ * `inside` says whether the focused element belongs to the trap at all.
+ * `explicit` steps through `items` in order instead of leaving the middle of the
+ * cycle to the browser — needed once the trap spans a layer elsewhere in the
+ * DOM (the guide's card), which the browser's own order would never reach.
+ * Pure, so the cycle is tested without a DOM (use-modal-a11y.test.ts).
+ */
+export function tabTarget<T>(
+  items: readonly T[],
+  active: T | null,
+  shift: boolean,
+  inside: boolean,
+  explicit = false,
+): T | null {
+  if (items.length === 0) return null;
+  const first = items[0]!;
+  const last = items[items.length - 1]!;
+  if (!active || !inside) return shift ? last : first;
+  if (explicit) {
+    const i = items.indexOf(active);
+    if (i === -1) return shift ? last : first;
+    return items[(i + (shift ? -1 : 1) + items.length) % items.length]!;
+  }
+  if (shift && active === first) return last;
+  if (!shift && active === last) return first;
+  return null;
+}
 
 function focusableWithin(panel: HTMLElement): HTMLElement[] {
   // getClientRects() rather than offsetParent: the panel sits inside a
@@ -64,6 +113,8 @@ export function useModalA11y<T extends HTMLElement = HTMLDivElement>(
       if (!el) return;
 
       if (e.key === "Escape") {
+        // The guide above handles it; one keypress must not close both.
+        if (topLayerActive()) return;
         if (!closeRef.current) return;
         e.preventDefault();
         e.stopPropagation();
@@ -72,25 +123,19 @@ export function useModalA11y<T extends HTMLElement = HTMLDivElement>(
       }
       if (e.key !== "Tab") return;
 
-      const items = focusableWithin(el);
+      const layers = [...topLayers];
+      const items = [...focusableWithin(el), ...layers.flatMap(focusableWithin)];
       if (items.length === 0) {
         e.preventDefault();
         el.focus();
         return;
       }
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
       const active = document.activeElement as HTMLElement | null;
-
-      if (!active || !el.contains(active)) {
+      const inside = !!active && (el.contains(active) || layers.some((l) => l.contains(active)));
+      const next = tabTarget(items, active, e.shiftKey, inside, layers.length > 0);
+      if (next) {
         e.preventDefault();
-        (e.shiftKey ? last : first).focus();
-      } else if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
+        next.focus();
       }
     }
 

@@ -52,7 +52,9 @@ BEGIN
   -- scope either (no salonId), and withTenantScope — the only user of this role
   -- — never touches them. Least privilege by revocation instead of by policy.
   -- IgDigest quotes the same leads and conversations, so it goes with them.
-  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage', 'IgDigest']) LOOP
+  -- UserGuideState and GuideEvent (in-app help) are per user, not per salon,
+  -- and are only ever read on the owner connection: same treatment.
+  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage', 'IgDigest', 'UserGuideState', 'GuideEvent']) LOOP
     IF EXISTS (
       SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relname = t

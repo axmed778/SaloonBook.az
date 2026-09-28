@@ -10,6 +10,8 @@ import { canOpenSection, type Permission } from "@/lib/auth/permissions";
 type NavItem = {
   href: string;
   labelKey: string;
+  /** The data-tour anchor the interactive guides point at. */
+  tour: string;
   icon: React.ReactNode;
   /** Not listed for a role holding this permission, which reaches the same thing elsewhere. */
   hideWith?: Permission;
@@ -20,6 +22,7 @@ const ICON = "h-[18px] w-[18px] shrink-0";
 const items: NavItem[] = [
   {
     href: "/dashboard",
+    tour: "nav.today",
     labelKey: "today",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -30,6 +33,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/calendar",
+    tour: "nav.calendar",
     labelKey: "calendar",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -40,6 +44,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/clients",
+    tour: "nav.clients",
     labelKey: "clients",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -51,6 +56,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/services",
+    tour: "nav.services",
     labelKey: "services",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -60,6 +66,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/workers",
+    tour: "nav.workers",
     labelKey: "workers",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -70,6 +77,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/time-off",
+    tour: "nav.time-off",
     labelKey: "timeOff",
     // The owner manages time off on the Staff screen, next to everything else
     // about each person; this entry is for roles that plan the schedule without
@@ -84,6 +92,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/analytics",
+    tour: "nav.analytics",
     labelKey: "analytics",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -93,6 +102,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/payroll",
+    tour: "nav.payroll",
     labelKey: "payroll",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -104,6 +114,7 @@ const items: NavItem[] = [
   },
   {
     href: "/dashboard/settings",
+    tour: "nav.settings",
     labelKey: "settings",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -119,6 +130,7 @@ const items: NavItem[] = [
 const adminItems: NavItem[] = [
   {
     href: "/dashboard/admin",
+    tour: "nav.admin",
     labelKey: "salons",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -128,6 +140,7 @@ const adminItems: NavItem[] = [
   },
   {
     href: "/dashboard/ig-digest",
+    tour: "nav.ig-digest",
     labelKey: "igDigest",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -175,6 +188,7 @@ export function SidebarNav({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
+            data-tour={item.tour}
             title={collapsed ? t(item.labelKey) : undefined}
             className={
               "flex items-center rounded-lg text-sm font-medium transition " +
