@@ -167,6 +167,13 @@ autosuspends and one that bills CU-hours all day:
 | `DATABASE_URL` | **pooled** — `-pooler` in the hostname | every runtime query (web + worker) | client connections terminate at Neon's PgBouncer, so the compute sees few short-lived backends and can reach its 5-min autosuspend |
 | `DIRECT_URL` | **direct** — no `-pooler` | `prisma migrate` / `db push` only (`directUrl` in `prisma/schema.prisma`) | migrations hold advisory locks and run DDL that a transaction-mode pooler breaks |
 
+`pnpm db:setup` (Railway's `preDeployCommand`) and `pnpm db:deploy` refuse to
+start when `DIRECT_URL` is missing or points at the pooler on Neon
+(`scripts/check-migration-url.ts`): through PgBouncer, `prisma migrate deploy`
+leaves its advisory lock (`72707369`) held by an idle pooler session, and the
+next deploy's pre-deploy fails on it. Prisma's `Datasource … at "<host>"` log
+line shows the `directUrl` host, so `-pooler` there means `DIRECT_URL` is wrong.
+
 Append `?sslmode=require&pgbouncer=true&connection_limit=5&pool_timeout=10` to
 `DATABASE_URL`. `pgbouncer=true` stops Prisma using named prepared statements
 (transaction pooling can't carry them); `connection_limit` caps a pool that
