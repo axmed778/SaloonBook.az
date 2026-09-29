@@ -1944,7 +1944,13 @@
         "do": "Yuxarıda soldakı menyu düyməsini basın.",
         "why": "Kabinetin bütün bölmələri oradadır."
       },
-      "saveFailed": "Yadda saxlanmadı. Qırmızı yazını oxuyun, düzəldin və yenidən «Saxla» düyməsini basın."
+      "saveFailed": "Yadda saxlanmadı. Qırmızı yazını oxuyun, düzəldin və yenidən «Saxla» düyməsini basın.",
+      "offscreen": {
+        "title": "Lazımi düymə indi ekranda deyil",
+        "body": "Ola bilər ki, o, bağlı bölmənin içindədir. «Göstər» düyməsini basın, həmin yerə sürüşdürüm.",
+        "show": "Göstər",
+        "scrollTo": "Lazımi düyməyə sürüşdür"
+      }
     },
     "guides": {
       "salonProfile": {

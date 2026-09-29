@@ -1944,7 +1944,13 @@
         "do": "Tap the menu button at the top left.",
         "why": "All sections of your dashboard are in there."
       },
-      "saveFailed": "It wasn't saved. Read the red hint, fix it, and press “Save” again."
+      "saveFailed": "It wasn't saved. Read the red hint, fix it, and press “Save” again.",
+      "offscreen": {
+        "title": "The button you need isn't on screen right now",
+        "body": "It may be inside a folded section. Press “Show” and I'll scroll to that spot.",
+        "show": "Show",
+        "scrollTo": "Scroll to the button"
+      }
     },
     "guides": {
       "salonProfile": {
