@@ -1947,6 +1947,31 @@
       "saveFailed": "It wasn't saved. Read the red hint, fix it, and press “Save” again."
     },
     "guides": {
+      "salonProfile": {
+        "title": "Fill in your salon details",
+        "steps": {
+          "openPage": {
+            "do": "Open “Settings”.",
+            "why": "Your salon's details are kept here."
+          },
+          "phone": {
+            "do": "Type the salon's phone number.",
+            "why": "Clients will be able to call you on it."
+          },
+          "address": {
+            "do": "Type the salon's address.",
+            "why": "So clients know where to come."
+          },
+          "save": {
+            "do": "Press “Save” below these fields.",
+            "why": "The phone and address appear on your salon's page."
+          },
+          "done": {
+            "do": "Done, your details are filled in!",
+            "why": "You can change them at any time."
+          }
+        }
+      },
       "addService": {
         "title": "Add a service",
         "steps": {
@@ -2045,6 +2070,105 @@
             "why": "Add the rest of your team the same way."
           }
         }
+      },
+      "workingHours": {
+        "title": "Working hours",
+        "steps": {
+          "openWorkers": {
+            "do": "Open “Staff”.",
+            "why": "Each staff member has their own working hours."
+          },
+          "edit": {
+            "do": "Press “Edit” next to a staff member.",
+            "why": "Their card with the schedule will open."
+          },
+          "hours": {
+            "do": "Tick the working days and pick the hours.",
+            "why": "Online booking offers clients only these times."
+          },
+          "save": {
+            "do": "Press “Save”.",
+            "why": "Their schedule starts working right away."
+          },
+          "openSettings": {
+            "do": "Now open “Settings”.",
+            "why": "The whole salon's opening hours are set there."
+          },
+          "salonHours": {
+            "do": "Check the salon's opening hours.",
+            "why": "Clients see them on your salon's page."
+          },
+          "salonHoursSave": {
+            "do": "Press “Save” below the hours.",
+            "why": "So clients see the right opening times."
+          },
+          "done": {
+            "do": "Done, your hours are set!",
+            "why": "You can change the schedule at any time."
+          }
+        }
+      },
+      "bookingLink": {
+        "title": "Your booking link",
+        "steps": {
+          "openPage": {
+            "do": "Open “Settings”.",
+            "why": "Your personal booking link is there."
+          },
+          "copy": {
+            "do": "Press “Copy” next to the link.",
+            "why": "The link is copied, ready to paste anywhere."
+          },
+          "instagram": {
+            "do": "Open Instagram, press “Edit profile” and paste the link into “Links”.",
+            "why": "Clients will book straight from your profile, without messaging."
+          },
+          "done": {
+            "do": "Done!",
+            "why": "You can also send the same link to clients on WhatsApp."
+          }
+        }
+      },
+      "manualBooking": {
+        "title": "Create a booking by hand",
+        "steps": {
+          "openPage": {
+            "do": "Open “Calendar”.",
+            "why": "All bookings are shown there, day by day."
+          },
+          "openForm": {
+            "do": "Press “New booking”.",
+            "why": "This is how you book a client who called or walked in."
+          },
+          "employee": {
+            "do": "Pick the staff member.",
+            "why": "The booking goes into their column in the calendar."
+          },
+          "service": {
+            "do": "Pick the service.",
+            "why": "It sets the price and length of the booking."
+          },
+          "slot": {
+            "do": "Tap a free time.",
+            "why": "If there are no free times, pick another day above."
+          },
+          "name": {
+            "do": "Type the client's name.",
+            "why": "It will show in the calendar."
+          },
+          "phone": {
+            "do": "Type the client's number. To test, use your own.",
+            "why": "A WhatsApp confirmation goes to this number."
+          },
+          "save": {
+            "do": "Press “Create booking”.",
+            "why": "The booking appears in the calendar right away."
+          },
+          "done": {
+            "do": "Done, the booking is created!",
+            "why": "You can cancel a test booking in the calendar."
+          }
+        }
       }
     }
   },
@@ -2055,6 +2179,7 @@
     "close": "Close",
     "done": "Done",
     "sections": {
+      "salon": "Salon",
       "services": "Services",
       "team": "Team",
       "schedule": "Schedule",
@@ -2074,9 +2199,72 @@
       }
     },
     "needs": {
-      "addService": {
-        "body": "First add at least one service: an extra is always added to a service.",
-        "action": "Show me how to add a service"
+      "addAddon": {
+        "hasServices": "First add at least one service: an extra is always added to a service."
+      },
+      "workingHours": {
+        "hasActiveEmployees": "First add a staff member: working hours belong to each person."
+      },
+      "manualBooking": {
+        "hasActiveServices": "First add a service: a client always books a service.",
+        "hasBookableStaff": "First you need a staff member with services and working hours: the booking goes to them."
+      }
+    },
+    "showGuide": {
+      "addService": "Show me how to add a service",
+      "addWorker": "Show me how to add a staff member"
+    },
+    "setup": {
+      "title": "First steps",
+      "progress": "{done} of {total} done"
+    }
+  },
+  "Onboarding": {
+    "welcome": {
+      "title": "Welcome to SalonBook!",
+      "body": "Let's set up your salon in {count} simple steps, so clients can book you online.",
+      "help": "Each step has a “Show me how” button: we'll highlight what to press. Help is always behind the “?” button.",
+      "start": "Let's start",
+      "later": "Later"
+    },
+    "checklist": {
+      "title": "First steps",
+      "progress": "{done} of {total} done",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "hide": "Hide this list",
+      "hiddenNote": "The list is hidden. Bring it back with the “?” button at the bottom right.",
+      "undo": "Bring back",
+      "showHow": "Show me how",
+      "copy": "Copy",
+      "copied": "Copied",
+      "stateDone": "done",
+      "stateTodo": "not done",
+      "items": {
+        "profile": {
+          "title": "Fill in your salon details",
+          "hint": "Phone and address, so clients can find you."
+        },
+        "services": {
+          "title": "Add your services",
+          "hint": "What you do, what it costs and how long it takes."
+        },
+        "worker": {
+          "title": "Add a staff member",
+          "hint": "The people clients will book with."
+        },
+        "hours": {
+          "title": "Set working hours",
+          "hint": "When your staff see clients."
+        },
+        "link": {
+          "title": "Copy your link and put it in your Instagram bio",
+          "hint": "Clients use it to book by themselves, without messaging."
+        },
+        "booking": {
+          "title": "Make a test booking",
+          "hint": "See how a booking shows up in the calendar."
+        }
       }
     }
   }

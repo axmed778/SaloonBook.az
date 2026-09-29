@@ -136,6 +136,7 @@ export function Calendar({
             <button
               type="button"
               onClick={() => setBooking(true)}
+              data-tour="calendar.new-booking"
               disabled={!canBook}
               title={canBook ? undefined : t("needStaffFirst")}
               className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"

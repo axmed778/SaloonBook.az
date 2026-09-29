@@ -9,9 +9,13 @@ import { canOpenSection, type Permission } from "@/lib/auth/permissions";
 // clear of the iOS home indicator.
 const ICON = "h-[22px] w-[22px]";
 
-const tabs: { href: string; labelKey: string; exact?: boolean; icon: React.ReactNode }[] = [
+// `tour`: the same data-tour anchors as the sidebar entries, so a guide step
+// pointing at "the Calendar entry" finds the tab on a phone (the sidebar copy
+// is hidden there) — see src/components/guides/targets.ts.
+const tabs: { href: string; labelKey: string; tour: string; exact?: boolean; icon: React.ReactNode }[] = [
   {
     href: "/dashboard",
+    tour: "nav.today",
     labelKey: "today",
     exact: true,
     icon: (
@@ -23,6 +27,7 @@ const tabs: { href: string; labelKey: string; exact?: boolean; icon: React.React
   },
   {
     href: "/dashboard/calendar",
+    tour: "nav.calendar",
     labelKey: "calendar",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -33,6 +38,7 @@ const tabs: { href: string; labelKey: string; exact?: boolean; icon: React.React
   },
   {
     href: "/dashboard/clients",
+    tour: "nav.clients",
     labelKey: "clients",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -44,6 +50,7 @@ const tabs: { href: string; labelKey: string; exact?: boolean; icon: React.React
   },
   {
     href: "/dashboard/settings",
+    tour: "nav.settings",
     labelKey: "settingsShort",
     icon: (
       <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -71,6 +78,7 @@ export function BottomTabBar({ permissions = [] }: { permissions?: readonly Perm
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
+                data-tour={tab.tour}
                 aria-current={active ? "page" : undefined}
                 className={
                   "flex min-h-[44px] flex-col items-center justify-center gap-0.5 px-1 py-1 text-[11px] font-medium transition " +

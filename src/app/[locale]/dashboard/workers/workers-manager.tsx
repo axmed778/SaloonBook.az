@@ -535,6 +535,7 @@ export function WorkersManager({
                 </button>
                 <button
                   onClick={() => startEdit(e)}
+                  data-tour="worker.edit"
                   disabled={pending}
                   className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >

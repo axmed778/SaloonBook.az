@@ -96,6 +96,7 @@ export function GuideOverlay({
   const [viaMenu, setViaMenu] = useState<HTMLElement | null>(null);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const [errorRect, setErrorRect] = useState<Rect | null>(null);
+  const [succeeded, setSucceeded] = useState(false);
   const [filled, setFilled] = useState(false);
   const [viewport, setViewport] = useState<Rect | null>(null);
   const [safe, setSafe] = useState<Insets>({ top: 0, right: 0, bottom: 0, left: 0 });
@@ -172,6 +173,8 @@ export function GuideOverlay({
       const errEl = step.errorTarget ? findTarget(step.errorTarget) : null;
       const er = errEl ? rectOf(errEl) : null;
       setErrorRect((prev) => (sameRect(prev, er) ? prev : er));
+      const ok = !!step.successTarget && !!findTarget(step.successTarget);
+      setSucceeded((prev) => (prev === ok ? prev : ok));
       const vp = currentViewport();
       setViewport((prev) => (sameRect(prev, vp) ? prev : vp));
       if (step.type === "input" && el) {
@@ -181,7 +184,7 @@ export function GuideOverlay({
       // A button that opens a form, when the form is already open: the person
       // is ahead of the guide, so catch up instead of waiting for a button that
       // only shows while the form is closed.
-      if (!advanced && !el && step.type === "click" && !step.awaitRemoval && !wrongPage) {
+      if (!advanced && !el && step.type === "click" && !step.awaitRemoval && !step.successTarget && !wrongPage) {
         const after = guide.steps[stepIndex + 1];
         if (after?.target && findTarget(after.target)) {
           advanced = true;
@@ -199,8 +202,8 @@ export function GuideOverlay({
   useEffect(() => {
     if (wrongPage || !step.target) return;
     if (phase === "submitted") {
-      // The form closed: the save went through.
-      if (!target) onNext(stepIndex);
+      // The save went through: its "Saved" line appeared, or the form closed.
+      if (step.successTarget ? succeeded : !target) onNext(stepIndex);
       return;
     }
     if (found) {
@@ -213,15 +216,27 @@ export function GuideOverlay({
       onNotFound(stepIndex);
     }, FIND_TIMEOUT_MS);
     return () => window.clearTimeout(id);
-  }, [found, target, phase, retry, wrongPage, step.target, stepIndex, onNext, onNotFound]);
+  }, [found, target, succeeded, phase, retry, wrongPage, step.target, step.successTarget, stepIndex, onNext, onNotFound]);
 
   // ── What finishes the step ────────────────────────────────────────────────
   useEffect(() => {
     if (!target) return;
     if (step.type === "click") {
-      const onClick = () => (step.awaitRemoval ? setPhase("submitted") : onNext(stepIndex));
+      const onClick = () => {
+        if (!step.awaitRemoval && !step.successTarget) return onNext(stepIndex);
+        // Forget a "Saved" line left from an earlier press: only one that
+        // appears after this press counts.
+        setSucceeded(false);
+        setPhase("submitted");
+      };
       target.addEventListener("click", onClick, true);
       return () => target.removeEventListener("click", onClick, true);
+    }
+    if (step.type === "input" && target instanceof HTMLSelectElement) {
+      // A dropdown commits with the pick itself.
+      const onChange = () => isFilled(target) && onNext(stepIndex);
+      target.addEventListener("change", onChange);
+      return () => target.removeEventListener("change", onChange);
     }
     if (step.type === "input" && isTextField(target)) {
       // On commit (leaving the field, or Enter), not on every keystroke: the
@@ -241,8 +256,14 @@ export function GuideOverlay({
   const scrolledFor = useRef<Element | null>(null);
   useEffect(() => {
     const el = target ?? viaMenu;
-    if (!el || scrolledFor.current === el || inFixedLayer(el)) return;
+    if (!el || scrolledFor.current === el) return;
     scrolledFor.current = el;
+    if (inFixedLayer(el)) {
+      // Inside a modal or the drawer: scrolling the page would not move it, but
+      // the dialog's own scroll box can (a field low in the booking form).
+      el.scrollIntoView({ block: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
+      return;
+    }
     const delta = scrollDelta(rectOf(el), currentViewport(), tipRef.current?.offsetHeight ?? 180);
     if (delta !== 0) window.scrollBy({ top: delta, behavior: reducedMotion ? "auto" : "smooth" });
   }, [target, viaMenu, reducedMotion]);
@@ -255,7 +276,7 @@ export function GuideOverlay({
   // ── Layout ────────────────────────────────────────────────────────────────
   const failed = phase === "submitted" && !!errorRect;
   const hole = spotlight(
-    [targetRect, failed || (errorRect && step.awaitRemoval) ? errorRect : null].filter(
+    [targetRect, errorRect].filter(
       (r): r is Rect => r !== null,
     ),
   );

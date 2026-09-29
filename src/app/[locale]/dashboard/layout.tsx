@@ -6,7 +6,7 @@ import { hasPermission, spansAllBranches, type AppRole } from "@/lib/auth/permis
 import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { ConsentGate } from "@/components/legal/consent-gate";
 import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
-import { loadGuideCatalog } from "@/lib/guides/catalog";
+import { loadHelpData } from "@/lib/guides/catalog";
 import { acceptLegalConsents } from "./actions";
 import { DashboardShell } from "./_components/dashboard-shell";
 import { AccessClosed } from "./_components/access-closed";
@@ -80,8 +80,13 @@ export default async function DashboardLayout({
   // this role may run on this plan, and which the data would dead-end — and
   // handed down finished. Off while the consent gate is up: a guide must not
   // start on top of a page the person cannot use yet.
-  const guideCatalog = stale.length === 0 ? await loadGuideCatalog(session) : [];
-  const guides = guideCatalog.length > 0 ? { userId: session.user.id, catalog: guideCatalog } : null;
+  // The first-run welcome and checklist ride along the same way, for the same
+  // reason: the welcome must never open over the consent gate either.
+  const help = stale.length === 0 ? await loadHelpData(session) : null;
+  const guides =
+    help && (help.catalog.length > 0 || help.setup)
+      ? { userId: session.user.id, catalog: help.catalog, setup: help.setup, bookingUrl: help.bookingUrl }
+      : null;
 
   return (
     <DashboardShell

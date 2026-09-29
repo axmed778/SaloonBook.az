@@ -1947,6 +1947,31 @@
       "saveFailed": "Yadda saxlanmadı. Qırmızı yazını oxuyun, düzəldin və yenidən «Saxla» düyməsini basın."
     },
     "guides": {
+      "salonProfile": {
+        "title": "Salon məlumatlarını doldur",
+        "steps": {
+          "openPage": {
+            "do": "«Tənzimləmələr» bölməsini açın (telefonda «Ayarlar»).",
+            "why": "Salonunuzun məlumatları buradadır."
+          },
+          "phone": {
+            "do": "Salonun telefon nömrəsini yazın.",
+            "why": "Müştərilər bu nömrə ilə sizə zəng edə biləcəklər."
+          },
+          "address": {
+            "do": "Salonun ünvanını yazın.",
+            "why": "Belə müştərilər hara gələcəklərini biləcəklər."
+          },
+          "save": {
+            "do": "Bu xanaların altındakı «Saxla» düyməsini basın.",
+            "why": "Telefon və ünvan salonunuzun səhifəsində görünəcək."
+          },
+          "done": {
+            "do": "Hazırdır, məlumatlar dolduruldu!",
+            "why": "Bu məlumatları istənilən vaxt dəyişə bilərsiniz."
+          }
+        }
+      },
       "addService": {
         "title": "Xidmət əlavə et",
         "steps": {
@@ -2045,6 +2070,105 @@
             "why": "Digər ustaları da eyni qaydada əlavə edin."
           }
         }
+      },
+      "workingHours": {
+        "title": "İş saatları",
+        "steps": {
+          "openWorkers": {
+            "do": "«İşçilər» bölməsini açın.",
+            "why": "İş saatları hər ustaya ayrıca verilir."
+          },
+          "edit": {
+            "do": "Ustanın yanındakı «Redaktə» düyməsini basın.",
+            "why": "Onun iş qrafiki olan kartı açılacaq."
+          },
+          "hours": {
+            "do": "İş günlərini qeyd edin və saatları seçin.",
+            "why": "Onlayn yazılış müştərilərə yalnız bu vaxtı təklif edəcək."
+          },
+          "save": {
+            "do": "«Saxla» düyməsini basın.",
+            "why": "Ustanın qrafiki dərhal işləməyə başlayacaq."
+          },
+          "openSettings": {
+            "do": "İndi «Tənzimləmələr» bölməsini açın (telefonda «Ayarlar»).",
+            "why": "Bütün salonun iş saatları orada qurulur."
+          },
+          "salonHours": {
+            "do": "Salonun iş saatlarını yoxlayın.",
+            "why": "Müştərilər onları salonunuzun səhifəsində görürlər."
+          },
+          "salonHoursSave": {
+            "do": "Saatların altındakı «Saxla» düyməsini basın.",
+            "why": "Belə müştərilər düzgün iş vaxtını görəcəklər."
+          },
+          "done": {
+            "do": "Hazırdır, saatlar quruldu!",
+            "why": "Qrafiki istənilən vaxt dəyişə bilərsiniz."
+          }
+        }
+      },
+      "bookingLink": {
+        "title": "Müştərilər üçün link",
+        "steps": {
+          "openPage": {
+            "do": "«Tənzimləmələr» bölməsini açın (telefonda «Ayarlar»).",
+            "why": "Yazılış üçün şəxsi linkiniz oradadır."
+          },
+          "copy": {
+            "do": "Linkin yanındakı «Kopyala» düyməsini basın.",
+            "why": "Link kopyalanacaq, onu istənilən yerə yapışdıra bilərsiniz."
+          },
+          "instagram": {
+            "do": "Instagram-ı açın, «Profili redaktə et» düyməsini basın və linki «Linklər» xanasına yapışdırın.",
+            "why": "Müştərilər yazışmadan birbaşa profilinizdən yazılacaqlar."
+          },
+          "done": {
+            "do": "Hazırdır!",
+            "why": "Eyni linki müştərilərə WhatsApp-da da göndərə bilərsiniz."
+          }
+        }
+      },
+      "manualBooking": {
+        "title": "Əl ilə görüş yarat",
+        "steps": {
+          "openPage": {
+            "do": "«Təqvim» bölməsini açın.",
+            "why": "Bütün görüşlər orada günlərə görə görünür."
+          },
+          "openForm": {
+            "do": "«Yeni görüş» düyməsini basın.",
+            "why": "Zəng edən və ya özü gələn müştərini belə yazırlar."
+          },
+          "employee": {
+            "do": "Ustanı seçin.",
+            "why": "Görüş təqvimdə onun sütununa düşəcək."
+          },
+          "service": {
+            "do": "Xidməti seçin.",
+            "why": "Görüşün qiyməti və müddəti ondan asılıdır."
+          },
+          "slot": {
+            "do": "Boş vaxtı basın.",
+            "why": "Boş vaxt yoxdursa, yuxarıda başqa gün seçin."
+          },
+          "name": {
+            "do": "Müştərinin adını yazın.",
+            "why": "Ad təqvimdə görünəcək."
+          },
+          "phone": {
+            "do": "Müştərinin nömrəsini yazın. Yoxlamaq üçün öz nömrənizi yaza bilərsiniz.",
+            "why": "Bu nömrəyə WhatsApp-da görüşün təsdiqi gələcək."
+          },
+          "save": {
+            "do": "«Görüşü yarat» düyməsini basın.",
+            "why": "Görüş dərhal təqvimdə görünəcək."
+          },
+          "done": {
+            "do": "Hazırdır, görüş yaradıldı!",
+            "why": "Sınaq görüşünü təqvimdə ləğv edə bilərsiniz."
+          }
+        }
       }
     }
   },
@@ -2055,6 +2179,7 @@
     "close": "Bağla",
     "done": "Edilib",
     "sections": {
+      "salon": "Salon",
       "services": "Xidmətlər",
       "team": "Komanda",
       "schedule": "İş qrafiki",
@@ -2074,9 +2199,72 @@
       }
     },
     "needs": {
-      "addService": {
-        "body": "Əvvəlcə ən azı bir xidmət əlavə edin: əlavə həmişə hansısa xidmətə qoşulur.",
-        "action": "Xidməti necə əlavə etməyi göstər"
+      "addAddon": {
+        "hasServices": "Əvvəlcə ən azı bir xidmət əlavə edin: əlavə həmişə hansısa xidmətə qoşulur."
+      },
+      "workingHours": {
+        "hasActiveEmployees": "Əvvəlcə işçi əlavə edin: iş saatları hər ustaya ayrıca verilir."
+      },
+      "manualBooking": {
+        "hasActiveServices": "Əvvəlcə xidmət əlavə edin: müştəri həmişə hansısa xidmətə yazılır.",
+        "hasBookableStaff": "Əvvəlcə xidmətləri və iş saatları olan usta lazımdır: görüş ona yazılacaq."
+      }
+    },
+    "showGuide": {
+      "addService": "Xidməti necə əlavə etməyi göstər",
+      "addWorker": "İşçini necə əlavə etməyi göstər"
+    },
+    "setup": {
+      "title": "İlk addımlar",
+      "progress": "{total} addımdan {done} edilib"
+    }
+  },
+  "Onboarding": {
+    "welcome": {
+      "title": "SalonBook-a xoş gəlmisiniz!",
+      "body": "Salonu {count} sadə addımda quraq və müştərilər sizə onlayn yazıla bilsinlər.",
+      "help": "Hər addımda «Necə olduğunu göstər» düyməsi var: nəyi basmaq lazım olduğunu işıqlandıracağıq. Kömək həmişə «?» düyməsindədir.",
+      "start": "Başla",
+      "later": "Sonra"
+    },
+    "checklist": {
+      "title": "İlk addımlar",
+      "progress": "{total} addımdan {done} edilib",
+      "collapse": "Yığ",
+      "expand": "Aç",
+      "hide": "Siyahını gizlət",
+      "hiddenNote": "Siyahı gizlədildi. Onu aşağıda sağdakı «?» düyməsi ilə qaytara bilərsiniz.",
+      "undo": "Qaytar",
+      "showHow": "Necə olduğunu göstər",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "stateDone": "edilib",
+      "stateTodo": "edilməyib",
+      "items": {
+        "profile": {
+          "title": "Salon məlumatlarını doldur",
+          "hint": "Müştərilər sizi tapsın deyə telefon və ünvan."
+        },
+        "services": {
+          "title": "Xidmətləri əlavə et",
+          "hint": "Nə edirsiniz, neçəyədir və nə qədər çəkir."
+        },
+        "worker": {
+          "title": "İşçi əlavə et",
+          "hint": "Müştərilərin yazılacağı ustalar."
+        },
+        "hours": {
+          "title": "İş saatlarını qur",
+          "hint": "Ustaların müştəri qəbul etdiyi vaxt."
+        },
+        "link": {
+          "title": "Linki kopyala və Instagram bio-ya qoy",
+          "hint": "Müştərilər bu linklə yazışmadan özləri yazılırlar."
+        },
+        "booking": {
+          "title": "Sınaq görüşü et",
+          "hint": "Görüşün təqvimdə necə göründüyünü yoxlayın."
+        }
       }
     }
   }
