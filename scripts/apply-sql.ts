@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { migrationUrl } from "../src/lib/migration-url";
 
 // This script applies DDL, so it needs the DIRECT (unpooled) connection — the
 // one thing that must NOT go through the shared client in src/lib/prisma.ts.
@@ -19,9 +20,15 @@ import { PrismaClient } from "@prisma/client";
 // Deliberately its own PrismaClient despite the one-client-per-process rule in
 // src/lib/prisma.ts: this is a short-lived one-off process, and it needs
 // different connection semantics from the app. Falls back to DATABASE_URL so
-// local development (a direct Postgres, no DIRECT_URL) keeps working.
-const datasourceUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL;
-const prisma = new PrismaClient({ datasourceUrl, log: ["error"] });
+// local development (a direct Postgres, no DIRECT_URL) keeps working — but
+// never onto Neon's pooler: migrationUrl() refuses a pooled or missing
+// DIRECT_URL there instead of silently running DDL through PgBouncer.
+const target = migrationUrl({ DATABASE_URL: process.env.DATABASE_URL, DIRECT_URL: process.env.DIRECT_URL });
+if ("error" in target) {
+  console.error(`[apply-sql] ${target.error}`);
+  process.exit(1);
+}
+const prisma = new PrismaClient({ datasourceUrl: target.url, log: ["error"] });
 
 // Splits a SQL file into statements, respecting PostgreSQL dollar-quoted blocks
 // ($$ ... $$, $tag$ ... $tag$) so semicolons inside DO blocks don't split.
