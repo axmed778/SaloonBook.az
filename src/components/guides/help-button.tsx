@@ -19,11 +19,11 @@ import { useGuides } from "./guide-provider";
 
 export function HelpButton({ lift = 0 }: { lift?: number }) {
   const t = useTranslations("Help");
-  const { catalog, runningId } = useGuides();
+  const { catalog, setup, runningId } = useGuides();
   const [open, setOpen] = useState(false);
 
   // Nothing to offer (a platform admin), or a guide is on screen already.
-  if (catalog.length === 0) return null;
+  if (catalog.length === 0 && !setup) return null;
 
   return (
     <>
@@ -49,7 +49,7 @@ export function HelpButton({ lift = 0 }: { lift?: number }) {
 function HelpPanel({ onClose }: { onClose: () => void }) {
   const t = useTranslations("Help");
   const tg = useTranslations("Guides");
-  const { catalog, start } = useGuides();
+  const { catalog, start, setup, openChecklist } = useGuides();
   const { titleId, dialogProps } = useModalA11y(onClose);
   // The task whose "why not" notice is unfolded.
   const [openNotice, setOpenNotice] = useState<string | null>(null);
@@ -90,6 +90,28 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto px-3 py-3">
+          {/* The first-run checklist: how far along, and the way back to it
+              after "Hide". */}
+          {setup && (
+            <section className="mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  openChecklist();
+                }}
+                className="flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-rose-500/25 bg-rose-500/5 px-3 py-2 text-left text-sm text-foreground transition hover:bg-rose-500/10"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">{t("setup.title")}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {t("setup.progress", { done: setup.done, total: setup.total })}
+                  </span>
+                </span>
+                <svg className="h-4 w-4 shrink-0 text-faint-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
+            </section>
+          )}
           {GUIDE_SECTIONS.map((section) => {
             const items = catalog.filter((g) => g.section === section);
             if (items.length === 0) return null;
@@ -154,10 +176,10 @@ export function GuideBlockedNotice({
     const prerequisiteReady = catalog.some((g) => g.id === entry.guide && g.state === "ready");
     return (
       <div className={box} role="note">
-        <p>{t(`needs.${entry.guide}.body`)}</p>
+        <p>{t(`needs.${entry.id}.${entry.fact}`)}</p>
         {prerequisiteReady && (
           <button type="button" className={action} onClick={() => onStart(entry.guide)}>
-            {t(`needs.${entry.guide}.action`)}
+            {t(`showGuide.${entry.guide}`)}
           </button>
         )}
       </div>

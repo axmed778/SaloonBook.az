@@ -2,10 +2,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { GuideEntry } from "@/lib/guides/availability";
+import type { SetupState } from "@/lib/guides/checklist";
 import { guideById, type GuideDef, type GuideId } from "@/lib/guides/registry";
-import { recordGuideEvent, type GuideEventInput } from "@/app/[locale]/dashboard/_actions/guides";
+import {
+  markWelcomeShown,
+  recordGuideEvent,
+  setChecklistHidden,
+  type GuideEventInput,
+} from "@/app/[locale]/dashboard/_actions/guides";
+import { useRouter } from "@/i18n/navigation";
 import { readRun, writeRun, type StoredRun } from "./guide-storage";
 import { GuideOverlay } from "./guide-overlay";
+import { WelcomeDialog } from "./welcome-dialog";
 
 // The running guide: which one, which step, and the moves between steps. The
 // list of guides this person may run arrives from the server (the dashboard
@@ -13,6 +21,10 @@ import { GuideOverlay } from "./guide-overlay";
 //
 // Lives in DashboardShell, above every page, so a guide carries on across route
 // changes; guide-storage.ts carries it across a reload.
+//
+// It also holds the first-run checklist and welcome the server computed, with
+// the person's own moves on top (hide, collapse, close the welcome) applied at
+// once while the server catches up.
 
 interface GuideContextValue {
   /** The server's list, with guides finished in this visit marked done. */
@@ -20,6 +32,19 @@ interface GuideContextValue {
   /** The running guide, or null. */
   runningId: GuideId | null;
   start: (id: GuideId) => void;
+  /** The first-run checklist, or null when it is not this person's or all done. */
+  setup: SetupState | null;
+  /** The salon's public booking link, for the checklist's "Copy". */
+  bookingUrl: string | null;
+  /** The checklist folded to its header (a per-browser preference). */
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+  /** Skip the checklist; the help panel brings it back. */
+  hideChecklist: () => void;
+  /** Bring the checklist back, unfolded, and scroll it into view on Today. */
+  openChecklist: () => void;
+  /** Bumped by openChecklist(), so the checklist knows to scroll itself into view. */
+  checklistFocus: number;
 }
 
 const GuideContext = createContext<GuideContextValue | null>(null);
@@ -30,6 +55,13 @@ export function useGuides(): GuideContextValue {
   return ctx;
 }
 
+/** For a page that renders with or without help (the provider is absent while it is off). */
+export function useGuidesOptional(): GuideContextValue | null {
+  return useContext(GuideContext);
+}
+
+const collapsedKey = (userId: string) => `sb_setup_collapsed:${userId}`;
+
 function send(event: GuideEventInput) {
   // Analytics must never cost the person anything: no await, no error shown.
   recordGuideEvent(event).catch(() => {});
@@ -38,13 +70,23 @@ function send(event: GuideEventInput) {
 export function GuideProvider({
   userId,
   catalog,
+  setup: serverSetup = null,
+  bookingUrl = null,
   children,
 }: {
   userId: string;
   catalog: GuideEntry[];
+  setup?: SetupState | null;
+  bookingUrl?: string | null;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [run, setRun] = useState<StoredRun | null>(null);
+  // The person's hide/show, until the server's next render says the same.
+  const [hiddenOverride, setHiddenOverride] = useState<boolean | null>(null);
+  const [welcomeClosed, setWelcomeClosed] = useState(false);
+  const [collapsed, setCollapsedState] = useState(false);
+  const [checklistFocus, setChecklistFocus] = useState(0);
   const [doneNow, setDoneNow] = useState<string[]>([]);
   // The latest run, for callbacks fired from DOM listeners and timers.
   const runRef = useRef<StoredRun | null>(null);
@@ -71,6 +113,60 @@ export function GuideProvider({
   useEffect(() => {
     writeRun(userId, run);
   }, [userId, run]);
+
+  // ── First-run checklist and welcome ───────────────────────────────────────
+  useEffect(() => {
+    try {
+      setCollapsedState(localStorage.getItem(collapsedKey(userId)) === "1");
+    } catch {
+      /* unfolded, then */
+    }
+  }, [userId]);
+
+  const setCollapsed = useCallback(
+    (next: boolean) => {
+      setCollapsedState(next);
+      try {
+        localStorage.setItem(collapsedKey(userId), next ? "1" : "0");
+      } catch {
+        /* just not remembered */
+      }
+    },
+    [userId],
+  );
+
+  // Once the server's value arrives, it is the truth again.
+  const serverHidden = serverSetup?.hidden;
+  useEffect(() => {
+    setHiddenOverride(null);
+  }, [serverHidden]);
+
+  const hideChecklist = useCallback(() => {
+    setHiddenOverride(true);
+    setChecklistHidden(true).catch(() => {});
+  }, []);
+
+  const openChecklist = useCallback(() => {
+    setHiddenOverride(false);
+    setCollapsed(false);
+    setChecklistFocus((n) => n + 1);
+    if (serverSetup?.hidden) setChecklistHidden(false).catch(() => {});
+    router.push("/dashboard");
+  }, [serverSetup?.hidden, setCollapsed, router]);
+
+  const setup = useMemo<SetupState | null>(
+    () => (serverSetup ? { ...serverSetup, hidden: hiddenOverride ?? serverSetup.hidden } : null),
+    [serverSetup, hiddenOverride],
+  );
+
+  const closeWelcome = useCallback(
+    (thenOpen: boolean) => {
+      setWelcomeClosed(true);
+      markWelcomeShown().catch(() => {});
+      if (thenOpen) openChecklist();
+    },
+    [openChecklist],
+  );
 
   const guide: GuideDef | undefined = run ? guideById(run.guideId) : undefined;
 
@@ -132,13 +228,24 @@ export function GuideProvider({
       catalog: catalog.map((g) => (doneNow.includes(g.id) ? { ...g, completed: true } : g)),
       runningId: (run?.guideId as GuideId | undefined) ?? null,
       start,
+      setup,
+      bookingUrl,
+      collapsed,
+      setCollapsed,
+      hideChecklist,
+      openChecklist,
+      checklistFocus,
     }),
-    [catalog, doneNow, run?.guideId, start],
+    [catalog, doneNow, run?.guideId, start, setup, bookingUrl, collapsed, setCollapsed, hideChecklist, openChecklist, checklistFocus],
   );
 
   return (
     <GuideContext.Provider value={value}>
       {children}
+      {/* Never over a running guide; the server already keeps it off the consent gate. */}
+      {setup?.welcome && !welcomeClosed && !run && (
+        <WelcomeDialog total={setup.total} onStart={() => closeWelcome(true)} onLater={() => closeWelcome(false)} />
+      )}
       {run && guide && (
         <GuideOverlay
           key={`${run.guideId}:${run.step}`}

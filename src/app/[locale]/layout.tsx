@@ -123,6 +123,7 @@ const CLIENT_NAMESPACES = [
   "LegalReconsent",
   "Manage",
   "Nav",
+  "Onboarding", // the first-run welcome dialog and the Today checklist
   "Payments", // payment-section and the Today totals strip
   "Payroll",
   "Pwa",

@@ -25,6 +25,7 @@ import { ConfirmDialog } from "../_components/confirm-dialog";
 import { LocationPicker } from "@/components/location-picker";
 import { NotificationToggle } from "@/components/pwa/notification-toggle";
 import { Link } from "@/i18n/navigation";
+import { markLinkCopied } from "../_actions/guides";
 import { MapPin, Store } from "lucide-react";
 
 const inputCls =
@@ -188,7 +189,7 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>{t("profile.address")}</label>
-            <input className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <input data-tour="settings.address" className={inputCls} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </div>
           <div>
             <label className={labelCls}>{t("profile.district")}</label>
@@ -201,15 +202,22 @@ function ProfileCard({ salon, onSaved }: { salon: SalonData; onSaved: () => void
           </div>
           <div>
             <label className={labelCls}>{t("profile.phone")}</label>
-            <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994..." />
+            <input data-tour="settings.phone" className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994..." />
           </div>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">
-        <button onClick={save} disabled={pending} className={saveBtn}>
+        <button onClick={save} disabled={pending} className={saveBtn} data-tour="settings.profile-save">
           {pending ? t("saving") : t("save")}
         </button>
-        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>{msg.text}</span>}
+        {msg && (
+          <span
+            data-tour={msg.ok ? "settings.profile-saved" : "settings.profile-error"}
+            className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}
+          >
+            {msg.text}
+          </span>
+        )}
       </div>
     </section>
   );
@@ -319,6 +327,8 @@ function LinkCard({
     navigator.clipboard?.writeText(fullUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      // Ticks "share your link" on the first-run checklist.
+      markLinkCopied().then(onSaved).catch(() => {});
     });
   }
 
@@ -351,6 +361,7 @@ function LinkCard({
         </code>
         <button
           onClick={copy}
+          data-tour="settings.link-copy"
           className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-hover"
         >
           {copied ? t("link.copied") : t("link.copy")}
@@ -760,7 +771,7 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
   }
 
   return (
-    <section className={cardCls}>
+    <section className={cardCls} data-tour="settings.hours">
       <h2 className="text-sm font-semibold text-foreground">{t("hours.title")}</h2>
       <p className="mt-1 text-sm text-faint-foreground">{t("hours.subtitle")}</p>
 
@@ -793,10 +804,17 @@ function HoursCard({ businessHours, onSaved }: { businessHours: BusinessHour[]; 
       </div>
 
       <div className="mt-4 flex items-center gap-3">
-        <button onClick={save} disabled={pending} className={saveBtn}>
+        <button onClick={save} disabled={pending} className={saveBtn} data-tour="settings.hours-save">
           {pending ? t("saving") : t("save")}
         </button>
-        {msg && <span className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>{msg.text}</span>}
+        {msg && (
+          <span
+            data-tour={msg.ok ? "settings.hours-saved" : "settings.hours-error"}
+            className={"text-sm " + (msg.ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}
+          >
+            {msg.text}
+          </span>
+        )}
       </div>
     </section>
   );

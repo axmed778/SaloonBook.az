@@ -65,18 +65,22 @@ model User {
 // What the person has finished or dismissed. The position INSIDE a running
 // guide is not here — it lives minutes, in the browser (see guide-storage.ts).
 model UserGuideState {
-  userId          String    @id
+  userId              String    @id
   /// Registry ids (src/lib/guides/registry.ts) of the guides walked to the end.
-  completedGuides String[]  @default([])
-  /// First-run welcome dialog seen (phase 2).
-  welcomeShownAt  DateTime? @db.Timestamptz(3)
-  /// First-run checklist collapsed away by the person (phase 2).
-  checklistHidden Boolean   @default(false)
+  completedGuides     String[]  @default([])
+  /// Set at registration: this person signed up through the first-run flow,
+  /// so they get the welcome dialog. Null for everyone who existed before it
+  /// shipped — they never see the welcome, only the data-driven checklist.
+  onboardingStartedAt DateTime? @db.Timestamptz(3)
+  /// First-run welcome dialog seen (closed either way).
+  welcomeShownAt      DateTime? @db.Timestamptz(3)
+  /// First-run checklist hidden by the person ("skip"); the help panel brings it back.
+  checklistHidden     Boolean   @default(false)
   /// Pressed a "Copy" button next to the booking link, wherever it is shown:
-  /// the one checklist item the data cannot answer by itself (phase 2).
-  linkCopiedAt    DateTime? @db.Timestamptz(3)
-  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// one of the two signals for the checklist's "share your link" item.
+  linkCopiedAt        DateTime? @db.Timestamptz(3)
+  updatedAt           DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Product analytics for the guides: where people start, finish and give up, so

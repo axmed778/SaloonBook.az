@@ -6,6 +6,7 @@ import az from "../../../messages/az.json";
 import ru from "../../../messages/ru.json";
 import en from "../../../messages/en.json";
 import { canOpenSection } from "../auth/permissions";
+import { SETUP_ITEMS } from "./checklist";
 import {
   ENGINE_TARGETS,
   GUIDES,
@@ -57,7 +58,7 @@ function requiredKeys(): string[] {
       keys.push(`Guides.guides.${g.id}.steps.${s.id}.do`, `Guides.guides.${g.id}.steps.${s.id}.why`);
     }
     if (g.limit) keys.push(`Help.limit.${g.limit}.title`, `Help.limit.${g.limit}.body`);
-    if (g.needs) keys.push(`Help.needs.${g.needs.guide}.body`, `Help.needs.${g.needs.guide}.action`);
+    for (const n of g.needs ?? []) keys.push(`Help.needs.${g.id}.${n.fact}`, `Help.showGuide.${n.guide}`);
   }
   return keys;
 }
@@ -79,8 +80,10 @@ describe("guide registry", () => {
         const at = `${g.id}.${s.id}`;
         if (s.type !== "info") expect(s.target, at).toBeTruthy();
         if (s.type === "navigate") expect(s.route, at).toBeTruthy();
-        if (s.awaitRemoval) expect(s.type, at).toBe("click");
-        if (s.errorTarget) expect(s.awaitRemoval, at).toBe(true);
+        if (s.awaitRemoval || s.successTarget) expect(s.type, at).toBe("click");
+        // One way to know the save worked, and an error line only beside one.
+        expect(!!(s.awaitRemoval && s.successTarget), at).toBe(false);
+        if (s.errorTarget) expect(!!(s.awaitRemoval || s.successTarget), at).toBe(true);
       }
       // The last step is the "done" card: reaching it is what counts as finished.
       expect(g.steps[g.steps.length - 1]!.type, g.id).toBe("info");
@@ -92,15 +95,22 @@ describe("guide registry", () => {
       expect(GUIDE_SECTIONS).toContain(g.section);
       for (const route of [g.route, ...g.steps.flatMap((s) => (s.route ? [s.route] : []))]) {
         expect(route.startsWith("/dashboard"), `${g.id}: ${route}`).toBe(true);
-        expect(canOpenSection([g.permission], route), `${g.id}: ${route}`).toBe(true);
+        expect(canOpenSection(g.permissions, route), `${g.id}: ${route}`).toBe(true);
       }
     }
   });
 
-  it("names prerequisite guides that exist", () => {
+  it("names prerequisite guides that exist, and are not the guide itself", () => {
     for (const g of guides) {
-      if (g.needs) expect(guideById(g.needs.guide), g.id).toBeDefined();
+      for (const n of g.needs ?? []) {
+        expect(guideById(n.guide), `${g.id} needs ${n.guide}`).toBeDefined();
+        expect(n.guide, g.id).not.toBe(g.id);
+      }
     }
+  });
+
+  it("asks for at least one permission per guide", () => {
+    for (const g of guides) expect(g.permissions.length, g.id).toBeGreaterThan(0);
   });
 });
 
@@ -118,11 +128,22 @@ describe("guide texts", () => {
   });
 
   it("have the same keys in az, ru and en", () => {
-    for (const ns of ["Guides", "Help"]) {
+    for (const ns of ["Guides", "Help", "Onboarding"]) {
       const base = leafKeys(get(az, ns)).sort();
       expect(base.length, ns).toBeGreaterThan(0);
       expect(leafKeys(get(ru, ns)).sort(), `ru ${ns}`).toEqual(base);
       expect(leafKeys(get(en, ns)).sort(), `en ${ns}`).toEqual(base);
+    }
+  });
+
+  it("have a title and a hint for every checklist item, in every locale", () => {
+    for (const [locale, messages] of Object.entries(LOCALES)) {
+      for (const item of SETUP_ITEMS) {
+        for (const leaf of ["title", "hint"]) {
+          const key = `Onboarding.checklist.items.${item.id}.${leaf}`;
+          expect(typeof get(messages, key), `${locale}: ${key}`).toBe("string");
+        }
+      }
     }
   });
 
@@ -136,9 +157,10 @@ describe("guide texts", () => {
 describe("guide anchors", () => {
   const anchors = new Set(
     filesUnder(SRC, (p) => /\.tsx$/.test(p) && !/\.test\.tsx$/.test(p)).flatMap((file) =>
-      // data-tour="x" on an element, or tour: "x" in a menu table that renders it.
-      [...readFileSync(file, "utf8").matchAll(/data-tour="([^"]+)"|\btour: "([^"]+)"/g)].map(
-        (m) => m[1] ?? m[2]!,
+      // data-tour="x" on an element; data-tour={ok ? "x" : "y"} choosing between
+      // literals; or tour: "x" in a menu table that renders it.
+      [...readFileSync(file, "utf8").matchAll(/data-tour="([^"]+)"|data-tour=\{([^}]*)\}|\btour: "([^"]+)"/g)].flatMap(
+        (m) => (m[2] !== undefined ? [...m[2].matchAll(/"([^"]+)"/g)].map((q) => q[1]!) : [m[1] ?? m[3]!]),
       ),
     ),
   );

@@ -59,3 +59,49 @@ export async function recordGuideEvent(input: GuideEventInput): Promise<void> {
     });
   }
 }
+
+// ── First-run state ─────────────────────────────────────────────────────────
+// Each writes one field of the caller's own UserGuideState and nothing else.
+
+/** The welcome dialog was closed (either button, or Escape): never show it again. */
+export async function markWelcomeShown(): Promise<void> {
+  const session = await requirePermission("bookings.read");
+  const userId = session.user.id;
+  const now = new Date();
+  await prisma.userGuideState.upsert({
+    where: { userId },
+    create: { userId, welcomeShownAt: now },
+    update: { welcomeShownAt: now },
+  });
+}
+
+/** Skip the checklist on Today (true), or bring it back from the help panel (false). */
+export async function setChecklistHidden(hidden: boolean): Promise<void> {
+  const session = await requirePermission("bookings.read");
+  if (typeof hidden !== "boolean") return;
+  const userId = session.user.id;
+  await prisma.userGuideState.upsert({
+    where: { userId },
+    create: { userId, checklistHidden: hidden },
+    update: { checklistHidden: hidden },
+  });
+}
+
+/**
+ * A "Copy" button next to the salon's booking link was pressed — the Settings
+ * card or the checklist's own. The first press is what counts; later ones
+ * leave the date alone.
+ */
+export async function markLinkCopied(): Promise<void> {
+  const session = await requirePermission("bookings.read");
+  const userId = session.user.id;
+  await prisma.userGuideState.upsert({
+    where: { userId },
+    create: { userId, linkCopiedAt: new Date() },
+    update: {},
+  });
+  await prisma.userGuideState.updateMany({
+    where: { userId, linkCopiedAt: null },
+    data: { linkCopiedAt: new Date() },
+  });
+}

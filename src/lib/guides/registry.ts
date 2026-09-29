@@ -14,7 +14,7 @@
 // has no matching data-tour="…" anywhere in src/.
 //
 // Who may run a guide is decided on the server (availability.ts), from the
-// `permission` below and the plan, and handed to the client ready-made. The
+// `permissions` below and the plan, and handed to the client ready-made. The
 // client never filters this list itself.
 //
 // PURE: no React, no Prisma. The server imports it to decide availability, the
@@ -51,6 +51,11 @@ export interface GuideStep {
    */
   awaitRemoval?: boolean;
   /**
+   * A click that submits a form which stays open (Settings): the step is done
+   * when this element — the form's "Saved" line — appears after the press.
+   */
+  successTarget?: string;
+  /**
    * data-tour of the form's error line. When it shows up after the press, the
    * spotlight widens to it and the step says the save did not go through.
    */
@@ -58,7 +63,7 @@ export interface GuideStep {
 }
 
 /** The help panel's groups, in display order. */
-export const GUIDE_SECTIONS = ["services", "team", "schedule", "bookings", "billing"] as const;
+export const GUIDE_SECTIONS = ["salon", "services", "team", "schedule", "bookings", "billing"] as const;
 export type GuideSection = (typeof GUIDE_SECTIONS)[number];
 
 /**
@@ -67,95 +72,205 @@ export type GuideSection = (typeof GUIDE_SECTIONS)[number];
  */
 export type GuideLimit = "employeeSeats";
 
+/**
+ * What the salon's data must already hold for a guide not to dead-end. Loaded
+ * on the server (catalog.ts); each is a plain yes/no about the salon.
+ */
+export const GUIDE_FACTS = [
+  "hasServices", // any service, active or not (the add-on form lists them all)
+  "hasActiveServices",
+  "hasActiveEmployees",
+  "hasBookableStaff", // an active employee with an active service and working hours
+] as const;
+export type GuideFact = (typeof GUIDE_FACTS)[number];
+
 export interface GuideDef {
   id: string;
   section: GuideSection;
-  /** What the person must be allowed to do. Asked with accessRefusal(). */
-  permission: Permission;
+  /**
+   * What the person must be allowed to do — every one of them, asked together
+   * with accessRefusal(). More than one when the guide crosses screens.
+   */
+  permissions: readonly Permission[];
   /** The page the guide works on. */
   route: string;
   /** A plan limit the guide's action consumes, checked before it starts. */
   limit?: GuideLimit;
   /**
-   * A guide that must have left something behind first. The add-on form cannot
-   * be saved without a service to attach the add-on to. registry.test.ts checks
-   * the id exists.
+   * What must exist first, and the guide that makes it. The add-on form cannot
+   * be saved without a service; a booking needs a master who can take it. The
+   * first unmet one is offered instead. registry.test.ts checks the ids exist.
+   * (`guide` is a string here: GuideId derives from this very list.)
    */
-  needs?: {
-    /** Id of the guide that leaves it behind (a string here: GuideId derives from this list). */
-    guide: string;
-    fact: "hasServices";
-  };
+  needs?: readonly { fact: GuideFact; guide: string }[];
   steps: readonly GuideStep[];
 }
 
+const SERVICES = "/dashboard/services";
+const WORKERS = "/dashboard/workers";
+const SETTINGS = "/dashboard/settings";
+const CALENDAR = "/dashboard/calendar";
+
 export const GUIDES = [
+  {
+    id: "salonProfile",
+    section: "salon",
+    permissions: ["settings.write"],
+    route: SETTINGS,
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.settings", route: SETTINGS },
+      { id: "phone", type: "input", target: "settings.phone", route: SETTINGS },
+      { id: "address", type: "input", target: "settings.address", route: SETTINGS },
+      {
+        id: "save",
+        type: "click",
+        target: "settings.profile-save",
+        route: SETTINGS,
+        successTarget: "settings.profile-saved",
+        errorTarget: "settings.profile-error",
+      },
+      { id: "done", type: "info", route: SETTINGS },
+    ],
+  },
   {
     id: "addService",
     section: "services",
-    permission: "services.write",
-    route: "/dashboard/services",
+    permissions: ["services.write"],
+    route: SERVICES,
     steps: [
-      { id: "openPage", type: "navigate", target: "nav.services", route: "/dashboard/services" },
-      { id: "openForm", type: "click", target: "service.add", route: "/dashboard/services" },
-      { id: "name", type: "input", target: "service.name", route: "/dashboard/services" },
-      { id: "price", type: "input", target: "service.price", route: "/dashboard/services" },
-      { id: "duration", type: "input", target: "service.duration", route: "/dashboard/services" },
+      { id: "openPage", type: "navigate", target: "nav.services", route: SERVICES },
+      { id: "openForm", type: "click", target: "service.add", route: SERVICES },
+      { id: "name", type: "input", target: "service.name", route: SERVICES },
+      { id: "price", type: "input", target: "service.price", route: SERVICES },
+      { id: "duration", type: "input", target: "service.duration", route: SERVICES },
       {
         id: "save",
         type: "click",
         target: "service.save",
-        route: "/dashboard/services",
+        route: SERVICES,
         awaitRemoval: true,
         errorTarget: "service.error",
       },
-      { id: "done", type: "info", route: "/dashboard/services" },
+      { id: "done", type: "info", route: SERVICES },
     ],
   },
   {
     id: "addAddon",
     section: "services",
-    permission: "services.write",
-    route: "/dashboard/services",
-    needs: { guide: "addService", fact: "hasServices" },
+    permissions: ["services.write"],
+    route: SERVICES,
+    needs: [{ fact: "hasServices", guide: "addService" }],
     steps: [
-      { id: "openPage", type: "navigate", target: "nav.services", route: "/dashboard/services" },
-      { id: "openForm", type: "click", target: "addon.add", route: "/dashboard/services" },
-      { id: "name", type: "input", target: "addon.name", route: "/dashboard/services" },
-      { id: "price", type: "input", target: "addon.price", route: "/dashboard/services" },
-      { id: "services", type: "input", target: "addon.services", route: "/dashboard/services" },
+      { id: "openPage", type: "navigate", target: "nav.services", route: SERVICES },
+      { id: "openForm", type: "click", target: "addon.add", route: SERVICES },
+      { id: "name", type: "input", target: "addon.name", route: SERVICES },
+      { id: "price", type: "input", target: "addon.price", route: SERVICES },
+      { id: "services", type: "input", target: "addon.services", route: SERVICES },
       {
         id: "save",
         type: "click",
         target: "addon.save",
-        route: "/dashboard/services",
+        route: SERVICES,
         awaitRemoval: true,
         errorTarget: "addon.error",
       },
-      { id: "done", type: "info", route: "/dashboard/services" },
+      { id: "done", type: "info", route: SERVICES },
     ],
   },
   {
     id: "addWorker",
     section: "team",
-    permission: "staff.manage",
-    route: "/dashboard/workers",
+    permissions: ["staff.manage"],
+    route: WORKERS,
     limit: "employeeSeats",
     steps: [
-      { id: "openPage", type: "navigate", target: "nav.workers", route: "/dashboard/workers" },
-      { id: "openForm", type: "click", target: "worker.add", route: "/dashboard/workers" },
-      { id: "name", type: "input", target: "worker.name", route: "/dashboard/workers" },
-      { id: "services", type: "input", target: "worker.services", route: "/dashboard/workers" },
-      { id: "hours", type: "info", target: "worker.hours", route: "/dashboard/workers" },
+      { id: "openPage", type: "navigate", target: "nav.workers", route: WORKERS },
+      { id: "openForm", type: "click", target: "worker.add", route: WORKERS },
+      { id: "name", type: "input", target: "worker.name", route: WORKERS },
+      { id: "services", type: "input", target: "worker.services", route: WORKERS },
+      { id: "hours", type: "info", target: "worker.hours", route: WORKERS },
       {
         id: "save",
         type: "click",
         target: "worker.save",
-        route: "/dashboard/workers",
+        route: WORKERS,
         awaitRemoval: true,
         errorTarget: "worker.error",
       },
-      { id: "done", type: "info", route: "/dashboard/workers" },
+      { id: "done", type: "info", route: WORKERS },
+    ],
+  },
+  {
+    // Both places hours live: each master's own (what online booking offers)
+    // first, then the salon's opening hours (what the salon page shows).
+    id: "workingHours",
+    section: "schedule",
+    permissions: ["staff.manage", "settings.write"],
+    route: WORKERS,
+    needs: [{ fact: "hasActiveEmployees", guide: "addWorker" }],
+    steps: [
+      { id: "openWorkers", type: "navigate", target: "nav.workers", route: WORKERS },
+      { id: "edit", type: "click", target: "worker.edit", route: WORKERS },
+      { id: "hours", type: "info", target: "worker.hours", route: WORKERS },
+      {
+        id: "save",
+        type: "click",
+        target: "worker.save",
+        route: WORKERS,
+        awaitRemoval: true,
+        errorTarget: "worker.error",
+      },
+      { id: "openSettings", type: "navigate", target: "nav.settings", route: SETTINGS },
+      { id: "salonHours", type: "info", target: "settings.hours", route: SETTINGS },
+      {
+        id: "salonHoursSave",
+        type: "click",
+        target: "settings.hours-save",
+        route: SETTINGS,
+        successTarget: "settings.hours-saved",
+        errorTarget: "settings.hours-error",
+      },
+      { id: "done", type: "info", route: SETTINGS },
+    ],
+  },
+  {
+    id: "bookingLink",
+    section: "bookings",
+    permissions: ["settings.write"],
+    route: SETTINGS,
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.settings", route: SETTINGS },
+      { id: "copy", type: "click", target: "settings.link-copy", route: SETTINGS },
+      { id: "instagram", type: "info", route: SETTINGS },
+      { id: "done", type: "info", route: SETTINGS },
+    ],
+  },
+  {
+    id: "manualBooking",
+    section: "bookings",
+    permissions: ["bookings.write"],
+    route: CALENDAR,
+    needs: [
+      { fact: "hasActiveServices", guide: "addService" },
+      { fact: "hasBookableStaff", guide: "addWorker" },
+    ],
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.calendar", route: CALENDAR },
+      { id: "openForm", type: "click", target: "calendar.new-booking", route: CALENDAR },
+      { id: "employee", type: "input", target: "booking.employee", route: CALENDAR },
+      { id: "service", type: "input", target: "booking.service", route: CALENDAR },
+      { id: "slot", type: "input", target: "booking.slots", route: CALENDAR },
+      { id: "name", type: "input", target: "booking.name", route: CALENDAR },
+      { id: "phone", type: "input", target: "booking.phone", route: CALENDAR },
+      {
+        id: "save",
+        type: "click",
+        target: "booking.save",
+        route: CALENDAR,
+        awaitRemoval: true,
+        errorTarget: "booking.error",
+      },
+      { id: "done", type: "info", route: CALENDAR },
     ],
   },
 ] as const satisfies readonly GuideDef[];
@@ -179,6 +294,7 @@ export function guideTargets(): string[] {
     for (const s of g.steps) {
       if (s.target) out.add(s.target);
       if (s.errorTarget) out.add(s.errorTarget);
+      if (s.successTarget) out.add(s.successTarget);
     }
   }
   return [...out];

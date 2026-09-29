@@ -14,6 +14,7 @@ import {
 } from "@/lib/serializers/booking";
 import { dayTotalsByMethod, type DayTotals } from "./_components/today-shared";
 import { TodayView } from "./_components/today-view";
+import { SetupChecklist } from "@/components/guides/setup-checklist";
 import { toTodayAppointment, type TodayAppointment } from "./_components/today-shared";
 
 export const dynamic = "force-dynamic";
@@ -111,13 +112,18 @@ export default async function DashboardTodayPage() {
   }
 
   return (
-    <TodayView
-      items={items}
-      dateLabel={formatBakuDate(today, locale)}
-      salonName={salon?.name ?? ""}
-      // Finance sees the day but does not change it: no status or move buttons.
-      canWrite={can(session, "bookings.write")}
-      totals={totals}
-    />
+    <>
+      {/* The first-run checklist (renders nothing unless the layout computed
+          one for this person: the owner of a salon with steps still open). */}
+      <SetupChecklist />
+      <TodayView
+        items={items}
+        dateLabel={formatBakuDate(today, locale)}
+        salonName={salon?.name ?? ""}
+        // Finance sees the day but does not change it: no status or move buttons.
+        canWrite={can(session, "bookings.write")}
+        totals={totals}
+      />
+    </>
   );
 }

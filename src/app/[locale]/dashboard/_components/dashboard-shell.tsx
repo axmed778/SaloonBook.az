@@ -8,6 +8,7 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { GuideProvider } from "@/components/guides/guide-provider";
 import { HelpButton } from "@/components/guides/help-button";
 import type { GuideEntry } from "@/lib/guides/availability";
+import type { SetupState } from "@/lib/guides/checklist";
 import { SidebarNav } from "./sidebar-nav";
 import { BottomTabBar } from "./bottom-tab-bar";
 import { BranchSwitcher, type BranchOption } from "./branch-switcher";
@@ -16,8 +17,16 @@ import type { Permission } from "@/lib/auth/permissions";
 
 type User = { name: string; role: string; initial: string };
 type BranchData = { branches: BranchOption[]; activeId: string };
-/** The interactive guides: whose progress, and the list the server allowed. */
-type GuidesData = { userId: string; catalog: GuideEntry[] };
+/**
+ * The interactive guides and the first-run checklist: whose progress, the list
+ * the server allowed, and the checklist it computed (null when not theirs).
+ */
+type GuidesData = {
+  userId: string;
+  catalog: GuideEntry[];
+  setup: SetupState | null;
+  bookingUrl: string | null;
+};
 
 const STORAGE_KEY = "sb_sidebar_collapsed";
 
@@ -172,7 +181,12 @@ export function DashboardShell({
   );
 
   return guides ? (
-    <GuideProvider userId={guides.userId} catalog={guides.catalog}>
+    <GuideProvider
+      userId={guides.userId}
+      catalog={guides.catalog}
+      setup={guides.setup}
+      bookingUrl={guides.bookingUrl}
+    >
       {frame}
     </GuideProvider>
   ) : (
