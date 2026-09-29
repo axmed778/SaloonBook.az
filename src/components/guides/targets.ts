@@ -2,8 +2,15 @@
 //
 // Several elements may carry the same anchor: the menu is rendered twice (the
 // desktop sidebar and the phone drawer), and only one is on screen at a time.
-// The first one actually visible wins — "visible" meaning it has a box and
-// that box is horizontally on screen (the closed drawer sits at x = -256).
+// The first one actually laid out wins — "laid out" meaning it has a box and
+// that box is horizontally inside the page (the closed drawer sits at
+// x = -256). It may still be scrolled out of view vertically; the overlay
+// deals with that (placement.ts, targetView).
+//
+// The page width is documentElement.clientWidth — the LAYOUT viewport — never
+// window.innerWidth, which some browsers shrink to the visible area under pinch
+// zoom: a zoomed-in person would lose every element to the right of what they
+// happen to be looking at.
 
 export function tourSelector(name: string): string {
   return `[data-tour="${name}"]`;
@@ -12,14 +19,32 @@ export function tourSelector(name: string): string {
 export function isOnScreen(el: Element): boolean {
   const r = el.getBoundingClientRect();
   if (r.width === 0 && r.height === 0) return false;
-  if (r.right <= 0 || r.left >= window.innerWidth) return false;
+  if (r.right <= 0 || r.left >= document.documentElement.clientWidth) return false;
   const style = window.getComputedStyle(el);
   return style.visibility !== "hidden" && style.display !== "none";
 }
 
 export function findTarget(name: string): HTMLElement | null {
+  return locateTarget(name).el;
+}
+
+/**
+ * The step's element, told apart from "it is in the page but has no place on
+ * screen" (display:none, inside a folded section or the closed drawer), which
+ * gets its own message instead of a silent wait.
+ */
+export function locateTarget(name: string): { el: HTMLElement | null; hidden: HTMLElement | null } {
   const all = document.querySelectorAll<HTMLElement>(tourSelector(name));
-  for (const el of all) if (isOnScreen(el)) return el;
+  for (const el of all) if (isOnScreen(el)) return { el, hidden: null };
+  return { el: null, hidden: all[0] ?? null };
+}
+
+/** The nearest ancestor that has a box on screen, to scroll to when the element itself has none. */
+export function nearestShown(el: HTMLElement): HTMLElement | null {
+  for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+    const r = n.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return n;
+  }
   return null;
 }
 
