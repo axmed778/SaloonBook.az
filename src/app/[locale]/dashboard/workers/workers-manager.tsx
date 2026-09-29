@@ -471,27 +471,29 @@ export function WorkersManager({
           {employees.map((e) => (
             <li
               key={e.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5"
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border bg-card px-4 py-3.5"
             >
-              <div className="flex min-w-0 items-center gap-3">
+              {/* basis-56: avatar and name keep at least 14rem; when the
+                  actions don't fit beside that, they wrap under it (phones). */}
+              <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
                   {e.name.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-foreground">{e.name}</p>
-                    <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <p className="min-w-0 truncate font-medium text-foreground">{e.name}</p>
+                    <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {tAudience(e.audience)}
                     </span>
                     {!e.isActive && (
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         {t("inactive")}
                       </span>
                     )}
                     {e.access && (
                       <span
                         title={e.access.email}
-                        className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                        className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
                       >
                         {t("access.badge")}
                       </span>
@@ -507,7 +509,7 @@ export function WorkersManager({
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex max-w-full shrink-0 flex-wrap items-center gap-3">
                 <button
                   onClick={() => setAccessFor(e)}
                   disabled={pending}
