@@ -280,9 +280,9 @@ export function AddonsManager({
                 key={a.id}
                 className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border bg-card px-4 py-3.5"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-48">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-foreground">{a.name}</p>
+                    <p className="min-w-0 truncate font-medium text-foreground">{a.name}</p>
                     {!a.isActive && (
                       <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         {t("inactive")}
@@ -306,7 +306,7 @@ export function AddonsManager({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-3">
+                <div className="flex max-w-full shrink-0 flex-wrap items-center gap-3">
                   <span className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground">
                     +{aznLabel(a.priceMinor)} ₼
                   </span>

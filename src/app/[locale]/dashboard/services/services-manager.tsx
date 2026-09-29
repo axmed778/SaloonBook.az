@@ -276,16 +276,18 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
           {services.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5"
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border bg-card px-4 py-3.5"
             >
-              <div className="min-w-0">
+              {/* basis-48: the name keeps at least 12rem; when the actions
+                  don't fit beside that, they wrap under it (phones). */}
+              <div className="min-w-0 flex-1 basis-48">
                 <div className="flex items-center gap-2">
-                  <p className="truncate font-medium text-foreground">{s.name}</p>
-                  <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <p className="min-w-0 truncate font-medium text-foreground">{s.name}</p>
+                  <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {tAudience(s.audience)}
                   </span>
                   {!s.isActive && (
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {t("inactive")}
                     </span>
                   )}
@@ -301,7 +303,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                 )}
               </div>
 
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex max-w-full shrink-0 flex-wrap items-center gap-3">
                 <span className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground">
                   {aznLabel(s.priceMinor)} ₼
                 </span>
