@@ -1922,5 +1922,162 @@
       "notFound": "The digest has been updated — reload the page.",
       "generic": "Couldn't save. Please try again."
     }
+  },
+  "Guides": {
+    "ui": {
+      "step": "Step {current} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "done": "Done",
+      "exit": "Exit",
+      "retry": "Try again",
+      "openPage": "Open the right page",
+      "notFound": {
+        "title": "I can't see the button",
+        "body": "The window may have closed, or the page is still loading. Try again, or open the right page."
+      },
+      "wrongPage": {
+        "title": "This step is on another page",
+        "body": "Press the button below and I'll open it."
+      },
+      "openMenu": {
+        "do": "Tap the menu button at the top left.",
+        "why": "All sections of your dashboard are in there."
+      },
+      "saveFailed": "It wasn't saved. Read the red hint, fix it, and press “Save” again."
+    },
+    "guides": {
+      "addService": {
+        "title": "Add a service",
+        "steps": {
+          "openPage": {
+            "do": "Open “Services” in the menu.",
+            "why": "This is the list of everything your salon does."
+          },
+          "openForm": {
+            "do": "Press “New service”.",
+            "why": "A short form for the new service will open."
+          },
+          "name": {
+            "do": "Type the service name, for example “Haircut”.",
+            "why": "Clients will see this name when they book."
+          },
+          "price": {
+            "do": "Type the price in manat, just the number.",
+            "why": "Clients will see the price before they book."
+          },
+          "duration": {
+            "do": "Check how many minutes the service takes.",
+            "why": "This way the calendar never books two clients at the same time."
+          },
+          "save": {
+            "do": "Press “Save”.",
+            "why": "The service then appears in the list and in online booking."
+          },
+          "done": {
+            "do": "Done, the service is added!",
+            "why": "Add your other services the same way."
+          }
+        }
+      },
+      "addAddon": {
+        "title": "Add an extra to a service",
+        "steps": {
+          "openPage": {
+            "do": "Open “Services” in the menu.",
+            "why": "Extras are set up on the same page, below the services."
+          },
+          "openForm": {
+            "do": "Press “New add-on” below the list of services.",
+            "why": "An extra is something a client can add to a service, like “French tips” to a manicure."
+          },
+          "name": {
+            "do": "Type the name of the extra.",
+            "why": "Clients will see it next to the main service."
+          },
+          "price": {
+            "do": "Type the extra price in manat.",
+            "why": "It is added to the price of the main service."
+          },
+          "services": {
+            "do": "Tick the services this extra can be added to.",
+            "why": "Clients only see the extra when they pick one of them."
+          },
+          "save": {
+            "do": "Press “Save”.",
+            "why": "Clients can then choose the extra when they book."
+          },
+          "done": {
+            "do": "Done, the extra is added!",
+            "why": "Its price and time are added to the booking by themselves."
+          }
+        }
+      },
+      "addWorker": {
+        "title": "Add a staff member",
+        "steps": {
+          "openPage": {
+            "do": "Open “Staff” in the menu.",
+            "why": "This is the list of everyone who works in your salon."
+          },
+          "openForm": {
+            "do": "Press “New staff member”.",
+            "why": "A form for the new person will open."
+          },
+          "name": {
+            "do": "Type their name.",
+            "why": "Clients will see this name when they book."
+          },
+          "services": {
+            "do": "Tap the services this person does.",
+            "why": "Clients can book them only for these services."
+          },
+          "hours": {
+            "do": "Check their working days and hours.",
+            "why": "Clients can book them only at these times."
+          },
+          "save": {
+            "do": "Press “Save”.",
+            "why": "They appear in the calendar and in online booking right away."
+          },
+          "done": {
+            "do": "Done, the staff member is added!",
+            "why": "Add the rest of your team the same way."
+          }
+        }
+      }
+    }
+  },
+  "Help": {
+    "fab": "Help",
+    "title": "Help",
+    "greeting": "Hi! What would you like to do?",
+    "close": "Close",
+    "done": "Done",
+    "sections": {
+      "services": "Services",
+      "team": "Team",
+      "schedule": "Schedule",
+      "bookings": "Bookings and clients",
+      "billing": "Plan"
+    },
+    "upgrade": "See plans",
+    "askOwner": "Ask the salon owner to switch to another plan.",
+    "plan": {
+      "title": "Your plan doesn't include this",
+      "body": "This is available on another plan."
+    },
+    "limit": {
+      "employeeSeats": {
+        "title": "Your plan allows up to {max} active staff members, and all places are taken.",
+        "body": "To add one more, switch to a bigger plan or switch off someone who no longer works here."
+      }
+    },
+    "needs": {
+      "addService": {
+        "body": "First add at least one service: an extra is always added to a service.",
+        "action": "Show me how to add a service"
+      }
+    }
   }
 }

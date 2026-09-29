@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { GuideProvider } from "@/components/guides/guide-provider";
+import { HelpButton } from "@/components/guides/help-button";
+import type { GuideEntry } from "@/lib/guides/availability";
 import { SidebarNav } from "./sidebar-nav";
 import { BottomTabBar } from "./bottom-tab-bar";
 import { BranchSwitcher, type BranchOption } from "./branch-switcher";
@@ -13,6 +16,8 @@ import type { Permission } from "@/lib/auth/permissions";
 
 type User = { name: string; role: string; initial: string };
 type BranchData = { branches: BranchOption[]; activeId: string };
+/** The interactive guides: whose progress, and the list the server allowed. */
+type GuidesData = { userId: string; catalog: GuideEntry[] };
 
 const STORAGE_KEY = "sb_sidebar_collapsed";
 
@@ -24,6 +29,7 @@ export function DashboardShell({
   permissions = [],
   branch = null,
   installDismissed = false,
+  guides = null,
   children,
 }: {
   user: User;
@@ -32,11 +38,16 @@ export function DashboardShell({
   permissions?: readonly Permission[];
   branch?: BranchData | null;
   installDismissed?: boolean;
+  /** Null when help is off: a platform admin, or while the consent gate blocks the page. */
+  guides?: GuidesData | null;
   children: React.ReactNode;
 }) {
   const t = useTranslations("Nav");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // How much of the bottom corner the install prompt covers; the help button
+  // moves up by that much instead of landing on the prompt's buttons.
+  const [installHeight, setInstallHeight] = useState(0);
 
   // Restore the desktop collapsed preference after mount (avoids SSR mismatch).
   useEffect(() => {
@@ -59,7 +70,7 @@ export function DashboardShell({
     });
   }
 
-  return (
+  const frame = (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop sidebar */}
       <aside
@@ -110,6 +121,7 @@ export function DashboardShell({
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
+            data-tour="nav.menu"
             aria-label={t("menu")} title={t("menu")}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary-foreground transition hover:bg-hover"
           >
@@ -131,8 +143,17 @@ export function DashboardShell({
           </div>
         </header>
 
-        {/* Bottom padding clears the fixed mobile tab bar (none on lg). */}
-        <main className="min-w-0 flex-1 px-4 pt-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:px-6 lg:px-8 lg:pb-6">
+        {/* Bottom padding clears the fixed mobile tab bar (none on lg), and the
+            help button above it when help is on, so the last row can scroll
+            out from under both. */}
+        <main
+          className={
+            "min-w-0 flex-1 px-4 pt-6 sm:px-6 lg:px-8 lg:pb-6 " +
+            (guides
+              ? "pb-[calc(env(safe-area-inset-bottom)+8.5rem)]"
+              : "pb-[calc(env(safe-area-inset-bottom)+5rem)]")
+          }
+        >
           {children}
         </main>
       </div>
@@ -142,8 +163,20 @@ export function DashboardShell({
 
       {/* Installable-PWA prompt (Android beforeinstallprompt / iOS instructions).
           Client-side; renders nothing when already installed or dismissed. */}
-      <InstallPrompt dismissed={installDismissed} />
+      <InstallPrompt dismissed={installDismissed} onHeightChange={setInstallHeight} />
+
+      {/* The "?" help button and the guide it starts (none on public pages:
+          only this shell renders it). */}
+      {guides && <HelpButton lift={installHeight} />}
     </div>
+  );
+
+  return guides ? (
+    <GuideProvider userId={guides.userId} catalog={guides.catalog}>
+      {frame}
+    </GuideProvider>
+  ) : (
+    frame
   );
 }
 

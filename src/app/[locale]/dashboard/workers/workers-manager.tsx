@@ -290,6 +290,7 @@ export function WorkersManager({
         {!open && (
           <button
             onClick={startAdd}
+            data-tour="worker.add"
             className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -310,6 +311,7 @@ export function WorkersManager({
             <div>
               <label className={labelCls}>{t("name")}</label>
               <input
+                data-tour="worker.name"
                 className={inputCls + " w-full"}
                 placeholder={t("namePlaceholder")}
                 value={form.name}
@@ -346,7 +348,7 @@ export function WorkersManager({
           </div>
 
           {/* Services */}
-          <div className="mt-5">
+          <div className="mt-5" data-tour="worker.services">
             <label className={labelCls}>{t("services")}</label>
             {activeServices.length === 0 ? (
               <p className="text-sm text-faint-foreground">
@@ -360,6 +362,7 @@ export function WorkersManager({
                     <button
                       key={s.id}
                       type="button"
+                      aria-pressed={on}
                       onClick={() => toggleService(s.id)}
                       className={
                         "rounded-full border px-3 py-1.5 text-sm transition " +
@@ -377,7 +380,7 @@ export function WorkersManager({
           </div>
 
           {/* Working hours */}
-          <div className="mt-5">
+          <div className="mt-5" data-tour="worker.hours">
             <label className={labelCls}>{t("schedule")}</label>
             <div className="divide-y divide-border/60">
               {WEEKDAYS.map((weekday) => {
@@ -437,11 +440,12 @@ export function WorkersManager({
             {t("activeLabel")}
           </label>
 
-          {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          {error && <p data-tour="worker.error" className="mt-3 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
           <div className="mt-5 flex items-center gap-2">
             <button
               onClick={submit}
+              data-tour="worker.save"
               disabled={pending}
               className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >

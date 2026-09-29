@@ -114,6 +114,8 @@ const CLIENT_NAMESPACES = [
   "Discovery",
   "Export",
   "Faq",
+  "Guides", // the interactive guide's card and every guide's step texts
+  "Help", // the "?" help button's panel
   "History",
   "IgDigest", // the platform-admin digest checklist
   "Landing", // salon-map reads Landing.map

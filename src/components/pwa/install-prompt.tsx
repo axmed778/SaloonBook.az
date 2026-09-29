@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { dismissInstallPrompt } from "./actions";
 
@@ -20,11 +20,39 @@ type BeforeInstallPromptEvent = Event & {
  * persisted server-side via a cookie (see actions.ts); `dismissed` reflects it,
  * so a dismissed user never sees it flash on the next load.
  */
-export function InstallPrompt({ dismissed }: { dismissed: boolean }) {
+export function InstallPrompt({
+  dismissed,
+  onHeightChange,
+}: {
+  dismissed: boolean;
+  /**
+   * The card's height (0 while hidden). The card sits right above the tab bar,
+   * where the dashboard's help button is, so the button moves up by this much.
+   */
+  onHeightChange?: (px: number) => void;
+}) {
   const t = useTranslations("Pwa");
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
+  const layerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!onHeightChange) return;
+    const el = layerRef.current;
+    if (!show || !el) {
+      onHeightChange(0);
+      return;
+    }
+    const report = () => onHeightChange(el.offsetHeight);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      onHeightChange(0);
+    };
+  }, [show, onHeightChange]);
 
   useEffect(() => {
     if (dismissed) return;
@@ -98,7 +126,7 @@ export function InstallPrompt({ dismissed }: { dismissed: boolean }) {
       role="dialog"
       aria-label={ios ? t("iosTitle") : t("installTitle")}
     >
-      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-frame">
+      <div ref={layerRef} className="pointer-events-auto w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-frame">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
             <svg

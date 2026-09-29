@@ -91,6 +91,9 @@ jobs:
       # signup policy (8+ chars, upper/lower/digit/special).
       SEED_ADMIN_PASSWORD: "Ci-E2e-Throwaway-1!"
       SEED_OWNER_PASSWORD: "Ci-E2e-Throwaway-2!"
+      # The seeded owner, for the specs that sign in (e2e/guide.spec.ts).
+      E2E_OWNER_EMAIL: "saloon@book.az"
+      E2E_OWNER_PASSWORD: "Ci-E2e-Throwaway-2!"
       CI: "true"
     steps:
       - uses: actions/checkout@v7
