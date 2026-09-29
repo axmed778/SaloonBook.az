@@ -61,6 +61,25 @@ export function useGuidesOptional(): GuideContextValue | null {
 }
 
 const collapsedKey = (userId: string) => `sb_setup_collapsed:${userId}`;
+const pendingHiddenKey = (userId: string) => `sb_setup_hidden_pending:${userId}`;
+
+function readPendingHidden(userId: string): boolean | null {
+  try {
+    const v = localStorage.getItem(pendingHiddenKey(userId));
+    return v === "1" ? true : v === "0" ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePendingHidden(userId: string, hidden: boolean | null): void {
+  try {
+    if (hidden === null) localStorage.removeItem(pendingHiddenKey(userId));
+    else localStorage.setItem(pendingHiddenKey(userId), hidden ? "1" : "0");
+  } catch {
+    /* no storage: the plain request is all there is */
+  }
+}
 
 function send(event: GuideEventInput) {
   // Analytics must never cost the person anything: no await, no error shown.
@@ -141,18 +160,50 @@ export function GuideProvider({
     setHiddenOverride(null);
   }, [serverHidden]);
 
+  // Hide / bring back must survive a reload or a tab closed right after the
+  // press: a server action in flight is simply aborted then, and the change was
+  // lost. So the intent is written to the browser first, sent, and cleared once
+  // the server has it; a load that finds one still pending applies it and sends
+  // it again. (Declared after the effect above, so this override wins at mount.)
+  const sendHidden = useCallback(
+    (hidden: boolean) => {
+      writePendingHidden(userId, hidden);
+      setChecklistHidden(hidden)
+        .then(() => writePendingHidden(userId, null))
+        .catch(() => {
+          /* stays pending: retried on the next load */
+        });
+    },
+    [userId],
+  );
+
+  useEffect(() => {
+    const pending = readPendingHidden(userId);
+    if (pending === null) return;
+    if (pending === serverHidden) {
+      writePendingHidden(userId, null);
+      return;
+    }
+    setHiddenOverride(pending);
+    sendHidden(pending);
+    // Mount only: a pending intent is replayed once per load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const effectiveHidden = hiddenOverride ?? serverHidden ?? false;
+
   const hideChecklist = useCallback(() => {
     setHiddenOverride(true);
-    setChecklistHidden(true).catch(() => {});
-  }, []);
+    sendHidden(true);
+  }, [sendHidden]);
 
   const openChecklist = useCallback(() => {
     setHiddenOverride(false);
     setCollapsed(false);
     setChecklistFocus((n) => n + 1);
-    if (serverSetup?.hidden) setChecklistHidden(false).catch(() => {});
+    if (effectiveHidden) sendHidden(false);
     router.push("/dashboard");
-  }, [serverSetup?.hidden, setCollapsed, router]);
+  }, [effectiveHidden, sendHidden, setCollapsed, router]);
 
   const setup = useMemo<SetupState | null>(
     () => (serverSetup ? { ...serverSetup, hidden: hiddenOverride ?? serverSetup.hidden } : null),

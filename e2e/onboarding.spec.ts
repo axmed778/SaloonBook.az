@@ -113,16 +113,24 @@ for (const viewport of [
 
       // Hide: it says where it went, stays hidden on reload, and comes back
       // from the help panel.
+      // Wait for the save itself before reloading: the reload must test what
+      // the server stored, not race the request.
+      const saved = () =>
+        page.waitForResponse((r) => r.request().method() === "POST" && !!r.request().headers()["next-action"]);
+      let save = saved();
       await checklist(page).getByRole("button", { name: ob.checklist.hide }).click();
       await expect(page.getByText(ob.checklist.hiddenNote)).toBeVisible();
+      await save;
       await page.reload();
       await expect(checklist(page)).toHaveCount(0);
       // …and the welcome does not come back either.
       await expect(page.getByRole("dialog", { name: ob.welcome.title })).toHaveCount(0);
 
       await page.getByRole("button", { name: az.Help.fab }).click();
+      save = saved();
       await page.getByRole("button", { name: new RegExp(az.Help.setup.title) }).click();
       await expect(checklist(page)).toBeVisible();
+      await save;
       await page.reload();
       await expect(checklist(page)).toBeVisible();
     });
