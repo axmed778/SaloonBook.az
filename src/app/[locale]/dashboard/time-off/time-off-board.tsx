@@ -57,6 +57,7 @@ export function TimeOffBoard({
               </div>
               <button
                 onClick={() => setOpenId(e.id)}
+                data-tour="timeoff.manage"
                 className="shrink-0 text-sm text-muted-foreground transition hover:text-foreground"
               >
                 {canEdit ? t("manage") : t("view")}

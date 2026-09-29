@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import type { GuideEntry } from "@/lib/guides/availability";
 import { GUIDE_SECTIONS } from "@/lib/guides/registry";
+import { searchGuides } from "@/lib/guides/search";
 import { useGuides } from "./guide-provider";
 
 // The round "?" button in the dashboard's bottom-right corner and the panel it
@@ -53,6 +54,13 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
   const { titleId, dialogProps } = useModalA11y(onClose);
   // The task whose "why not" notice is unfolded.
   const [openNotice, setOpenNotice] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  // Searched locally over the list the server allowed: the titles in this
+  // language plus every language's synonyms (search.ts).
+  const searching = query.trim() !== "";
+  const results = searching
+    ? searchGuides(query, catalog.map((g) => ({ ...g, title: tg(`guides.${g.id}.title`) })))
+    : [];
 
   function pick(g: GuideEntry) {
     if (g.state === "ready") {
@@ -61,6 +69,30 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
     } else {
       setOpenNotice((cur) => (cur === g.id ? null : g.id));
     }
+  }
+
+  function renderItem(g: GuideEntry) {
+    return (
+      <li key={g.id}>
+        <button
+          type="button"
+          onClick={() => pick(g)}
+          aria-expanded={g.state === "ready" ? undefined : openNotice === g.id}
+          className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-foreground transition hover:bg-hover"
+        >
+          <span className="min-w-0 flex-1">{tg(`guides.${g.id}.title`)}</span>
+          {g.completed && (
+            <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              {t("done")}
+            </span>
+          )}
+          <svg className="h-4 w-4 shrink-0 text-faint-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+        {openNotice === g.id && g.state !== "ready" && (
+          <GuideBlockedNotice entry={g} onStart={(id) => { onClose(); start(id); }} onNavigate={onClose} />
+        )}
+      </li>
+    );
   }
 
   return (
@@ -89,10 +121,30 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        <div className="border-b border-border px-5 py-3">
+          <label className="sr-only" htmlFor={`${titleId}-search`}>
+            {t("search.label")}
+          </label>
+          <input
+            id={`${titleId}-search`}
+            type="search"
+            data-tour="help.search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpenNotice(null);
+            }}
+            placeholder={t("search.placeholder")}
+            autoComplete="off"
+            enterKeyHint="search"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-faint-foreground focus:border-rose-500 focus:outline-none"
+          />
+        </div>
+
         <div className="overflow-y-auto px-3 py-3">
           {/* The first-run checklist: how far along, and the way back to it
               after "Hide". */}
-          {setup && (
+          {setup && !searching && (
             <section className="mb-3">
               <button
                 type="button"
@@ -112,40 +164,31 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
               </button>
             </section>
           )}
-          {GUIDE_SECTIONS.map((section) => {
-            const items = catalog.filter((g) => g.section === section);
-            if (items.length === 0) return null;
-            return (
-              <section key={section} className="mb-3 last:mb-0">
-                <h3 className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-faint-foreground">
-                  {t(`sections.${section}`)}
-                </h3>
-                <ul className="space-y-1">
-                  {items.map((g) => (
-                    <li key={g.id}>
-                      <button
-                        type="button"
-                        onClick={() => pick(g)}
-                        aria-expanded={g.state === "ready" ? undefined : openNotice === g.id}
-                        className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-foreground transition hover:bg-hover"
-                      >
-                        <span className="min-w-0 flex-1">{tg(`guides.${g.id}.title`)}</span>
-                        {g.completed && (
-                          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                            {t("done")}
-                          </span>
-                        )}
-                        <svg className="h-4 w-4 shrink-0 text-faint-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
-                      </button>
-                      {openNotice === g.id && g.state !== "ready" && (
-                        <GuideBlockedNotice entry={g} onStart={(id) => { onClose(); start(id); }} onNavigate={onClose} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
+          {searching && results.length > 0 ? (
+            <ul className="space-y-1" aria-label={t("search.label")}>
+              {results.map((g) => renderItem(g))}
+            </ul>
+          ) : (
+            <>
+              {searching && (
+                <p role="status" className="px-2 pb-2 text-sm text-muted-foreground">
+                  {t("search.noResults")}
+                </p>
+              )}
+              {GUIDE_SECTIONS.map((section) => {
+                const items = catalog.filter((g) => g.section === section);
+                if (items.length === 0) return null;
+                return (
+                  <section key={section} className="mb-3 last:mb-0">
+                    <h3 className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-faint-foreground">
+                      {t(`sections.${section}`)}
+                    </h3>
+                    <ul className="space-y-1">{items.map((g) => renderItem(g))}</ul>
+                  </section>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>

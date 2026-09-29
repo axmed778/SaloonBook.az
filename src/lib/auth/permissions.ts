@@ -290,6 +290,25 @@ export function canAssignRole(
   return can(subject, ASSIGN_PERMISSION[role]) && roleOnPlan(role, subject.plan);
 }
 
+/**
+ * The logins a guide can walk someone through handing out, by a neutral key —
+ * so the guide registry (src/lib/guides/registry.ts) never names a role. Only
+ * this table knows which role each key means.
+ */
+const LOGIN_KIND_ROLE = {
+  masterLogin: "MASTER",
+} as const satisfies Record<string, AssignableRole>;
+export type LoginKind = keyof typeof LOGIN_KIND_ROLE;
+
+/**
+ * Does `plan` include logins of this kind? The plan half of canAssignRole(),
+ * for a caller that has already asked the permission (the guides do, through
+ * accessRefusal) and needs to tell "not your screen" from "not on your plan".
+ */
+export function loginKindOnPlan(kind: LoginKind, plan: Plan): boolean {
+  return roleOnPlan(LOGIN_KIND_ROLE[kind], plan);
+}
+
 interface RoleTraits {
   /** "own": booking queries are narrowed to the login's employee. */
   rows: "salon" | "own";

@@ -60,7 +60,8 @@
     "branchSwitcherLabel": "Aktiv filial",
     "manageBranches": "Filialları idarə et",
     "timeOff": "Məzuniyyət",
-    "igDigest": "Instagram xülasəsi"
+    "igDigest": "Instagram xülasəsi",
+    "billing": "Tarif"
   },
   "StaffBlocked": {
     "title": "Giriş bağlıdır",
@@ -563,7 +564,8 @@
       "errors": {
         "selectDates": "Tarixləri seçin.",
         "endBeforeStart": "Bitmə tarixi başlanğıcdan əvvəl ola bilməz."
-      }
+      },
+      "added": "Əlavə olundu. Daha bir dövr əlavə edə bilərsiniz."
     },
     "team": {
       "title": "Komanda girişləri",
@@ -2175,6 +2177,155 @@
             "why": "Sınaq görüşünü təqvimdə ləğv edə bilərsiniz."
           }
         }
+      },
+      "masterLogin": {
+        "title": "Ustaya giriş yarat",
+        "steps": {
+          "openPage": {
+            "do": "«İşçilər» bölməsini açın.",
+            "why": "Hər ustaya giriş burada verilir."
+          },
+          "openAccess": {
+            "do": "Ustanın yanındakı «Giriş» düyməsini basın.",
+            "why": "Bu usta üçün giriş pəncərəsi açılacaq."
+          },
+          "email": {
+            "do": "Ustanın e-poçtunu yazın.",
+            "why": "Usta öz kabinetinə bununla daxil olacaq."
+          },
+          "password": {
+            "do": "Şifrə fikirləşin və ya «Yarat» düyməsini basın.",
+            "why": "Şifrə yalnız ustanın ilk girişi üçün lazımdır."
+          },
+          "save": {
+            "do": "«Girişi ver» düyməsini basın.",
+            "why": "Bundan sonra usta öz telefonundan daxil ola biləcək."
+          },
+          "handOver": {
+            "do": "Şifrəni kopyalayın və ustaya verin.",
+            "why": "Usta yalnız öz görüşlərini görəcək, qiymətləri və ayarları görməyəcək."
+          },
+          "done": {
+            "do": "Hazırdır, ustanın girişi var!",
+            "why": "Girişi həmin pəncərədə söndürmək olar."
+          }
+        }
+      },
+      "timeOff": {
+        "title": "Ustanın məzuniyyəti",
+        "steps": {
+          "openPage": {
+            "do": "«İşçilər» bölməsini açın.",
+            "why": "Məzuniyyət hər ustaya ayrıca verilir."
+          },
+          "openModal": {
+            "do": "Ustanın yanındakı «Məzuniyyət» düyməsini basın.",
+            "why": "Onun məzuniyyətləri olan pəncərə açılacaq."
+          },
+          "from": {
+            "do": "Məzuniyyətin ilk gününü seçin.",
+            "why": "Bu gündən ustaya onlayn yazılmaq olmayacaq."
+          },
+          "to": {
+            "do": "Məzuniyyətin son gününü seçin.",
+            "why": "Bu gün də istirahət günü sayılır."
+          },
+          "reason": {
+            "do": "İstəsəniz, səbəbi yazın.",
+            "why": "Onu yalnız siz görürsünüz, müştərilər görmür."
+          },
+          "save": {
+            "do": "«Əlavə et» düyməsini basın.",
+            "why": "Onlayn yazılış bu günləri dərhal təklif etməyəcək."
+          },
+          "done": {
+            "do": "Hazırdır, məzuniyyət əlavə olundu!",
+            "why": "Bu günlərə artıq yaradılmış görüşlər özü ləğv olunmur."
+          }
+        }
+      },
+      "timeOffReception": {
+        "title": "Ustanın məzuniyyəti",
+        "steps": {
+          "openPage": {
+            "do": "«Məzuniyyət» bölməsini açın.",
+            "why": "Salonun bütün ustalarının məzuniyyəti buradadır."
+          },
+          "openModal": {
+            "do": "Ustanın yanındakı «İdarə et» düyməsini basın.",
+            "why": "Onun məzuniyyətləri olan pəncərə açılacaq."
+          },
+          "from": {
+            "do": "Məzuniyyətin ilk gününü seçin.",
+            "why": "Bu gündən ustaya onlayn yazılmaq olmayacaq."
+          },
+          "to": {
+            "do": "Məzuniyyətin son gününü seçin.",
+            "why": "Bu gün də istirahət günü sayılır."
+          },
+          "reason": {
+            "do": "İstəsəniz, səbəbi yazın.",
+            "why": "Onu yalnız salon işçiləri görür, müştərilər görmür."
+          },
+          "save": {
+            "do": "«Əlavə et» düyməsini basın.",
+            "why": "Onlayn yazılış bu günləri dərhal təklif etməyəcək."
+          },
+          "done": {
+            "do": "Hazırdır, məzuniyyət əlavə olundu!",
+            "why": "Bu günlərə artıq yaradılmış görüşlər özü ləğv olunmur."
+          }
+        }
+      },
+      "lunchBreak": {
+        "title": "Nahar fasiləsi",
+        "steps": {
+          "openPage": {
+            "do": "«İşçilər» bölməsini açın.",
+            "why": "Fasilə ustanın iş qrafikində qurulur."
+          },
+          "edit": {
+            "do": "Ustanın yanındakı «Redaktə» düyməsini basın.",
+            "why": "Onun iş qrafiki olan kartı açılacaq."
+          },
+          "breakOn": {
+            "do": "İş gününün yanında «Nahar fasiləsi» xanasını işarələyin.",
+            "why": "Bu vaxtda ustaya yazılmaq olmayacaq."
+          },
+          "breakTime": {
+            "do": "Fasilənin başlama və bitmə saatını seçin.",
+            "why": "Fasilə iş gününün içində olmalıdır."
+          },
+          "save": {
+            "do": "«Saxla» düyməsini basın.",
+            "why": "Fasilə onlayn yazılışda dərhal görünəcək."
+          },
+          "done": {
+            "do": "Hazırdır, fasilə quruldu!",
+            "why": "Başqa günlər üçün də eyni qaydada fasilə qoya bilərsiniz."
+          }
+        }
+      },
+      "payPlan": {
+        "title": "Necə ödəmək olar",
+        "steps": {
+          "openPage": {
+            "do": "«Tarif» bölməsini açın.",
+            "why": "Tarifiniz və ödəniş buradadır."
+          },
+          "status": {
+            "do": "Burada hansı tarifiniz olduğu və nə vaxta qədər qüvvədə olduğu görünür.",
+            "why": "Belə ödəmək vaxtının nə vaxt çatdığını biləcəksiniz."
+          },
+          "pay": {
+            "do": "Lazımi tarifin «planını seç» düyməsini basın.",
+            "why": "SalonBook ilə WhatsApp söhbəti açılacaq, ödənişi orada razılaşdıracağıq."
+          },
+          "done": {
+            "do": "Hazırdır!",
+            "why": "Ödənişdən sonra tarif əl ilə, adətən həmin gün aktiv edilir."
+          }
+        }
       }
     }
   },
@@ -2214,6 +2365,18 @@
       "manualBooking": {
         "hasActiveServices": "Əvvəlcə xidmət əlavə edin: müştəri həmişə hansısa xidmətə yazılır.",
         "hasBookableStaff": "Əvvəlcə xidmətləri və iş saatları olan usta lazımdır: görüş ona yazılacaq."
+      },
+      "masterLogin": {
+        "hasActiveEmployees": "Əvvəlcə işçi əlavə edin: giriş konkret ustaya verilir."
+      },
+      "timeOff": {
+        "hasActiveEmployees": "Əvvəlcə işçi əlavə edin: məzuniyyət konkret ustaya verilir."
+      },
+      "timeOffReception": {
+        "hasActiveEmployees": "Salonda hələ usta yoxdur. Onları salon sahibi əlavə edir."
+      },
+      "lunchBreak": {
+        "hasActiveEmployees": "Əvvəlcə işçi əlavə edin: fasilə ustanın qrafikində qurulur."
       }
     },
     "showGuide": {
@@ -2223,6 +2386,11 @@
     "setup": {
       "title": "İlk addımlar",
       "progress": "{total} addımdan {done} edilib"
+    },
+    "search": {
+      "label": "Tapşırıqlarda axtarış",
+      "placeholder": "Nə etmək istəyirsiniz? Məsələn, «məzuniyyət»",
+      "noResults": "Heç nə tapılmadı. Bütün tapşırıqlar budur:"
     }
   },
   "Onboarding": {

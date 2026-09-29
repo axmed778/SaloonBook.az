@@ -96,7 +96,7 @@ model GuideEvent {
   /// Zero-based step index the event happened on.
   step      Int
   /// For "abandoned": "exit" (closed it), "not_found" (the step's element never
-  /// appeared). Null otherwise.
+  /// appeared), "timeout" (left mid-guide, not back within an hour). Null otherwise.
   reason    String?
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

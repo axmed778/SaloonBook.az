@@ -174,3 +174,13 @@ describe("guide anchors", () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe("the analytics SQL (docs/guides-analytics.sql)", () => {
+  it("names every step exactly as the registry does", () => {
+    const sql = readFileSync(join(ROOT, "docs", "guides-analytics.sql"), "utf8");
+    const inSql = [...sql.matchAll(/^\s*\('(\w+)', (\d+), '(\w+)'\)/gm)].map((m) => `${m[1]}#${m[2]}#${m[3]}`);
+    const inRegistry = guides.flatMap((g) => g.steps.map((s, i) => `${g.id}#${i}#${s.id}`));
+    expect(inSql).toEqual(inRegistry);
+  });
+});
+
