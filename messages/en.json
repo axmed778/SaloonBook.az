@@ -60,7 +60,8 @@
     "branchSwitcherLabel": "Active branch",
     "manageBranches": "Manage branches",
     "timeOff": "Time off",
-    "igDigest": "Instagram digest"
+    "igDigest": "Instagram digest",
+    "billing": "Plan"
   },
   "StaffBlocked": {
     "title": "Access closed",
@@ -563,7 +564,8 @@
       "errors": {
         "selectDates": "Select the dates.",
         "endBeforeStart": "The end date can't be before the start."
-      }
+      },
+      "added": "Added. You can add another period."
     },
     "team": {
       "title": "Team logins",
@@ -2175,6 +2177,155 @@
             "why": "You can cancel a test booking in the calendar."
           }
         }
+      },
+      "masterLogin": {
+        "title": "Create a login for a staff member",
+        "steps": {
+          "openPage": {
+            "do": "Open “Staff”.",
+            "why": "This is where each person gets their own login."
+          },
+          "openAccess": {
+            "do": "Press “Access” next to the person.",
+            "why": "Their login window will open."
+          },
+          "email": {
+            "do": "Type their e-mail.",
+            "why": "They will sign in to their own dashboard with it."
+          },
+          "password": {
+            "do": "Make up a password or press “Generate”.",
+            "why": "The password is only for their first sign-in."
+          },
+          "save": {
+            "do": "Press “Grant access”.",
+            "why": "They can then sign in from their own phone."
+          },
+          "handOver": {
+            "do": "Copy the password and give it to them.",
+            "why": "They will see only their own bookings, not prices or salon settings."
+          },
+          "done": {
+            "do": "Done, they have a login!",
+            "why": "You can switch it off in the same window."
+          }
+        }
+      },
+      "timeOff": {
+        "title": "Time off for a staff member",
+        "steps": {
+          "openPage": {
+            "do": "Open “Staff”.",
+            "why": "Time off is set for each person separately."
+          },
+          "openModal": {
+            "do": "Press “Time off” next to the person.",
+            "why": "A window with their time off will open."
+          },
+          "from": {
+            "do": "Pick the first day off.",
+            "why": "From that day nobody can book them online."
+          },
+          "to": {
+            "do": "Pick the last day off.",
+            "why": "That day counts as a day off too."
+          },
+          "reason": {
+            "do": "If you like, type a reason.",
+            "why": "Only you see it, clients don't."
+          },
+          "save": {
+            "do": "Press “Add”.",
+            "why": "Online booking stops offering those days right away."
+          },
+          "done": {
+            "do": "Done, the time off is added!",
+            "why": "Bookings already made for those days are not cancelled by themselves."
+          }
+        }
+      },
+      "timeOffReception": {
+        "title": "Time off for a staff member",
+        "steps": {
+          "openPage": {
+            "do": "Open “Time off”.",
+            "why": "Everyone's time off in the salon is here."
+          },
+          "openModal": {
+            "do": "Press “Manage” next to the person.",
+            "why": "A window with their time off will open."
+          },
+          "from": {
+            "do": "Pick the first day off.",
+            "why": "From that day nobody can book them online."
+          },
+          "to": {
+            "do": "Pick the last day off.",
+            "why": "That day counts as a day off too."
+          },
+          "reason": {
+            "do": "If you like, type a reason.",
+            "why": "Only the salon's staff see it, clients don't."
+          },
+          "save": {
+            "do": "Press “Add”.",
+            "why": "Online booking stops offering those days right away."
+          },
+          "done": {
+            "do": "Done, the time off is added!",
+            "why": "Bookings already made for those days are not cancelled by themselves."
+          }
+        }
+      },
+      "lunchBreak": {
+        "title": "Lunch break",
+        "steps": {
+          "openPage": {
+            "do": "Open “Staff”.",
+            "why": "A break is part of a person's schedule."
+          },
+          "edit": {
+            "do": "Press “Edit” next to the person.",
+            "why": "Their card with the schedule will open."
+          },
+          "breakOn": {
+            "do": "Tick “Lunch break” next to a working day.",
+            "why": "Nobody can book them during that time."
+          },
+          "breakTime": {
+            "do": "Pick when the break starts and ends.",
+            "why": "The break has to be inside the working day."
+          },
+          "save": {
+            "do": "Press “Save”.",
+            "why": "The break shows in online booking right away."
+          },
+          "done": {
+            "do": "Done, the break is set!",
+            "why": "You can set a break for other days the same way."
+          }
+        }
+      },
+      "payPlan": {
+        "title": "How to pay",
+        "steps": {
+          "openPage": {
+            "do": "Open “Plan”.",
+            "why": "Your plan and payment are here."
+          },
+          "status": {
+            "do": "This shows your plan and the day it runs until.",
+            "why": "So you know when it is time to pay."
+          },
+          "pay": {
+            "do": "Press “Choose” on the plan you want.",
+            "why": "A WhatsApp chat with SalonBook opens, where we agree on the payment."
+          },
+          "done": {
+            "do": "Done!",
+            "why": "After payment the plan is switched on by hand, usually the same day."
+          }
+        }
       }
     }
   },
@@ -2214,6 +2365,18 @@
       "manualBooking": {
         "hasActiveServices": "First add a service: a client always books a service.",
         "hasBookableStaff": "First you need a staff member with services and working hours: the booking goes to them."
+      },
+      "masterLogin": {
+        "hasActiveEmployees": "First add a staff member: a login belongs to one person."
+      },
+      "timeOff": {
+        "hasActiveEmployees": "First add a staff member: time off belongs to one person."
+      },
+      "timeOffReception": {
+        "hasActiveEmployees": "There are no staff members yet. The salon owner adds them."
+      },
+      "lunchBreak": {
+        "hasActiveEmployees": "First add a staff member: a break is part of their schedule."
       }
     },
     "showGuide": {
@@ -2223,6 +2386,11 @@
     "setup": {
       "title": "First steps",
       "progress": "{done} of {total} done"
+    },
+    "search": {
+      "label": "Search tasks",
+      "placeholder": "What would you like to do? For example, “time off”",
+      "noResults": "Nothing found. Here are all the tasks:"
     }
   },
   "Onboarding": {

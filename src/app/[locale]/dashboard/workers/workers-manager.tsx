@@ -161,6 +161,10 @@ export function WorkersManager({
   const [toast, setToast] = useState<string | null>(null);
 
   const activeServices = services.filter((s) => s.isActive);
+  // Where the "give a master a login" guide points: an active master without
+  // one, or — when everyone has one — any active master (to reset it).
+  const withoutLogin = employees.filter((e) => e.isActive && !e.access);
+  const accessTour = new Set((withoutLogin.length > 0 ? withoutLogin : employees.filter((e) => e.isActive)).map((e) => e.id));
   const serviceName = (id: string) => services.find((s) => s.id === id)?.name ?? "—";
 
   function startAdd() {
@@ -403,7 +407,7 @@ export function WorkersManager({
                           <span className="text-faint-foreground">—</span>
                           <TimeSelect value={d.end} onChange={(v) => setDay(weekday, { end: v })} />
                         </div>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <label data-tour="worker.break" className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground">
                           <input
                             type="checkbox"
                             checked={d.breakOn}
@@ -516,6 +520,7 @@ export function WorkersManager({
               <div className="flex max-w-full shrink-0 flex-wrap items-center gap-3">
                 <button
                   onClick={() => setAccessFor(e)}
+                  data-tour={accessTour.has(e.id) ? "worker.access" : undefined}
                   disabled={pending}
                   className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
@@ -523,6 +528,7 @@ export function WorkersManager({
                 </button>
                 <button
                   onClick={() => setTimeOffFor(e)}
+                  data-tour={e.isActive ? "worker.timeoff" : undefined}
                   disabled={pending}
                   className="text-sm text-muted-foreground transition hover:text-foreground disabled:opacity-60"
                 >
@@ -711,11 +717,12 @@ function AccessModal({
               <div>
                 <label className={labelCls}>{t("access.email")}</label>
                 {hasAccess ? (
-                  <p className="rounded-lg bg-muted px-3 py-2 font-mono text-sm text-secondary-foreground">
+                  <p data-tour="access.email" className="rounded-lg bg-muted px-3 py-2 font-mono text-sm text-secondary-foreground">
                     {employee.access!.email}
                   </p>
                 ) : (
                   <input
+                    data-tour="access.email"
                     type="email"
                     autoComplete="off"
                     className={inputCls + " w-full"}
@@ -733,6 +740,7 @@ function AccessModal({
                 </label>
                 <div className="flex gap-2">
                   <input
+                    data-tour="access.password"
                     type="text"
                     autoComplete="off"
                     className={inputCls + " w-full font-mono"}
@@ -750,10 +758,11 @@ function AccessModal({
                 </div>
               </div>
 
-              {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+              {error && <p data-tour="access.error" className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
 
               <button
                 type="submit"
+                data-tour="access.save"
                 disabled={pending}
                 className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
               >
@@ -766,7 +775,7 @@ function AccessModal({
             </form>
 
             {issued && (
-              <div className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2.5">
+              <div data-tour="access.issued" className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2.5">
                 <p className="text-sm text-emerald-700 dark:text-emerald-300">
                   {t("access.issued")}
                 </p>

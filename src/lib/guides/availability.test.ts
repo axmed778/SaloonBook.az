@@ -22,8 +22,12 @@ const entry = (id: string, facts: GuideFacts, role: AppRole = "OWNER", plan: Pla
   guideCatalog(subject(role, plan), facts, []).find((g) => g.id === id);
 
 describe("guides by role", () => {
-  it("offers the owner every guide", () => {
-    expect(ids("OWNER")).toEqual((GUIDES as readonly GuideDef[]).map((g) => g.id));
+  it("offers the owner every guide but the ones meant for roles without their screen", () => {
+    const perms = rolePermissions("OWNER");
+    expect(ids("OWNER")).toEqual(
+      (GUIDES as readonly GuideDef[]).filter((g) => !(g.hideWith && perms.includes(g.hideWith))).map((g) => g.id),
+    );
+    expect(ids("OWNER")).not.toContain("timeOffReception");
   });
 
   it("lists a guide exactly when the role holds every permission it needs", () => {
@@ -31,14 +35,16 @@ describe("guides by role", () => {
       const perms = rolePermissions(role);
       const got: string[] = ids(role);
       for (const g of GUIDES as readonly GuideDef[]) {
-        expect(got.includes(g.id), `${role}: ${g.id}`).toBe(g.permissions.every((p) => perms.includes(p)));
+        const allowed = g.permissions.every((p) => perms.includes(p));
+        const hidden = !!g.hideWith && perms.includes(g.hideWith);
+        expect(got.includes(g.id), `${role}: ${g.id}`).toBe(allowed && !hidden);
       }
     }
   });
 
   it("spells today's table out, so a change to it is a visible decision", () => {
     // Reception and masters take bookings; nobody but the owner sets the salon up.
-    expect(ids("ADMIN")).toEqual(["manualBooking"]);
+    expect(ids("ADMIN")).toEqual(["manualBooking", "timeOffReception"]);
     expect(ids("MASTER")).toEqual(["manualBooking"]);
     expect(ids("FINANCE")).toEqual([]);
   });
@@ -99,7 +105,7 @@ describe("guides against the plan and the data", () => {
     const list = guideCatalog(subject("OWNER"), FACTS, ["addService", "gone"]);
     expect(list.find((g) => g.id === "addService")?.completed).toBe(true);
     expect(list.find((g) => g.id === "addWorker")?.completed).toBe(false);
-    expect(list).toHaveLength(GUIDES.length);
+    expect(list).toHaveLength(ids("OWNER").length);
   });
 
   it("loads only the facts the offered guides need", () => {
@@ -113,3 +119,19 @@ describe("guides against the plan and the data", () => {
     expect(finance.seats).toBe(false);
   });
 });
+
+describe("guides that hand out a login", () => {
+  it("explain the plan when it has no staff logins, instead of opening a refusing form", () => {
+    // FREE has no staff logins (ROLE_PLAN_FEATURE); the owner still manages staff.
+    expect(entry("masterLogin", FACTS, "OWNER", "FREE")).toMatchObject({ state: "plan", canUpgrade: true });
+    expect(entry("masterLogin", FACTS, "OWNER", "START")?.state).toBe("ready");
+  });
+
+  it("ask for a master to give the login to", () => {
+    expect(entry("masterLogin", { ...FACTS, hasActiveEmployees: false })).toMatchObject({
+      state: "needs",
+      guide: "addWorker",
+    });
+  });
+});
+

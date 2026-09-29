@@ -40,10 +40,14 @@ export function TimeOffModal({
   const [to, setTo] = useState(today);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Said once a period is saved: the form stays open for the next one, so
+  // without it nothing on screen confirmed the save.
+  const [added, setAdded] = useState(false);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setAdded(false);
     if (!from || !to) return setError(t("timeOffModal.errors.selectDates"));
     if (to < from) return setError(t("timeOffModal.errors.endBeforeStart"));
     startTransition(async () => {
@@ -58,6 +62,7 @@ export function TimeOffModal({
         return;
       }
       setReason("");
+      setAdded(true);
       router.refresh();
     });
   }
@@ -99,6 +104,7 @@ export function TimeOffModal({
                 <label className={labelCls}>{t("timeOffModal.start")}</label>
                 <input
                   type="date"
+                  data-tour="timeoff.from"
                   className={inputCls + " w-full"}
                   value={from}
                   min={today}
@@ -112,6 +118,7 @@ export function TimeOffModal({
                 <label className={labelCls}>{t("timeOffModal.endInclusive")}</label>
                 <input
                   type="date"
+                  data-tour="timeoff.to"
                   className={inputCls + " w-full"}
                   value={to}
                   min={from}
@@ -122,6 +129,7 @@ export function TimeOffModal({
             <div>
               <label className={labelCls}>{t("timeOffModal.reason")}</label>
               <input
+                data-tour="timeoff.reason"
                 className={inputCls + " w-full"}
                 placeholder={t("timeOffModal.reasonPlaceholder")}
                 maxLength={200}
@@ -129,9 +137,15 @@ export function TimeOffModal({
                 onChange={(e) => setReason(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+            {error && <p data-tour="timeoff.error" className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+            {added && !error && (
+              <p data-tour="timeoff.added" role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+                {t("timeOffModal.added")}
+              </p>
+            )}
             <button
               type="submit"
+              data-tour="timeoff.save"
               disabled={pending}
               className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >

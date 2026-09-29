@@ -60,13 +60,16 @@ export function inFixedLayer(el: Element): boolean {
 /**
  * Whether an input step's field is filled in. A text field needs a value; a
  * group of choices needs one picked — a checked box, or a toggle button that
- * says it is pressed.
+ * says it is pressed; a read-only value shown as text counts as filled.
  */
 export function isFilled(el: HTMLElement): boolean {
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
     return el.value.trim() !== "";
   }
-  return el.querySelector('input:checked, [aria-pressed="true"]') !== null;
+  if (el.querySelector('input:checked, [aria-pressed="true"]')) return true;
+  // A value shown as plain text where a field would be (the login e-mail once
+  // it is set): already filled, nothing to type.
+  return !el.querySelector("input, select, textarea, button") && (el.textContent ?? "").trim() !== "";
 }
 
 /** The text field inside an input step's target, when the target is a field. */

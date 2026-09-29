@@ -113,6 +113,19 @@ const items: NavItem[] = [
     ),
   },
   {
+    href: "/dashboard/billing",
+    tour: "nav.billing",
+    labelKey: "billing",
+    // Only for billing.manage (the owner): canOpenSection reads it from
+    // SECTION_PERMISSIONS, like every other entry. Not in the phone tab bar.
+    icon: (
+      <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20M6 15h4" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/settings",
     tour: "nav.settings",
     labelKey: "settings",

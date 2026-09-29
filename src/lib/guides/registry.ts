@@ -20,7 +20,7 @@
 // PURE: no React, no Prisma. The server imports it to decide availability, the
 // client to run the steps.
 
-import type { Permission } from "../auth/permissions";
+import type { LoginKind, Permission } from "../auth/permissions";
 
 /**
  * How a step is finished:
@@ -97,6 +97,18 @@ export interface GuideDef {
   /** A plan limit the guide's action consumes, checked before it starts. */
   limit?: GuideLimit;
   /**
+   * The guide hands out a login of this kind. The permission alone does not
+   * say whether the PLAN includes such logins; permissions.ts answers that
+   * (loginKindOnPlan), and the guide explains the plan instead of dead-ending.
+   */
+  handsOutLogin?: LoginKind;
+  /**
+   * Not offered to a role holding this permission: it reaches the same thing
+   * another way, with its own guide (the owner plans time off on the Staff
+   * screen; reception on the Time off page). Same rule as the sidebar's.
+   */
+  hideWith?: Permission;
+  /**
    * What must exist first, and the guide that makes it. The add-on form cannot
    * be saved without a service; a booking needs a master who can take it. The
    * first unmet one is offered instead. registry.test.ts checks the ids exist.
@@ -110,6 +122,8 @@ const SERVICES = "/dashboard/services";
 const WORKERS = "/dashboard/workers";
 const SETTINGS = "/dashboard/settings";
 const CALENDAR = "/dashboard/calendar";
+const TIME_OFF = "/dashboard/time-off";
+const BILLING = "/dashboard/billing";
 
 export const GUIDES = [
   {
@@ -271,6 +285,116 @@ export const GUIDES = [
         errorTarget: "booking.error",
       },
       { id: "done", type: "info", route: CALENDAR },
+    ],
+  },
+  {
+    id: "masterLogin",
+    section: "team",
+    permissions: ["staff.manage"],
+    route: WORKERS,
+    handsOutLogin: "masterLogin",
+    needs: [{ fact: "hasActiveEmployees", guide: "addWorker" }],
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.workers", route: WORKERS },
+      { id: "openAccess", type: "click", target: "worker.access", route: WORKERS },
+      { id: "email", type: "input", target: "access.email", route: WORKERS },
+      { id: "password", type: "input", target: "access.password", route: WORKERS },
+      {
+        id: "save",
+        type: "click",
+        target: "access.save",
+        route: WORKERS,
+        successTarget: "access.issued",
+        errorTarget: "access.error",
+      },
+      { id: "handOver", type: "info", target: "access.issued", route: WORKERS },
+      { id: "done", type: "info", route: WORKERS },
+    ],
+  },
+  {
+    // The owner's way in: each person's time off sits on the Staff screen.
+    id: "timeOff",
+    section: "schedule",
+    permissions: ["staff.manage"],
+    route: WORKERS,
+    needs: [{ fact: "hasActiveEmployees", guide: "addWorker" }],
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.workers", route: WORKERS },
+      { id: "openModal", type: "click", target: "worker.timeoff", route: WORKERS },
+      { id: "from", type: "input", target: "timeoff.from", route: WORKERS },
+      { id: "to", type: "input", target: "timeoff.to", route: WORKERS },
+      { id: "reason", type: "info", target: "timeoff.reason", route: WORKERS },
+      {
+        id: "save",
+        type: "click",
+        target: "timeoff.save",
+        route: WORKERS,
+        successTarget: "timeoff.added",
+        errorTarget: "timeoff.error",
+      },
+      { id: "done", type: "info", route: WORKERS },
+    ],
+  },
+  {
+    // Reception's way in: the Time off page, for roles that plan the schedule
+    // without managing staff.
+    id: "timeOffReception",
+    section: "schedule",
+    // schedule.read opens the page, schedule.write lets them add to it.
+    permissions: ["schedule.read", "schedule.write"],
+    hideWith: "staff.manage",
+    route: TIME_OFF,
+    needs: [{ fact: "hasActiveEmployees", guide: "addWorker" }],
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.time-off", route: TIME_OFF },
+      { id: "openModal", type: "click", target: "timeoff.manage", route: TIME_OFF },
+      { id: "from", type: "input", target: "timeoff.from", route: TIME_OFF },
+      { id: "to", type: "input", target: "timeoff.to", route: TIME_OFF },
+      { id: "reason", type: "info", target: "timeoff.reason", route: TIME_OFF },
+      {
+        id: "save",
+        type: "click",
+        target: "timeoff.save",
+        route: TIME_OFF,
+        successTarget: "timeoff.added",
+        errorTarget: "timeoff.error",
+      },
+      { id: "done", type: "info", route: TIME_OFF },
+    ],
+  },
+  {
+    id: "lunchBreak",
+    section: "schedule",
+    permissions: ["staff.manage"],
+    route: WORKERS,
+    needs: [{ fact: "hasActiveEmployees", guide: "addWorker" }],
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.workers", route: WORKERS },
+      { id: "edit", type: "click", target: "worker.edit", route: WORKERS },
+      { id: "breakOn", type: "input", target: "worker.break", route: WORKERS },
+      { id: "breakTime", type: "info", target: "worker.hours", route: WORKERS },
+      {
+        id: "save",
+        type: "click",
+        target: "worker.save",
+        route: WORKERS,
+        awaitRemoval: true,
+        errorTarget: "worker.error",
+      },
+      { id: "done", type: "info", route: WORKERS },
+    ],
+  },
+  {
+    id: "payPlan",
+    section: "billing",
+    permissions: ["billing.manage"],
+    route: BILLING,
+    steps: [
+      { id: "openPage", type: "navigate", target: "nav.billing", route: BILLING },
+      { id: "status", type: "info", target: "billing.status", route: BILLING },
+      // Any plan's button will do, so the step points at the plans as a whole.
+      { id: "pay", type: "click", target: "billing.plans", route: BILLING },
+      { id: "done", type: "info", route: BILLING },
     ],
   },
 ] as const satisfies readonly GuideDef[];

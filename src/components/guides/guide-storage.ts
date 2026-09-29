@@ -25,29 +25,53 @@ export const RESUME_WINDOW_MS = 60 * 60 * 1000;
 
 const key = (userId: string) => `sb_guide_run:${userId}`;
 
-export function readRun(userId: string, now = Date.now()): StoredRun | null {
+/**
+ * What a stored value holds, as data: a run to resume, one left idle past the
+ * resume window (reported as abandoned, "timeout" — the tab was closed or the
+ * person walked away mid-guide), or nothing usable. PURE, for the tests.
+ */
+export function classifyRun(
+  raw: string | null,
+  now: number,
+): { run: StoredRun } | { expired: StoredRun } | null {
+  if (!raw) return null;
+  let parsed: Partial<StoredRun>;
   try {
-    const raw = localStorage.getItem(key(userId));
-    if (!raw) return null;
-    const run = JSON.parse(raw) as Partial<StoredRun>;
-    if (
-      typeof run.guideId !== "string" ||
-      typeof run.step !== "number" ||
-      typeof run.at !== "number" ||
-      now - run.at > RESUME_WINDOW_MS
-    ) {
-      localStorage.removeItem(key(userId));
-      return null;
-    }
-    return {
-      guideId: run.guideId,
-      step: run.step,
-      notFound: Array.isArray(run.notFound) ? run.notFound.filter((n) => typeof n === "number") : [],
-      completed: run.completed === true,
-      at: run.at,
-    };
+    parsed = JSON.parse(raw) as Partial<StoredRun>;
   } catch {
     return null;
+  }
+  if (typeof parsed.guideId !== "string" || typeof parsed.step !== "number" || typeof parsed.at !== "number") {
+    return null;
+  }
+  const run: StoredRun = {
+    guideId: parsed.guideId,
+    step: parsed.step,
+    notFound: Array.isArray(parsed.notFound) ? parsed.notFound.filter((n) => typeof n === "number") : [],
+    completed: parsed.completed === true,
+    at: parsed.at,
+  };
+  return now - run.at > RESUME_WINDOW_MS ? { expired: run } : { run };
+}
+
+/**
+ * The run stored for this user. An expired one is removed and handed back as
+ * `expired`, so the caller can report where it was left.
+ */
+export function readRun(userId: string, now = Date.now()): { run: StoredRun | null; expired: StoredRun | null } {
+  try {
+    const found = classifyRun(localStorage.getItem(key(userId)), now);
+    if (!found) {
+      localStorage.removeItem(key(userId));
+      return { run: null, expired: null };
+    }
+    if ("expired" in found) {
+      localStorage.removeItem(key(userId));
+      return { run: null, expired: found.expired };
+    }
+    return { run: found.run, expired: null };
+  } catch {
+    return { run: null, expired: null };
   }
 }
 

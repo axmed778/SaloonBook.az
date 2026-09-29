@@ -6,10 +6,9 @@ import type { SetupState } from "@/lib/guides/checklist";
 import { guideById, type GuideDef, type GuideId } from "@/lib/guides/registry";
 import {
   markWelcomeShown,
-  recordGuideEvent,
   setChecklistHidden,
-  type GuideEventInput,
 } from "@/app/[locale]/dashboard/_actions/guides";
+import type { GuideEventInput } from "@/lib/guides/events";
 import { useRouter } from "@/i18n/navigation";
 import { readRun, writeRun, type StoredRun } from "./guide-storage";
 import { GuideOverlay } from "./guide-overlay";
@@ -81,9 +80,19 @@ function writePendingHidden(userId: string, hidden: boolean | null): void {
   }
 }
 
+const EVENTS_URL = "/api/dashboard/guide-events";
+
 function send(event: GuideEventInput) {
   // Analytics must never cost the person anything: no await, no error shown.
-  recordGuideEvent(event).catch(() => {});
+  // A beacon, because the page usually changes right after (opening a guide is
+  // a click, then a navigation), and a beacon is delivered anyway.
+  const body = JSON.stringify(event);
+  try {
+    if (navigator.sendBeacon?.(EVENTS_URL, new Blob([body], { type: "text/plain" }))) return;
+  } catch {
+    /* fall through */
+  }
+  fetch(EVENTS_URL, { method: "POST", body, keepalive: true, credentials: "same-origin" }).catch(() => {});
 }
 
 export function GuideProvider({
@@ -118,7 +127,12 @@ export function GuideProvider({
 
   // Resume after a reload — only a guide the server still offers as ready.
   useEffect(() => {
-    const stored = readRun(userId);
+    const { run: stored, expired } = readRun(userId);
+    // Left mid-guide and never came back within the hour (a closed tab, a
+    // phone put away): report where, as an abandon of its own kind.
+    if (expired && !expired.completed && guideById(expired.guideId)) {
+      send({ guideId: expired.guideId, event: "abandoned", step: expired.step, reason: "timeout" });
+    }
     const guide = stored && guideById(stored.guideId);
     if (stored && guide && ready(stored.guideId) && stored.step < guide.steps.length) {
       setRun(stored);

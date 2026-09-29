@@ -5,7 +5,7 @@
 // PURE, like ../auth/permissions: no Prisma, no cookies.
 
 import type { Plan } from "@prisma/client";
-import { accessRefusal, canUpgradePlan, type Permission } from "../auth/permissions";
+import { accessRefusal, canUpgradePlan, loginKindOnPlan, type Permission } from "../auth/permissions";
 import {
   GUIDES,
   type GuideDef,
@@ -52,7 +52,9 @@ export interface Subject {
 /** The guides the role may run at all, before the plan or the data is asked. */
 export function guidesForRole(subject: Subject): GuideDef[] {
   return (GUIDES as readonly GuideDef[]).filter(
-    (g) => accessRefusal(subject, g.permissions) !== "role",
+    (g) =>
+      accessRefusal(subject, g.permissions) !== "role" &&
+      !(g.hideWith && subject.permissions.includes(g.hideWith)),
   );
 }
 
@@ -70,6 +72,7 @@ export function factsNeeded(guides: readonly GuideDef[]): {
 function stateOf(g: GuideDef, subject: Subject, facts: GuideFacts): GuideState {
   const canUpgrade = canUpgradePlan(subject);
   if (accessRefusal(subject, g.permissions) === "plan") return { state: "plan", canUpgrade };
+  if (g.handsOutLogin && !loginKindOnPlan(g.handsOutLogin, subject.plan)) return { state: "plan", canUpgrade };
   if (g.limit === "employeeSeats") {
     const { active, max } = facts.employeeSeats;
     if (Number.isFinite(max) && active >= max) {

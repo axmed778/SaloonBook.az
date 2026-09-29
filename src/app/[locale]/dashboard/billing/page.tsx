@@ -135,20 +135,23 @@ export default async function BillingPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
-        <p className="mt-0.5 text-sm text-faint-foreground">
-          {t("subtitle")}
-        </p>
+      {/* data-tour: the "how to pay" guide points here (and at the plans below). */}
+      <div data-tour="billing.status" className="space-y-6">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-faint-foreground">
+            {t("subtitle")}
+          </p>
+        </div>
+
+        {statusLine && (
+          <div className={`rounded-xl border p-4 text-sm ${statusToneCls[statusLine.tone]}`}>
+            {statusLine.text}
+          </div>
+        )}
       </div>
 
-      {statusLine && (
-        <div className={`rounded-xl border p-4 text-sm ${statusToneCls[statusLine.tone]}`}>
-          {statusLine.text}
-        </div>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div data-tour="billing.plans" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.map((p) => (
           <div
             key={p.key}
