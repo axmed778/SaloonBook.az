@@ -168,6 +168,14 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Signed up through the first-run flow: the dashboard opens with the
+      // welcome dialog and the setup checklist (src/lib/guides/checklist.ts).
+      // Accounts from before it shipped have no such row and never see the
+      // welcome.
+      await tx.userGuideState.create({
+        data: { userId: user.id, onboardingStartedAt: new Date() },
+      });
+
       return user.id;
     });
   } catch (e) {

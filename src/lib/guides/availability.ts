@@ -6,15 +6,20 @@
 
 import type { Plan } from "@prisma/client";
 import { accessRefusal, canUpgradePlan, type Permission } from "../auth/permissions";
-import { GUIDES, type GuideDef, type GuideId, type GuideLimit, type GuideSection } from "./registry";
+import {
+  GUIDES,
+  type GuideDef,
+  type GuideFact,
+  type GuideId,
+  type GuideLimit,
+  type GuideSection,
+} from "./registry";
 
 /** What the database says, as far as the guides need to know. */
-export interface GuideFacts {
-  /** The salon has at least one service (an add-on needs one to attach to). */
-  hasServices: boolean;
+export type GuideFacts = Record<GuideFact, boolean> & {
   /** Active employees against the plan's seat limit; max is Infinity when unlimited. */
   employeeSeats: { active: number; max: number };
-}
+};
 
 /**
  * A guide as the help panel shows it.
@@ -31,7 +36,7 @@ export type GuideState =
   | { state: "ready" }
   | { state: "plan"; canUpgrade: boolean }
   | { state: "limit"; limit: GuideLimit; max: number; canUpgrade: boolean }
-  | { state: "needs"; guide: GuideId };
+  | { state: "needs"; fact: GuideFact; guide: GuideId };
 
 export type GuideEntry = GuideState & {
   id: GuideId;
@@ -39,7 +44,7 @@ export type GuideEntry = GuideState & {
   completed: boolean;
 };
 
-interface Subject {
+export interface Subject {
   permissions: readonly Permission[];
   plan: Plan;
 }
@@ -47,31 +52,32 @@ interface Subject {
 /** The guides the role may run at all, before the plan or the data is asked. */
 export function guidesForRole(subject: Subject): GuideDef[] {
   return (GUIDES as readonly GuideDef[]).filter(
-    (g) => accessRefusal(subject, [g.permission]) !== "role",
+    (g) => accessRefusal(subject, g.permissions) !== "role",
   );
 }
 
 /** Which facts are worth loading for these guides (the rest cost a query for nothing). */
 export function factsNeeded(guides: readonly GuideDef[]): {
-  services: boolean;
+  facts: Set<GuideFact>;
   seats: boolean;
 } {
   return {
-    services: guides.some((g) => g.needs?.fact === "hasServices"),
+    facts: new Set(guides.flatMap((g) => (g.needs ?? []).map((n) => n.fact))),
     seats: guides.some((g) => g.limit === "employeeSeats"),
   };
 }
 
 function stateOf(g: GuideDef, subject: Subject, facts: GuideFacts): GuideState {
   const canUpgrade = canUpgradePlan(subject);
-  if (accessRefusal(subject, [g.permission]) === "plan") return { state: "plan", canUpgrade };
+  if (accessRefusal(subject, g.permissions) === "plan") return { state: "plan", canUpgrade };
   if (g.limit === "employeeSeats") {
     const { active, max } = facts.employeeSeats;
     if (Number.isFinite(max) && active >= max) {
       return { state: "limit", limit: g.limit, max, canUpgrade };
     }
   }
-  if (g.needs && !facts[g.needs.fact]) return { state: "needs", guide: g.needs.guide as GuideId };
+  const unmet = g.needs?.find((n) => !facts[n.fact]);
+  if (unmet) return { state: "needs", fact: unmet.fact, guide: unmet.guide as GuideId };
   return { state: "ready" };
 }
 
