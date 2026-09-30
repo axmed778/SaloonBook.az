@@ -85,7 +85,25 @@ jobs:
       # No Redis service: rate limiting fails open (src/lib/ratelimit.ts) and
       # enqueueing is time-bounded and best-effort, so the app serves without it.
       REDIS_URL: "redis://localhost:6379"
-      APP_URL: "http://127.0.0.1:3000"
+      # `next start` runs with NODE_ENV=production, so src/lib/env.ts refuses to
+      # boot on a localhost APP_URL or any missing web-service secret — the
+      # webServer then never answers /api/health and the job times out after 10
+      # minutes. APP_URL gets a reserved .invalid origin: the specs navigate by
+      # Playwright's baseURL, and the auth routes' same-origin check also
+      # accepts the Host the request arrived on (src/app/api/auth/_origin.ts).
+      APP_URL: "https://e2e.salonbook.invalid"
+      # Dummy values that only satisfy the boot check. No spec exercises the
+      # webhooks, Instagram or password-reset email; SESSION_SECRET really
+      # signs the test sessions, which is fine for a throwaway runner.
+      SESSION_SECRET: "ci-e2e-throwaway-session-secret"
+      WHATSAPP_APP_SECRET: "ci-e2e-throwaway"
+      RESEND_API_KEY: "ci-e2e-throwaway"
+      EMAIL_FROM: "SalonBook <no-reply@e2e.salonbook.invalid>"
+      IG_USER_ID: "ci-e2e-throwaway"
+      IG_APP_ID: "ci-e2e-throwaway"
+      IG_APP_SECRET: "ci-e2e-throwaway"
+      IG_VERIFY_TOKEN: "ci-e2e-throwaway"
+      IG_ACCESS_TOKEN: "ci-e2e-throwaway"
       # Throwaway credentials for a database that is destroyed with the runner.
       # prisma/seed.ts refuses to invent passwords, and they must satisfy the
       # signup policy (8+ chars, upper/lower/digit/special).
