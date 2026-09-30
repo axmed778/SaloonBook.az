@@ -68,6 +68,27 @@ function rects(page: Page) {
   });
 }
 
+/**
+ * Waits for the page to stop moving. The guide scrolls smoothly, and mid-scroll
+ * the element is already in view (and ringed) while the card still flips to
+ * whichever side is free — so geometry read before the scroll lands can catch
+ * the card above the element for a frame. Two equal reads in a row = landed.
+ */
+async function settled(page: Page) {
+  let last = "";
+  await expect
+    .poll(
+      async () => {
+        const now = JSON.stringify(await rects(page));
+        const same = now === last;
+        last = now;
+        return same;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+}
+
 /** The ring wraps the element: same centre, a few pixels of padding all round. */
 function expectRingOn(m: Awaited<ReturnType<typeof rects>>) {
   expect(m.ring, "ring drawn").not.toBeNull();
@@ -102,6 +123,7 @@ test.describe("guide spotlight at 360px", () => {
       const m = await rects(page);
       return m.ring && m.target ? Math.abs(m.ring.top + m.ring.height / 2 - (m.target.top + m.target.height / 2)) : 99;
     }).toBeLessThan(2);
+    await settled(page);
     const m = await rects(page);
     expectRingOn(m);
     expect(m.target!.top + m.target!.height).toBeLessThanOrEqual(m.card!.top);
@@ -130,8 +152,8 @@ test.describe("guide spotlight at 360px", () => {
 
 test.describe("guide spotlight under pinch zoom (360px)", () => {
   test.skip(!email || !password, "E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD not set");
-  // Not isMobile: Chromium pans the zoomed-in visual viewport with the wheel,
-  // which a touch-emulated page does not take.
+  // Not isMobile: the pinch below is synthesized from the mouse (ctrl+wheel);
+  // a touch-sourced one leaves the page unzoomed in headless Chromium.
   test.use({ viewport: { width: 360, height: 740 } });
 
   test("pinch zoom: the hole stays on the element and the card stays reachable", async ({ page }) => {
@@ -140,13 +162,24 @@ test.describe("guide spotlight under pinch zoom (360px)", () => {
     await startAddService(page);
     await expect(card(page)).toContainText(steps.openForm.do);
 
+    // Pinch in on the element, as a finger would: the zoomed-in window then sits
+    // off the page's corner (visual viewport offset ≠ 0), the case the real
+    // phone broke on. A real pinch rather than setting the page scale and
+    // panning with the wheel: zoomed in, the card covers most of the window, and
+    // where a wheel lands (and what it scrolls) differs between full Chrome and
+    // chrome-headless-shell, CI's browser, where the pan went nowhere.
+    // Anchored on the element's far corner: Chrome snaps a pinch that starts
+    // near the page's edge back to that edge (offset 0), and the element sits
+    // at the left.
     const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
-    await expect.poll(async () => (await rects(page)).vv.scale).toBe(2);
-    // Pan the zoomed-in window off the corner, as a finger would: the case the
-    // real phone broke on (visual viewport offset ≠ 0).
-    await page.mouse.move(90, 180);
-    await page.mouse.wheel(40, 60);
+    const t = (await rects(page)).target!;
+    await cdp.send("Input.synthesizePinchGesture", {
+      x: t.left + t.width,
+      y: t.top + t.height,
+      scaleFactor: 2,
+      gestureSourceType: "mouse",
+    });
+    await expect.poll(async () => (await rects(page)).vv.scale).toBeCloseTo(2, 2);
     await expect.poll(async () => {
       const { vv } = await rects(page);
       return vv.left > 0 && vv.top > 0;
