@@ -19,6 +19,19 @@ export const IG_DIGEST_WINDOW_DAYS = 30;
 export const IG_DIGEST_MESSAGES_PER_THREAD = 12;
 
 /**
+ * A thread whose last message is MINE and is older than this many whole days is
+ * not sent to Claude at all. The playbook's follow-up ladder ends with 8.4 on
+ * day 7; a lead silent for two weeks after that is a dead lead, and asking the
+ * model about it every morning only re-proposed the same follow-up for a month
+ * (the length of IG_DIGEST_WINDOW_DAYS) at ~2K output tokens a thread.
+ *
+ * The cost of the cutoff: the playbook's 8.5 reactivation (three weeks on) is
+ * never offered by the digest any more. It also needs a real reason — a new
+ * feature, a real salon count — which nothing in the transcript carries.
+ */
+export const IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS = 14;
+
+/**
  * The most IG_DIGEST_MODEL can write in one response, thinking included — the
  * two constants move together. At 64K, the first two days with the whole
  * playbook in the system prompt (2026-09-26/27, ~80 threads in one request) ran
@@ -205,6 +218,8 @@ export interface IgDigestThread {
    * lead who went quiet more than twelve messages ago still has a date.
    */
   lastLeadMessageAt: Date | null;
+  /** When the founder excluded the thread from the digest; null when they never did. */
+  digestExcludedAt: Date | null;
   /** The newest messages, oldest first. Non-empty; its last entry is the thread's last message. */
   messages: Array<{
     fromMe: boolean;
@@ -253,6 +268,46 @@ export function idleStats(
   // this branch — so no extra query is needed to find when I wrote.
   const daysAwaitingLead = last?.fromMe ? wholeDays(last.sentAt, now) : 0;
   return { daysIdle, daysSinceMyReply, daysAwaitingLead };
+}
+
+/**
+ * Excluded by hand and not revived since. "Исключить" means "until the lead
+ * writes again", so a lead message newer than the exclusion brings the thread
+ * back on its own — the lead who answers a week later is exactly the one the
+ * founder must not lose to an old click. Our own messages never revive it.
+ *
+ * Decided here, from the timestamps, rather than by clearing the column when a
+ * message arrives: the webhook and the backfill then need no part in it, and an
+ * old message imported by the backfill can never revive anything by accident.
+ */
+export function isExcludedFromDigest(
+  thread: Pick<IgDigestThread, "digestExcludedAt" | "lastLeadMessageAt">,
+): boolean {
+  const excludedAt = thread.digestExcludedAt;
+  if (!excludedAt) return false;
+  const lead = thread.lastLeadMessageAt;
+  return !lead || lead.getTime() <= excludedAt.getTime();
+}
+
+/**
+ * Which threads go to Claude. Two kinds stay home: those excluded by hand
+ * (isExcludedFromDigest) and follow-ups that have run out
+ * (IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS). Both are dropped BEFORE the request, so a
+ * dead lead costs nothing — not merely hidden from the page after being paid for.
+ */
+export function partitionDigestThreads(
+  threads: IgDigestThread[],
+  now: Date,
+): { threads: IgDigestThread[]; excluded: number; stale: number } {
+  const kept: IgDigestThread[] = [];
+  let excluded = 0;
+  let stale = 0;
+  for (const t of threads) {
+    if (isExcludedFromDigest(t)) excluded += 1;
+    else if (idleStats(t, now).daysAwaitingLead > IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS) stale += 1;
+    else kept.push(t);
+  }
+  return { threads: kept, excluded, stale };
 }
 
 /**

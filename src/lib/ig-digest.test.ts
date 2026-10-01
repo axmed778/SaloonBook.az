@@ -6,11 +6,14 @@ import {
   buildDigestSystemPrompt,
   digestTemplateComponents,
   IG_DIGEST_BATCH_SIZE,
+  IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS,
   flattenMarkdownLinks,
   formatRunContext,
   formatTranscript,
   idleStats,
+  isExcludedFromDigest,
   parseDigestResponse,
+  partitionDigestThreads,
   readDigestItems,
   splitIntoBatches,
   unresolvedPlaceholders,
@@ -35,6 +38,7 @@ function thread(igUserId: string, leadDays: number | null, overrides: Partial<Ig
     username: `user_${igUserId}`,
     name: `Name ${igUserId}`,
     lastLeadMessageAt: leadDays === null ? null : daysAgo(leadDays),
+    digestExcludedAt: null,
     messages: [LEAD_MSG],
     ...overrides,
   };
@@ -102,6 +106,65 @@ describe("idleStats", () => {
     // flooring would turn every message sent this morning into a day-1 follow-up.
     const t = thread("x", 1, { messages: [LEAD_MSG, myMsgSent(0, 3 * HOUR)] });
     expect(idleStats(t, NOW)).toMatchObject({ daysAwaitingLead: 0 });
+  });
+});
+
+/** The lead's message, sent `days` ago. */
+const leadMsgSent = (days: number) => ({ ...LEAD_MSG, sentAt: daysAgo(days) });
+
+describe("isExcludedFromDigest", () => {
+  const excludedAt = daysAgo(3);
+
+  it("is false for a thread nobody excluded", () => {
+    expect(isExcludedFromDigest(thread("x", 5))).toBe(false);
+  });
+
+  it("holds while the lead has not written since the exclusion", () => {
+    expect(isExcludedFromDigest(thread("x", 5, { digestExcludedAt: excludedAt }))).toBe(true);
+    expect(isExcludedFromDigest(thread("x", null, { digestExcludedAt: excludedAt }))).toBe(true);
+    // The message the founder was looking at when they clicked does not count.
+    const seen = thread("x", 3, { digestExcludedAt: excludedAt, lastLeadMessageAt: excludedAt });
+    expect(isExcludedFromDigest(seen)).toBe(true);
+  });
+
+  it("lets a lead who writes again back in on their own", () => {
+    expect(isExcludedFromDigest(thread("x", 1, { digestExcludedAt: excludedAt }))).toBe(false);
+  });
+
+  it("is not lifted by our own messages", () => {
+    // Our follow-up after the exclusion: the lead's last word is still older.
+    const t = thread("x", 5, {
+      digestExcludedAt: excludedAt,
+      messages: [leadMsgSent(5), myMsgSent(1)],
+    });
+    expect(isExcludedFromDigest(t)).toBe(true);
+  });
+});
+
+describe("partitionDigestThreads", () => {
+  const CUTOFF = IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS;
+  /** I wrote last, `days` ago, and the lead never answered. */
+  const followUp = (igUserId: string, days: number) =>
+    thread(igUserId, days + 1, { messages: [leadMsgSent(days + 1), myMsgSent(days)] });
+
+  it("drops leads excluded by hand and follow-ups silent past the cutoff, before Claude", () => {
+    const { threads, excluded, stale } = partitionDigestThreads(
+      [
+        thread("waiting", 2),
+        thread("excluded", 9, { digestExcludedAt: daysAgo(2) }),
+        thread("revived", 1, { digestExcludedAt: daysAgo(2) }),
+        followUp("at-cutoff", CUTOFF),
+        followUp("past-cutoff", CUTOFF + 1),
+      ],
+      NOW,
+    );
+    expect(threads.map((t) => t.igUserId)).toEqual(["waiting", "revived", "at-cutoff"]);
+    expect({ excluded, stale }).toEqual({ excluded: 1, stale: 1 });
+  });
+
+  it("never treats a lead waiting on MY reply as stale, however long ago they wrote", () => {
+    // The cutoff is about follow-ups that went unanswered; this is the opposite.
+    expect(partitionDigestThreads([thread("x", CUTOFF + 10)], NOW).threads).toHaveLength(1);
   });
 });
 

@@ -50,3 +50,33 @@ export async function setIgDigestItemDone(input: unknown): Promise<ActionResult>
   if (updated === 0) return { ok: false, error: t("notFound") };
   return { ok: true };
 }
+
+const excludeSchema = z.object({
+  igUserId: z.string().min(1).max(64),
+  excluded: z.boolean(),
+});
+
+/**
+ * "Исключить" a lead from the daily digest, or bring one back.
+ *
+ * Stamps the moment rather than setting a flag: a lead message newer than it
+ * revives the thread on its own (isExcludedFromDigest in src/lib/ig-digest.ts),
+ * which is what makes the exclusion "until the lead writes again". The thread
+ * stops being sent to Claude from the next morning's run; today's page hides
+ * it at once, since it reads the same column.
+ */
+export async function setIgLeadExcluded(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("IgDigest.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = excludeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const { igUserId, excluded } = parsed.data;
+
+  const { count } = await prisma.igThread.updateMany({
+    where: { igUserId },
+    data: { digestExcludedAt: excluded ? new Date() : null },
+  });
+  if (count === 0) return { ok: false, error: t("leadNotFound") };
+  return { ok: true };
+}

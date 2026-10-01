@@ -1918,11 +1918,20 @@
     "copy": "Kopyala",
     "copied": "Kopyalandı",
     "done": "Edildi",
+    "exclude": "Xaric et",
+    "excludeHint": "Yenidən yazana qədər xülasədə göstərmə",
+    "excludedToast": "{name}: xülasədən xaric edildi",
+    "undo": "Geri al",
+    "excludedTitle": "Xaric edilənlər ({count})",
+    "excludedHint": "Yenidən yazsa, özü xülasəyə qayıdacaq.",
+    "excludedOn": "xaric edilib: {when}",
+    "restore": "Geri qaytar",
     "errors": {
       "unauthorized": "Giriş icazəsi yoxdur.",
       "invalidData": "Yanlış məlumat.",
       "notFound": "Xülasə yenilənib — səhifəni yeniləyin.",
-      "generic": "Yadda saxlamaq alınmadı. Yenidən cəhd edin."
+      "generic": "Yadda saxlamaq alınmadı. Yenidən cəhd edin.",
+      "leadNotFound": "Tapılmadı — səhifəni yeniləyin."
     }
   },
   "Guides": {

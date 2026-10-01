@@ -880,15 +880,19 @@ model AuditLog {
 /// One conversation, keyed by the other party's Instagram-scoped id (IGSID).
 /// An IGSID is stable per (user, app) pair but means nothing outside it.
 model IgThread {
-  id            String      @id
-  igUserId      String      @unique // the LEAD's IGSID — never our own IG_USER_ID
-  username      String? // @handle, filled in asynchronously by the profile job
-  name          String? // display name, same source
-  phone         String? // set by hand once the lead shares a number
-  lastMessageAt DateTime?   @db.Timestamptz(6) // advanced monotonically; drives inbox order
-  lastSender    String? // "ME" | "LEAD"
-  stage         String      @default("new") // lead pipeline slot; free-form for now
-  messages      IgMessage[]
+  id               String      @id
+  igUserId         String      @unique // the LEAD's IGSID — never our own IG_USER_ID
+  username         String? // @handle, filled in asynchronously by the profile job
+  name             String? // display name, same source
+  phone            String? // set by hand once the lead shares a number
+  lastMessageAt    DateTime?   @db.Timestamptz(6) // advanced monotonically; drives inbox order
+  lastSender       String? // "ME" | "LEAD"
+  stage            String      @default("new") // lead pipeline slot; free-form for now
+  /// Set by "Исключить" on the digest page: the thread is left out of the daily
+  /// digest until the lead writes AFTER this moment (src/lib/ig-digest.ts,
+  /// isExcludedFromDigest). Null = included.
+  digestExcludedAt DateTime?   @db.Timestamptz(6)
+  messages         IgMessage[]
 
   @@index([lastMessageAt])
 }
