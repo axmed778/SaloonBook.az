@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "tsx scripts/next-build.ts",
     "start": "next start",
     "worker": "tsx watch worker/index.ts",
     "worker:start": "tsx worker/index.ts",
