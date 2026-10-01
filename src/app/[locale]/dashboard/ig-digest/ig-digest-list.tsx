@@ -2,11 +2,26 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import type { IgDigestItem, IgDigestShownPriority } from "@/lib/ig-digest";
-import { ErrorToast } from "../_components/toast";
-import { setIgDigestItemDone } from "./actions";
+import { ErrorToast, UndoToast } from "../_components/toast";
+import { setIgDigestItemDone, setIgLeadExcluded } from "./actions";
 
 type Row = IgDigestItem & { index: number };
+
+/** A lead excluded from the digest, as the page lists it. */
+export interface ExcludedLead {
+  igUserId: string;
+  username: string | null;
+  name: string | null;
+  /** When it was excluded, already formatted for display. */
+  when: string;
+}
+
+type Lead = Pick<ExcludedLead, "igUserId" | "username" | "name">;
+
+const leadLabel = (lead: Lead) =>
+  lead.name || (lead.username ? `@${lead.username}` : lead.igUserId);
 
 const PRIORITY_CLASS: Record<IgDigestShownPriority, string> = {
   hot: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
@@ -14,19 +29,50 @@ const PRIORITY_CLASS: Record<IgDigestShownPriority, string> = {
   cold: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
 };
 
-export function IgDigestList({ digestId, items }: { digestId: string; items: Row[] }) {
+export function IgDigestList({
+  digestId,
+  items,
+  excluded,
+}: {
+  /** Null until the first digest has been generated. */
+  digestId: string | null;
+  items: Row[];
+  excluded: ExcludedLead[];
+}) {
   const t = useTranslations("IgDigest");
+  const router = useRouter();
   const [done, setDone] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(items.map((i) => [i.index, i.done])),
   );
+  // Exclusions made on this page, by igUserId, ahead of the server's answer:
+  // true hides the card at once, false brings it back. After the write lands,
+  // router.refresh() brings `excluded` in line and the entry just agrees with it.
+  const [override, setOverride] = useState<Record<string, boolean>>({});
+  const [undo, setUndo] = useState<Lead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const clearError = useCallback(() => setError(null), []);
+  const clearUndo = useCallback(() => setUndo(null), []);
 
-  const doneCount = items.filter((i) => done[i.index]).length;
+  const excludedIds = new Set(excluded.map((l) => l.igUserId));
+  const isExcluded = (igUserId: string) => override[igUserId] ?? excludedIds.has(igUserId);
+  const visible = items.filter((i) => !isExcluded(i.igUserId));
+  // Excluded just now (not yet in the server's list) first, then the server's
+  // own, minus whatever was restored here a moment ago. A digest holds each
+  // lead once (buildDigestItems), so `items` needs no dedupe.
+  const excludedHere = items.filter(
+    (i) => override[i.igUserId] === true && !excludedIds.has(i.igUserId),
+  );
+  const excludedList: Array<Lead & { when?: string }> = [
+    ...excludedHere,
+    ...excluded.filter((l) => isExcluded(l.igUserId)),
+  ];
+
+  const doneCount = visible.filter((i) => done[i.index]).length;
 
   // Optimistic: the box flips at once and flips back if the write is refused.
   async function toggle(item: Row, next: boolean) {
     setDone((d) => ({ ...d, [item.index]: next }));
+    if (!digestId) return;
     const res = await setIgDigestItemDone({
       digestId,
       index: item.index,
@@ -39,21 +85,95 @@ export function IgDigestList({ digestId, items }: { digestId: string; items: Row
     }
   }
 
+  // Optimistic like the checkbox. Excluding offers an undo; restoring does not
+  // need one — the lead is simply back in the list.
+  async function setExcluded(lead: Lead, next: boolean) {
+    setOverride((o) => ({ ...o, [lead.igUserId]: next }));
+    setUndo(next ? lead : null);
+    const res = await setIgLeadExcluded({ igUserId: lead.igUserId, excluded: next }).catch(
+      () => ({ ok: false as const, error: t("errors.generic") }),
+    );
+    if (!res.ok) {
+      setOverride((o) => ({ ...o, [lead.igUserId]: !next }));
+      setUndo(null);
+      setError(res.error);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <>
-      <p className="mb-4 text-sm text-muted-foreground">
-        {t("progress", { done: doneCount, total: items.length })}
-      </p>
-      <ul className="flex flex-col gap-3">
-        {items.map((item) => (
-          <DigestCard
-            key={item.index}
-            item={item}
-            done={!!done[item.index]}
-            onToggle={(next) => void toggle(item, next)}
-          />
-        ))}
-      </ul>
+      {!digestId ? (
+        <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          {t("empty")}
+        </p>
+      ) : visible.length === 0 ? (
+        <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          {t("noTasks")}
+        </p>
+      ) : (
+        <>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {t("progress", { done: doneCount, total: visible.length })}
+          </p>
+          <ul className="flex flex-col gap-3">
+            {visible.map((item) => (
+              <DigestCard
+                key={item.index}
+                item={item}
+                done={!!done[item.index]}
+                onToggle={(next) => void toggle(item, next)}
+                onExclude={() => void setExcluded(item, true)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {excludedList.length > 0 && (
+        <details className="mt-8 rounded-xl border border-border bg-card p-4">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            {t("excludedTitle", { count: excludedList.length })}
+          </summary>
+          <p className="mt-2 text-xs text-muted-foreground">{t("excludedHint")}</p>
+          <ul className="mt-3 flex flex-col divide-y divide-border">
+            {excludedList.map((lead) => (
+              <li key={lead.igUserId} className="flex items-center gap-3 py-2 text-sm">
+                <span className="min-w-0 flex-1 truncate text-foreground">
+                  {leadLabel(lead)}
+                  {lead.name && lead.username && (
+                    <span className="ml-2 text-muted-foreground">@{lead.username}</span>
+                  )}
+                </span>
+                {lead.when && (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {t("excludedOn", { when: lead.when })}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void setExcluded(lead, false)}
+                  className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition hover:bg-muted"
+                >
+                  {t("restore")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {undo && (
+        <UndoToast
+          // Keyed so excluding a second lead restarts the timer for it.
+          key={undo.igUserId}
+          message={t("excludedToast", { name: leadLabel(undo) })}
+          undoLabel={t("undo")}
+          onUndo={() => void setExcluded(undo, false)}
+          onClose={clearUndo}
+        />
+      )}
       {error && <ErrorToast message={error} onClose={clearError} />}
     </>
   );
@@ -63,10 +183,12 @@ function DigestCard({
   item,
   done,
   onToggle,
+  onExclude,
 }: {
   item: Row;
   done: boolean;
   onToggle: (next: boolean) => void;
+  onExclude: () => void;
 }) {
   const t = useTranslations("IgDigest");
   const [copied, setCopied] = useState(false);
@@ -165,6 +287,17 @@ function DigestCard({
               {t("noDraft")}
             </p>
           )}
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={onExclude}
+              title={t("excludeHint")}
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              {t("exclude")}
+            </button>
+          </div>
         </div>
       </div>
     </li>

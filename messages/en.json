@@ -1918,11 +1918,20 @@
     "copy": "Copy",
     "copied": "Copied",
     "done": "Done",
+    "exclude": "Exclude",
+    "excludeHint": "Hide from the digest until the lead writes again",
+    "excludedToast": "{name}: excluded from the digest",
+    "undo": "Undo",
+    "excludedTitle": "Excluded ({count})",
+    "excludedHint": "They come back to the digest on their own if the lead writes again.",
+    "excludedOn": "excluded {when}",
+    "restore": "Restore",
     "errors": {
       "unauthorized": "Access denied.",
       "invalidData": "Invalid data.",
       "notFound": "The digest has been updated — reload the page.",
-      "generic": "Couldn't save. Please try again."
+      "generic": "Couldn't save. Please try again.",
+      "leadNotFound": "Lead not found — reload the page."
     }
   },
   "Guides": {

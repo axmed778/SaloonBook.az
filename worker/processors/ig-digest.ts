@@ -5,6 +5,7 @@ import { sendWhatsAppTemplate } from "../../src/lib/whatsapp";
 import { captureError } from "../../src/lib/observability";
 import { withDbRetry } from "../../src/lib/db-retry";
 import {
+  IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS,
   IG_DIGEST_MAX_TOKENS,
   IG_DIGEST_MESSAGES_PER_THREAD,
   IG_DIGEST_MODEL,
@@ -17,6 +18,7 @@ import {
   digestTemplateComponents,
   formatRunContext,
   parseDigestResponse,
+  partitionDigestThreads,
   splitIntoBatches,
   type IgDigestRunContext,
   type IgDigestThread,
@@ -86,8 +88,14 @@ async function generateIgDigest(
   // deliberately never throws and the scheduler fires only once a day.
   // Retrying only the read is safe (both queries inside are selects), and once it
   // succeeds the compute is awake for the write that follows.
-  const threads = await withDbRetry("ig-digest", () => loadThreads(now));
+  const loaded = await withDbRetry("ig-digest", () => loadThreads(now));
+  const { threads, excluded, stale } = partitionDigestThreads(loaded, now);
   ctx.threads = threads.length;
+  console.log(
+    `[ig-digest] ${loaded.length} thread(s) in the window: ${excluded} excluded by hand, ` +
+      `${stale} follow-up(s) silent > ${IG_DIGEST_FOLLOW_UP_CUTOFF_DAYS} days — ` +
+      `${threads.length} go to Claude`,
+  );
 
   let items: ReturnType<typeof buildDigestItems> = [];
   if (threads.length > 0) {
@@ -119,6 +127,7 @@ async function loadThreads(now: Date): Promise<IgDigestThread[]> {
       igUserId: true,
       username: true,
       name: true,
+      digestExcludedAt: true,
       // Newest N, reversed below: "the last 12, in chronological order".
       messages: {
         orderBy: { sentAt: "desc" },
@@ -148,6 +157,7 @@ async function loadThreads(now: Date): Promise<IgDigestThread[]> {
             username: r.username,
             name: r.name,
             lastLeadMessageAt: leadLastAt.get(r.id) ?? null,
+            digestExcludedAt: r.digestExcludedAt,
             messages: [...r.messages].reverse(),
           },
         ]
