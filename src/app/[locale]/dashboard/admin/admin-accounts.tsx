@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { EXTRA_BRANCH_PRICE_MINOR, TRIAL_DAYS } from "@/lib/plans";
@@ -12,6 +12,9 @@ import {
   activateSubscription,
   grantTrial,
   deletePayment,
+  deleteAccount,
+  previewAccountDeletion,
+  type AccountDeletionPreview,
   setExtraBranches,
   setWhatsAppSender,
   disableWhatsAppSender,
@@ -80,6 +83,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
   const [branchesFor, setBranchesFor] = useState<AccountRow | null>(null);
   const [senderFor, setSenderFor] = useState<AccountRow | null>(null);
   const [cardFor, setCardFor] = useState<AccountRow | null>(null);
+  const [removeFor, setRemoveFor] = useState<AccountRow | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   // Matches the server's default order, so the first paint doesn't reshuffle.
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
@@ -171,6 +175,7 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
                   onSender={() => setSenderFor(r)}
                   onCard={() => setCardFor(r)}
                   onDeletePayment={(payment) => setDeleting({ row: r, payment })}
+                  onDeleteAccount={() => setRemoveFor(r)}
                 />
               ))}
             </tbody>
@@ -184,6 +189,16 @@ export function AdminAccounts({ rows }: { rows: AccountRow[] }) {
           row={deleting.row}
           payment={deleting.payment}
           onClose={() => setDeleting(null)}
+        />
+      )}
+      {removeFor && (
+        <DeleteAccountModal
+          row={removeFor}
+          onClose={() => setRemoveFor(null)}
+          onDeleted={() => {
+            setRemoveFor(null);
+            setExpanded(null);
+          }}
         />
       )}
       {trialFor && <TrialModal row={trialFor} onClose={() => setTrialFor(null)} />}
@@ -278,6 +293,7 @@ function RowGroup({
   onSender,
   onCard,
   onDeletePayment,
+  onDeleteAccount,
 }: {
   row: AccountRow;
   expanded: boolean;
@@ -288,6 +304,7 @@ function RowGroup({
   onSender: () => void;
   onCard: () => void;
   onDeletePayment: (p: AccountRow["payments"][number]) => void;
+  onDeleteAccount: () => void;
 }) {
   const t = useTranslations("Admin");
   return (
@@ -434,6 +451,14 @@ function RowGroup({
                 ))}
               </ul>
             )}
+            <div className="mt-3 border-t border-border pt-3">
+              <button
+                onClick={onDeleteAccount}
+                className="rounded-md border border-rose-500/40 px-2 py-0.5 text-xs text-rose-700 transition hover:bg-rose-500/5 dark:text-rose-400"
+              >
+                {t("deleteAccount.button")}
+              </button>
+            </div>
           </td>
         </tr>
       )}
@@ -526,6 +551,118 @@ function DeletePaymentModal({
               className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
             >
               {pending ? tc("pleaseWait") : t("deletePayment")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Delete the whole account: shows what goes (counted on the server), then asks
+// for the ADMIN's own password before anything is removed.
+function DeleteAccountModal({
+  row,
+  onClose,
+  onDeleted,
+}: {
+  row: AccountRow;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const t = useTranslations("Admin.deleteAccount");
+  const tc = useTranslations("Common");
+  const router = useRouter();
+  const { titleId, dialogProps } = useModalA11y(onClose);
+  const fid = useId();
+  const [pending, startTransition] = useTransition();
+  const [preview, setPreview] = useState<AccountDeletionPreview | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    previewAccountDeletion({ accountId: row.accountId }).then((res) => {
+      if (!live) return;
+      if (res.ok) setPreview(res.preview);
+      else setError(res.error);
+    });
+    return () => {
+      live = false;
+    };
+  }, [row.accountId]);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await deleteAccount({ accountId: row.accountId, password });
+      if (!res.ok) {
+        setError(res.error);
+        setPassword("");
+        return;
+      }
+      onDeleted();
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        {...dialogProps}
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl focus:outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id={titleId} className="text-base font-semibold text-foreground">
+          {t("title", { name: r_name(row) })}
+        </h2>
+        <p className="mt-1 text-sm text-rose-700 dark:text-rose-400">{t("warning")}</p>
+        {preview ? (
+          <ul className="mt-3 space-y-0.5 text-sm text-secondary-foreground">
+            <li>{t("branches", { list: preview.salons.map((s) => `/${s.slug}`).join(", ") || "—" })}</li>
+            <li>{t("appointments", { count: preview.counts.appointments })}</li>
+            <li>{t("customers", { count: preview.counts.customers })}</li>
+            <li>{t("employees", { count: preview.counts.employees })}</li>
+            <li>{t("logins", { list: preview.deletedEmails.join(", ") || "—" })}</li>
+            {preview.keptEmails.length > 0 && (
+              <li className="text-faint-foreground">
+                {t("keptLogins", { list: preview.keptEmails.join(", ") })}
+              </li>
+            )}
+          </ul>
+        ) : (
+          !error && <p className="mt-3 text-sm text-faint-foreground">{tc("pleaseWait")}</p>
+        )}
+        <form onSubmit={submit} className="mt-4 space-y-4">
+          <label htmlFor={`${fid}-pw`} className="block text-sm text-secondary-foreground">
+            {t("passwordLabel")}
+            <input
+              id={`${fid}-pw`}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-rose-500 focus:outline-none"
+            />
+          </label>
+          {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-sm text-secondary-foreground transition hover:border-border-strong"
+            >
+              {tc("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={pending || !preview || password === ""}
+              className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-rose-700 disabled:opacity-60"
+            >
+              {pending ? tc("pleaseWait") : t("confirm")}
             </button>
           </div>
         </form>

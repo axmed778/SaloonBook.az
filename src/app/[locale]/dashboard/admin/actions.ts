@@ -11,6 +11,13 @@ import { addDays, addMonths, bakuToday, bakuYmd, formatBakuDate } from "@/lib/ti
 import { effectivePlan, subscriptionWindow } from "@/lib/subscription";
 import { encryptSecret, hasEncryptionKey } from "@/lib/crypto";
 import { fetchWhatsAppNumberInfo } from "@/lib/whatsapp";
+import { verifyPassword } from "@/lib/auth/password";
+import { rateLimit } from "@/lib/ratelimit";
+import {
+  deleteAccountCompletely,
+  planAccountDeletion,
+  type AccountDeletionPlan,
+} from "@/lib/account-deletion";
 
 // Platform-admin actions: manual billing (mark a salon as paid). Guarded by
 // isPlatformAdmin — regular owners can never reach these. Every activation
@@ -654,4 +661,79 @@ export async function getAccountDetails(input: unknown): Promise<DetailsResult> 
       employeesActive,
     },
   };
+}
+
+// --- Delete a salon account completely ---------------------------------------
+// Irreversible: the account, every branch with its bookings/clients/payments,
+// the subscription and the account's logins (see src/lib/account-deletion.ts).
+// The admin re-enters THEIR OWN password — a session left open on someone
+// else's screen must not be enough to wipe a salon.
+
+export type AccountDeletionPreview = Omit<AccountDeletionPlan, "userIds" | "accountId">;
+export type PreviewResult =
+  | { ok: true; preview: AccountDeletionPreview }
+  | { ok: false; error: string };
+
+const accountIdSchema = z.object({ accountId: z.string().uuid() });
+
+/** What "delete account" would remove, shown in the confirm dialog. */
+export async function previewAccountDeletion(input: unknown): Promise<PreviewResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = accountIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  const plan = await planAccountDeletion(parsed.data.accountId);
+  if (!plan) return { ok: false, error: t("accountNotFound") };
+  const { userIds: _userIds, accountId: _accountId, ...preview } = plan;
+  return { ok: true, preview };
+}
+
+const deleteAccountSchema = z.object({
+  accountId: z.string().uuid(),
+  password: z.string().min(1).max(256),
+});
+
+// Wrong-password tries per admin before the action locks for the window.
+const DELETE_PW_LIMIT = { limit: 5, windowSec: 15 * 60 };
+
+export async function deleteAccount(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = deleteAccountSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const d = parsed.data;
+
+  const rl = await rateLimit(
+    `admin:delete-account:${adminId}`,
+    DELETE_PW_LIMIT.limit,
+    DELETE_PW_LIMIT.windowSec,
+  );
+  if (!rl.allowed) return { ok: false, error: t("tooManyAttempts") };
+
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: { passwordHash: true },
+  });
+  if (!(await verifyPassword(d.password, admin?.passwordHash))) {
+    return { ok: false, error: t("wrongPassword") };
+  }
+
+  // Re-planned inside the delete rather than trusting the preview the dialog
+  // showed: a login or branch added since then must go too.
+  try {
+    const deleted = await deleteAccountCompletely(d.accountId, {
+      actorUserId: adminId,
+      via: "admin",
+    });
+    if (!deleted) return { ok: false, error: t("accountNotFound") };
+  } catch (e) {
+    console.error("[admin] deleteAccount failed", e);
+    return { ok: false, error: t("deleteFailed") };
+  }
+
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
 }
