@@ -9,7 +9,7 @@ function facts(partial: Partial<GateFacts> = {}): GateFacts {
   return {
     profileComplete: false,
     hasActiveServices: false,
-    hasActiveEmployees: false,
+    hasBookableMaster: false,
     hasStaffHours: false,
     linkShared: false,
     ...partial,
@@ -19,7 +19,7 @@ function facts(partial: Partial<GateFacts> = {}): GateFacts {
 const ALL_DONE: GateFacts = {
   profileComplete: true,
   hasActiveServices: true,
-  hasActiveEmployees: true,
+  hasBookableMaster: true,
   hasStaffHours: true,
   linkShared: true,
 };
@@ -48,7 +48,7 @@ describe("buildGate", () => {
   it("a step done out of order still counts, and the gate asks for what is left", () => {
     // Someone who filled the profile in on the Settings screen and added a
     // master, but has no service: 2 done, asked for the service.
-    const gate = buildGate(facts({ profileComplete: true, hasActiveEmployees: true }));
+    const gate = buildGate(facts({ profileComplete: true, hasBookableMaster: true }));
     expect(gate?.current).toBe("service");
     expect(gate?.done).toBe(2);
     expect(gate?.steps.filter((s) => s.done).map((s) => s.id)).toEqual(["profile", "master"]);
@@ -65,7 +65,7 @@ describe("stepDone", () => {
     const only = (key: keyof GateFacts) => facts({ [key]: true });
     expect(stepDone("profile", only("profileComplete"))).toBe(true);
     expect(stepDone("service", only("hasActiveServices"))).toBe(true);
-    expect(stepDone("master", only("hasActiveEmployees"))).toBe(true);
+    expect(stepDone("master", only("hasBookableMaster"))).toBe(true);
     expect(stepDone("hours", only("hasStaffHours"))).toBe(true);
     expect(stepDone("link", only("linkShared"))).toBe(true);
     // And nothing else makes a step pass: the profile is not done because a

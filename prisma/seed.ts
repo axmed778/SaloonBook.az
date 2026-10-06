@@ -129,14 +129,6 @@ async function seedAuthAccounts() {
     data: { userId: owner.id, accountId: account.id, role: "OWNER", salonId: salon.id },
   });
 
-  // The last thing the setup gate asks for: the booking link has been shared.
-  // onboardingStartedAt stays null on purpose — this owner is an account from
-  // before the first-run flow, and must never see the welcome dialog
-  // (e2e/onboarding.spec.ts holds that rule).
-  await prisma.userGuideState.create({
-    data: { userId: owner.id, linkCopiedAt: new Date() },
-  });
-
   // Populate the owner's salon so the calendar has real data on first login.
   const [nigar, resad] = await Promise.all([
     prisma.employee.create({

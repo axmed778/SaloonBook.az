@@ -92,13 +92,13 @@ export async function walkSetupGate(page: Page): Promise<void> {
   await expect(gateStep(page, "hours")).toBeVisible();
   await next("hours").click();
 
-  // 5 — the link, which also ends the gate.
+  // 5 — the link, which also ends the gate. Finishing waits for the copy.
   await expect(gateStep(page, "link")).toBeVisible();
+  const finish = gateStep(page, "link").getByRole("button", { name: gateCopy.finish, exact: true });
+  await expect(finish).toBeDisabled();
   await gateStep(page, "link")
     .getByRole("button", { name: gateCopy.fields.copy, exact: true })
     .click();
-  await gateStep(page, "link")
-    .getByRole("button", { name: gateCopy.finish, exact: true })
-    .click();
+  await finish.click();
   await expect(noGate(page)).toHaveCount(0);
 }

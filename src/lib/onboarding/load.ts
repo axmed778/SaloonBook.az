@@ -28,6 +28,12 @@ export interface SetupGateData extends GateState {
   bookingUrl: string;
   /** The master the hours step sets the week for (the one without hours). */
   employee: { id: string; name: string } | null;
+  /**
+   * An active master already on the team who does none of the salon's active
+   * services — offered as the master step's answer, so confirming links the
+   * services to them instead of adding a second person by the same name.
+   */
+  masterSuggestion: string | null;
   /** How many masters the owner said they had at registration; null if unknown. */
   signupStaffCount: number | null;
   /** The tier the trial is running on, so the gate can name it. */
@@ -44,7 +50,13 @@ export async function loadSetupGate(session: Session): Promise<SetupGateData | n
   if (!salonId || session.isAdmin) return null;
   if (accessRefusal(session, GATE_PERMISSIONS) !== null) return null;
 
-  const [salon, activeService, employee, employeeWithHours, guideState, onlineBooking] =
+  // A master counts only if they do at least one active service: the public
+  // page offers a master per service, and the availability route refuses a
+  // master/service pair with no link. Hours count only on such a master, so
+  // "a week exists" and "a service exists" can never be satisfied by two
+  // different people and leave a salon that still offers no slot.
+  const servesActive = { services: { some: { service: { isActive: true } } } };
+  const [salon, activeService, employee, bookable, unlinked, guideState, onlineBooking] =
     await Promise.all([
       prisma.salon.findUnique({
         where: { id: salonId },
@@ -58,19 +70,24 @@ export async function loadSetupGate(session: Session): Promise<SetupGateData | n
       }),
       prisma.service.findFirst({ where: { salonId, isActive: true }, select: { id: true } }),
       // The master the hours step will fill in: the longest-serving one still
-      // without a week, else just the first. Same order the Workers screen uses.
+      // without a week, else just the first.
       prisma.employee.findFirst({
-        where: { salonId, isActive: true },
+        where: { salonId, isActive: true, ...servesActive },
         orderBy: [{ workingHours: { _count: "asc" } }, { createdAt: "asc" }],
         select: { id: true, name: true },
       }),
       prisma.employee.findFirst({
-        where: { salonId, isActive: true, workingHours: { some: {} } },
+        where: { salonId, isActive: true, workingHours: { some: {} }, ...servesActive },
         select: { id: true },
+      }),
+      prisma.employee.findFirst({
+        where: { salonId, isActive: true, services: { none: { service: { isActive: true } } } },
+        orderBy: { createdAt: "asc" },
+        select: { name: true },
       }),
       prisma.userGuideState.findUnique({
         where: { userId: session.user.id },
-        select: { linkCopiedAt: true },
+        select: { linkCopiedAt: true, onboardingStartedAt: true },
       }),
       prisma.appointment.findFirst({
         where: { salonId, source: "PUBLIC" },
@@ -82,12 +99,17 @@ export async function loadSetupGate(session: Session): Promise<SetupGateData | n
   const gate = buildGate({
     profileComplete: isProfileComplete(salon),
     hasActiveServices: activeService !== null,
-    hasActiveEmployees: employee !== null,
-    hasStaffHours: employeeWithHours !== null,
+    hasBookableMaster: employee !== null,
+    hasStaffHours: bookable !== null,
     // A client who has already booked online is proof the link is out there,
     // same as the checklist reads it — a salon with real bookings is never
-    // held at a step that asks it to share the link.
-    linkShared: !!guideState?.linkCopiedAt || onlineBooking !== null,
+    // held at a step that asks it to share the link. And an owner from before
+    // the first-run flow (no onboardingStartedAt) is not asked at all: their
+    // salon has been running, the link has very likely been handed out by
+    // hand, and nothing in the database could say so either way. Holding an
+    // established salon at a wall over that guess is the wrong side to err on.
+    linkShared:
+      !!guideState?.linkCopiedAt || onlineBooking !== null || !guideState?.onboardingStartedAt,
   });
   if (!gate) return null;
 
@@ -100,6 +122,7 @@ export async function loadSetupGate(session: Session): Promise<SetupGateData | n
     address: salon.address,
     bookingUrl: `${appUrl}/${salon.slug}`,
     employee,
+    masterSuggestion: unlinked?.name ?? null,
     signupStaffCount: salon.account.signupStaffCount,
     planKey: marketingKeyForPlan(session.plan),
   };

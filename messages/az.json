@@ -2512,6 +2512,7 @@
         "masterName": "Ustanın adı",
         "masterSelf": "Tək işləyirsinizsə, öz adınızı yazın.",
         "masterRest": "Qalan {count} ustanı sonra «İşçilər» bölməsindən əlavə edəcəksiniz.",
+        "masterExisting": "«{name}» artıq komandadadır, amma hələ heç bir xidmət göstərmir. Davam etsəniz, salonun xidmətləri ona bağlanacaq.",
         "hoursFor": "{name} üçün iş günləri və saatlar",
         "hoursAny": "İş günləri və saatlar",
         "opensAt": "Başlayır",

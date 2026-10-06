@@ -2512,6 +2512,7 @@
         "masterName": "Master's name",
         "masterSelf": "Working on your own? Put your own name in.",
         "masterRest": "You'll add the other {count} masters later, under Staff.",
+        "masterExisting": "“{name}” is already on the team but does none of the services yet. Continue, and the salon's services will be assigned to them.",
         "hoursFor": "Working days and hours for {name}",
         "hoursAny": "Working days and hours",
         "opensAt": "Opens",

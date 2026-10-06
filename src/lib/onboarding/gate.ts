@@ -20,7 +20,8 @@
  * In order. Each one blocks online booking on its own:
  *   profile — a client needs a phone and an address to trust the page,
  *   service — there is nothing to book without one,
- *   master  — there is nobody to book with,
+ *   master  — there is nobody to book with (a master who does none of the
+ *             services is nobody, as far as the booking page is concerned),
  *   hours   — availability comes from a master's week; no hours, no slots,
  *   link    — the booking page exists, but nobody has it yet.
  */
@@ -33,10 +34,15 @@ export interface GateFacts {
   /** Phone and address both filled in. */
   profileComplete: boolean;
   hasActiveServices: boolean;
-  hasActiveEmployees: boolean;
-  /** At least one active master has working hours — what slots come from. */
+  /** An active master who does at least one active service — someone a client can book. */
+  hasBookableMaster: boolean;
+  /** Such a master also has working hours — what slots come from. */
   hasStaffHours: boolean;
-  /** The booking link has been copied, or a client has already booked through it. */
+  /**
+   * The booking link has been copied, or a client has already booked through
+   * it — or the owner predates the first-run flow, whose salon is taken to
+   * have handed its link out long ago (see ./load.ts).
+   */
   linkShared: boolean;
 }
 
@@ -60,7 +66,7 @@ export function stepDone(id: GateStepId, facts: GateFacts): boolean {
     case "service":
       return facts.hasActiveServices;
     case "master":
-      return facts.hasActiveEmployees;
+      return facts.hasBookableMaster;
     case "hours":
       return facts.hasStaffHours;
     case "link":

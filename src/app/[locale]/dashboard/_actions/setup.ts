@@ -86,6 +86,10 @@ const masterStep = z.object({ name: z.string().trim().min(1).max(120) });
  * One active master, able to do every service the salon has — which is what a
  * salon with one service and one chair means, and what makes the public page
  * offer slots at all. saveEmployee() takes the seat limit for us.
+ *
+ * A master already on the team under that name (the gate offers them as the
+ * answer when they do none of the services) gets the services linked instead
+ * of a second person added beside them; their hours and links are kept.
  */
 export async function saveSetupMaster(input: unknown): Promise<ActionResult> {
   const { salonId } = await requirePermission("staff.manage");
@@ -93,17 +97,44 @@ export async function saveSetupMaster(input: unknown): Promise<ActionResult> {
   const parsed = masterStep.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
 
-  const services = await prisma.service.findMany({
-    where: { salonId, isActive: true },
-    select: { id: true },
-  });
+  const [services, existing] = await Promise.all([
+    prisma.service.findMany({ where: { salonId, isActive: true }, select: { id: true } }),
+    prisma.employee.findFirst({
+      where: { salonId, isActive: true, name: { equals: parsed.data.name, mode: "insensitive" } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        position: true,
+        phone: true,
+        audience: true,
+        services: { select: { serviceId: true } },
+        workingHours: { select: { weekday: true, startMin: true, endMin: true } },
+      },
+    }),
+  ]);
+  const serviceIds = services.map((s) => s.id);
+
+  if (existing) {
+    return saveEmployee({
+      id: existing.id,
+      name: existing.name,
+      position: existing.position,
+      phone: existing.phone,
+      isActive: true,
+      audience: existing.audience,
+      serviceIds: [...new Set([...existing.services.map((s) => s.serviceId), ...serviceIds])],
+      hours: existing.workingHours,
+    });
+  }
+
   return saveEmployee({
     name: parsed.data.name,
     position: null,
     phone: null,
     isActive: true,
     audience: "ALL",
-    serviceIds: services.map((s) => s.id),
+    serviceIds,
     hours: [],
   });
 }

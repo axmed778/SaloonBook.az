@@ -75,7 +75,7 @@ export function SetupGate({
   const [price, setPrice] = useState("");
   const [duration, setDuration] = useState("30");
   // Step 3
-  const [masterName, setMasterName] = useState("");
+  const [masterName, setMasterName] = useState(gate.masterSuggestion ?? "");
   // Step 4 — Monday to Saturday, the week a salon in Baku usually works.
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [opensAt, setOpensAt] = useState("10:00");
@@ -276,7 +276,9 @@ export function SetupGate({
                 className={inputCls}
               />
               <p className="mt-2 text-xs text-muted-foreground">
-                {gate.signupStaffCount && gate.signupStaffCount > 1
+                {gate.masterSuggestion
+                  ? t("fields.masterExisting", { name: gate.masterSuggestion })
+                  : gate.signupStaffCount && gate.signupStaffCount > 1
                   ? t("fields.masterRest", { count: gate.signupStaffCount - 1 })
                   : t("fields.masterSelf")}
               </p>
@@ -363,7 +365,10 @@ export function SetupGate({
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
-            disabled={busy}
+            // The last step is "take the link", so finishing waits for the
+            // copy: a Finish that worked without it would make the one step
+            // that puts the salon in front of clients a click past.
+            disabled={busy || (gate.current === "link" && !copied)}
             onClick={() => {
               if (gate.current === "profile") {
                 return submit(() => saveSetupProfile({ phone, address }));
