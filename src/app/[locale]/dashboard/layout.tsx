@@ -7,6 +7,8 @@ import { A2HS_DISMISS_COOKIE } from "@/components/pwa/constants";
 import { ConsentGate } from "@/components/legal/consent-gate";
 import { gateDocs, staleSalonDocs } from "@/lib/legal-consent";
 import { loadHelpData } from "@/lib/guides/catalog";
+import { loadSetupGate } from "@/lib/onboarding/load";
+import { SetupGate } from "@/components/onboarding/setup-gate";
 import { acceptLegalConsents } from "./actions";
 import { DashboardShell } from "./_components/dashboard-shell";
 import { AccessClosed } from "./_components/access-closed";
@@ -83,9 +85,24 @@ export default async function DashboardLayout({
   // The first-run welcome and checklist ride along the same way, for the same
   // reason: the welcome must never open over the consent gate either.
   const help = stale.length === 0 ? await loadHelpData(session) : null;
+
+  // The mandatory setup walk-through: shown while the salon still misses
+  // something online booking cannot work without (src/lib/onboarding/gate.ts).
+  // Behind the consent gate for the same reason the guides are — a setup step
+  // must not open on top of a page the person may not use yet.
+  const setupGate = stale.length === 0 ? await loadSetupGate(session) : null;
+
   const guides =
     help && (help.catalog.length > 0 || help.setup)
-      ? { userId: session.user.id, catalog: help.catalog, setup: help.setup, bookingUrl: help.bookingUrl }
+      ? {
+          userId: session.user.id,
+          catalog: help.catalog,
+          // While the gate is up it IS the first run: the welcome dialog and
+          // the Today checklist would be a second, dimmer copy of it behind the
+          // overlay, so they wait until the salon is through.
+          setup: setupGate ? null : help.setup,
+          bookingUrl: help.bookingUrl,
+        }
       : null;
 
   return (
@@ -98,6 +115,9 @@ export default async function DashboardLayout({
       guides={guides}
     >
       {children}
+      {setupGate && (
+        <SetupGate gate={setupGate} logoutPath="/api/auth/logout" logoutHref="/login" />
+      )}
       {stale.length > 0 && (
         <ConsentGate
           docs={gateDocs(stale)}

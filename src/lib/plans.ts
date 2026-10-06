@@ -138,6 +138,26 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
 /** Every new account gets a no-card free trial of this many days. */
 export const TRIAL_DAYS = 14;
 
+/**
+ * The tier a self-serve signup starts its trial on, from the one thing the
+ * owner is asked at registration: how many masters work in the salon. A salon
+ * must be able to put every master it has into the calendar during the trial —
+ * a two-chair barbershop on a tier that fits eight learns nothing about the
+ * product, and an eight-master salon on Start hits the seat limit on day one
+ * and reads it as the product being broken.
+ *
+ * So the count is matched against the same maxEmployees the seat check
+ * (assertEmployeeSeatAvailable) enforces, and never against a separate table:
+ * change PLAN_LIMITS and this follows. Above the top paid tier's limit there is
+ * nothing higher to give, so PRO (unlimited seats) is the ceiling.
+ */
+export function trialPlanForStaff(staffCount: number): Plan {
+  const count = Number.isFinite(staffCount) ? Math.max(1, Math.floor(staffCount)) : 1;
+  if (count <= PLAN_LIMITS.START.maxEmployees) return "START";
+  if (count <= PLAN_LIMITS.BASIC.maxEmployees) return "BASIC";
+  return "PRO";
+}
+
 // ---------------------------------------------------------------------------
 // Marketing pricing (customer-facing). The public site and the owner billing
 // page render exactly these three paid tiers — Start, Salon, Pro. Kept separate
@@ -201,6 +221,24 @@ export const MARKETING_PLANS: readonly MarketingPlan[] = [
     popular: false,
   },
 ] as const;
+
+/**
+ * The marketing card a Plan is sold as, for copy that has to name the tier
+ * (the registration hint, the onboarding gate). FREE is not sold, so it has no
+ * card — hence the null.
+ */
+export function marketingKeyForPlan(plan: Plan): MarketingPlanKey | null {
+  switch (plan) {
+    case "START":
+      return "start";
+    case "BASIC":
+      return "salon";
+    case "PRO":
+      return "pro";
+    case "FREE":
+      return null;
+  }
+}
 
 export function limitsFor(plan: Plan): PlanLimits {
   return PLAN_LIMITS[plan];

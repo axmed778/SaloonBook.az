@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { registerSalon, walkSetupGate } from "./setup-flow";
 
 // "Hide list" must survive a reload that aborts its save. The save is a
 // server action; a reload (or a tab closed) right after the press cancels it
@@ -12,22 +13,13 @@ import { fileURLToPath } from "node:url";
 const az = JSON.parse(
   readFileSync(fileURLToPath(new URL("../messages/az.json", import.meta.url)), "utf8"),
 ) as {
-  Auth: { emailLabel: string; register: { salonName: string; submit: string } };
-  Onboarding: { welcome: { later: string }; checklist: { hide: string } };
+  Onboarding: { checklist: { hide: string } };
 };
 
 test("hide, then reload before the save lands: the hide survives", async ({ page }) => {
-  const stamp = `${Date.now()}${Math.floor(Math.random() * 1e4)}`;
-  await page.goto("/register");
-  await page.getByLabel(az.Auth.register.salonName).fill(`E2E Hide ${stamp}`);
-  await page.getByLabel(az.Auth.emailLabel).fill(`e2e-hide-${stamp}@example.com`);
-  for (const field of await page.locator('input[autocomplete="new-password"]').all()) {
-    await field.fill("Onb0arding!x");
-  }
-  await page.locator('input[type="checkbox"]').first().check();
-  await page.getByRole("button", { name: az.Auth.register.submit, exact: true }).click();
-  await page.waitForURL(/\/dashboard$/);
-  await page.getByRole("button", { name: az.Onboarding.welcome.later }).click();
+  await registerSalon(page, "hide", 1);
+  // The checklist is only reachable past the mandatory setup gate.
+  await walkSetupGate(page);
 
   const list = page.locator('[data-tour="today.checklist"]');
   await expect(list).toBeVisible();

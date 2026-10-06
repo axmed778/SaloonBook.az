@@ -1536,6 +1536,14 @@
       "subtitle": "Salonunuz üçün hesab yaradın və idarə panelinə daxil olun.",
       "salonName": "Salon adı",
       "audienceLabel": "Salon kimin üçün?",
+      "staffCount": "Salonda neçə usta işləyir?",
+      "staffCountHint": "Özünüzü də sayın. Sonra istədiyiniz vaxt dəyişmək olar.",
+      "trialNote": "{plan} tarifi {days} gün pulsuz açılır — kart tələb olunmur. Sonra ayda {price} AZN-dən.",
+      "trialPlans": {
+        "start": "Start",
+        "salon": "Salon",
+        "pro": "Pro"
+      },
       "fullName": "Adınız (istəyə bağlı)",
       "confirmPassword": "Şifrəni təsdiqləyin",
       "submit": "Qeydiyyatdan keç",
@@ -2448,6 +2456,69 @@
           "title": "Sınaq görüşü et",
           "hint": "Görüşün təqvimdə necə göründüyünü yoxlayın."
         }
+      }
+    },
+    "gate": {
+      "progress": "{total} addımdan {step}-ci",
+      "trial": "Qeydiyyatda {count} usta göstərdiniz, ona görə {plan} tarifi artıq pulsuz işləyir. İndi salonu qurub müştəri qəbuluna hazır edək.",
+      "next": "Yadda saxla və davam et",
+      "finish": "Hazırdır, paneli aç",
+      "saving": "Yadda saxlanılır…",
+      "failed": "Yadda saxlanmadı. Yenidən cəhd edin.",
+      "logout": "Hesabdan çıx",
+      "plans": {
+        "start": "Start",
+        "salon": "Salon",
+        "pro": "Pro"
+      },
+      "weekdayShort": {
+        "0": "B",
+        "1": "B.e",
+        "2": "Ç.a",
+        "3": "Ç",
+        "4": "C.a",
+        "5": "C",
+        "6": "Ş"
+      },
+      "steps": {
+        "profile": {
+          "title": "Salonun telefonu və ünvanı",
+          "why": "Müştəri sizi tapmalı və zəng edə bilməlidir. Bu iki sətir salonun öz səhifəsində görünür — onlar olmasa yazılış səhifəsi yarımçıq qalır."
+        },
+        "service": {
+          "title": "Birinci xidməti əlavə edin",
+          "why": "Müştəri xidmət seçir, sistem də ona görə vaxt ayırır. Ən çox satılan xidmətlə başlayın, qalanını sonra əlavə edərsiniz."
+        },
+        "master": {
+          "title": "Birinci ustanı əlavə edin",
+          "why": "Yazılış ustaya olunur: təqvimdə onun sütunu açılır. Tək işləyirsinizsə, özünüzü usta kimi yazın."
+        },
+        "hours": {
+          "title": "İş saatlarını göstərin",
+          "why": "Boş vaxtlar məhz iş saatlarından yaranır. Saat verilməsə, müştəri səhifədə heç bir vaxt görmür."
+        },
+        "link": {
+          "title": "Yazılış linkini götürün",
+          "why": "Bu link müştərinin özü yazıldığı səhifədir. Onu Instagram bio-ya və WhatsApp-a qoyun — yazışmadan yazılışlar gəlməyə başlayır."
+        }
+      },
+      "fields": {
+        "phone": "Telefon",
+        "address": "Ünvan",
+        "serviceName": "Xidmətin adı",
+        "price": "Qiymət (AZN)",
+        "duration": "Nə qədər çəkir",
+        "minutes": "{count} dəqiqə",
+        "masterName": "Ustanın adı",
+        "masterSelf": "Tək işləyirsinizsə, öz adınızı yazın.",
+        "masterRest": "Qalan {count} ustanı sonra «İşçilər» bölməsindən əlavə edəcəksiniz.",
+        "hoursFor": "{name} üçün iş günləri və saatlar",
+        "hoursAny": "İş günləri və saatlar",
+        "opensAt": "Başlayır",
+        "closesAt": "Bitir",
+        "link": "Salonun yazılış linki",
+        "copy": "Linki kopyala",
+        "copied": "Kopyalandı"
       }
     }
   }

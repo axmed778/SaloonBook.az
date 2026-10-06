@@ -1536,6 +1536,14 @@
       "subtitle": "Create an account for your salon and open your dashboard.",
       "salonName": "Salon name",
       "audienceLabel": "Who is the salon for?",
+      "staffCount": "How many masters work in the salon?",
+      "staffCountHint": "Count yourself too. You can change it later.",
+      "trialNote": "The {plan} plan starts free for {days} days — no card needed. After that from {price} AZN a month.",
+      "trialPlans": {
+        "start": "Start",
+        "salon": "Salon",
+        "pro": "Pro"
+      },
       "fullName": "Your name (optional)",
       "confirmPassword": "Confirm password",
       "submit": "Sign up",
@@ -2448,6 +2456,69 @@
           "title": "Make a test booking",
           "hint": "See how a booking shows up in the calendar."
         }
+      }
+    },
+    "gate": {
+      "progress": "Step {step} of {total}",
+      "trial": "You said {count} masters work here, so the {plan} plan is already running free. Now let's set the salon up so it can take bookings.",
+      "next": "Save and continue",
+      "finish": "Done, open the dashboard",
+      "saving": "Saving…",
+      "failed": "Could not save. Please try again.",
+      "logout": "Sign out",
+      "plans": {
+        "start": "Start",
+        "salon": "Salon",
+        "pro": "Pro"
+      },
+      "weekdayShort": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "steps": {
+        "profile": {
+          "title": "The salon's phone and address",
+          "why": "A client has to find you and be able to call. Both lines show on the salon's own page — without them the booking page looks unfinished."
+        },
+        "service": {
+          "title": "Add your first service",
+          "why": "A client picks a service, and the system sets aside time for it. Start with your most popular one; the rest can come later."
+        },
+        "master": {
+          "title": "Add your first master",
+          "why": "A booking is made with a master, who gets their own column in the calendar. Working on your own? Add yourself."
+        },
+        "hours": {
+          "title": "Set the working hours",
+          "why": "Free slots come from the working hours. Without them a client sees no times at all on your page."
+        },
+        "link": {
+          "title": "Take your booking link",
+          "why": "This is the page where a client books themselves. Put it in your Instagram bio and WhatsApp — bookings start arriving without any chat."
+        }
+      },
+      "fields": {
+        "phone": "Phone",
+        "address": "Address",
+        "serviceName": "Service name",
+        "price": "Price (AZN)",
+        "duration": "How long it takes",
+        "minutes": "{count} minutes",
+        "masterName": "Master's name",
+        "masterSelf": "Working on your own? Put your own name in.",
+        "masterRest": "You'll add the other {count} masters later, under Staff.",
+        "hoursFor": "Working days and hours for {name}",
+        "hoursAny": "Working days and hours",
+        "opensAt": "Opens",
+        "closesAt": "Closes",
+        "link": "Booking link",
+        "copy": "Copy the link",
+        "copied": "Copied"
       }
     }
   }
