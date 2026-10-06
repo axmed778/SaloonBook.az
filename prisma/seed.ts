@@ -100,7 +100,18 @@ async function seedAuthAccounts() {
     data: {
       name: "My Salon",
       subscription: { create: { plan: "BASIC", status: "TRIALING", trialEndsAt } },
-      salons: { create: { slug: "mysalon", name: "My Salon" } },
+      // Phone and address filled in: this is a salon that is already running,
+      // and the mandatory setup gate (src/lib/onboarding/gate.ts) holds an
+      // owner whose salon cannot be booked yet — which is right for a new
+      // signup and wrong for the fixture every other spec logs in to.
+      salons: {
+        create: {
+          slug: "mysalon",
+          name: "My Salon",
+          phone: "+994500000001",
+          address: "Bakı, Nizami küç. 10",
+        },
+      },
     },
     include: { salons: true },
   });
@@ -195,6 +206,7 @@ async function main() {
           name: "Demo Beauty Studio",
           description: "Nümunə salon — test üçün.",
           phone: "+994500000000",
+          address: "Bakı, Fəvvarələr meydanı 1",
         },
       },
     },

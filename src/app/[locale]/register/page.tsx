@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { AUDIENCE_OPTIONS, type Audience } from "@/lib/audience";
+import { MARKETING_PLANS, marketingKeyForPlan, trialPlanForStaff, TRIAL_DAYS } from "@/lib/plans";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { TurnstileBox, useTurnstile } from "../_lib/turnstile-widget";
 
@@ -15,6 +16,10 @@ export default function RegisterPage() {
   const router = useRouter();
   const [salonName, setSalonName] = useState("");
   const [audience, setAudience] = useState<Audience>("ALL");
+  // How many masters work in the salon — the one question that decides which
+  // tier the free trial starts on. Kept as text so the field can be emptied
+  // while typing; the number is what is sent.
+  const [staffCount, setStaffCount] = useState("1");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +31,12 @@ export default function RegisterPage() {
   const [issues, setIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const turnstile = useTurnstile();
+
+  // What the trial will run on, shown while they type: the same rule the
+  // server applies, so the hint cannot promise a tier the server would not give.
+  const staffNumber = Math.min(500, Math.max(1, Math.round(Number(staffCount) || 1)));
+  const trialKey = marketingKeyForPlan(trialPlanForStaff(staffNumber));
+  const trialPlan = MARKETING_PLANS.find((p) => p.key === trialKey) ?? null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +58,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           salonName,
           audience,
+          staffCount: staffNumber,
           fullName,
           email,
           password,
@@ -131,6 +143,37 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
+
+        <label className="flex flex-col gap-1 text-sm">
+          {t("register.staffCount")}
+          <input
+            type="number"
+            required
+            inputMode="numeric"
+            min={1}
+            max={500}
+            step={1}
+            value={staffCount}
+            onChange={(e) => setStaffCount(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+          />
+        </label>
+        {/* Outside the label on purpose: inside it, the hint becomes part of
+            the field's accessible name. */}
+        <p className="-mt-3 text-xs text-neutral-500">{t("register.staffCountHint")}</p>
+
+        {trialPlan && trialKey && (
+          <p
+            aria-live="polite"
+            className="rounded-lg border border-emerald-600/30 bg-emerald-600/5 px-3 py-2 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300"
+          >
+            {t("register.trialNote", {
+              plan: t(`register.trialPlans.${trialKey}`),
+              days: TRIAL_DAYS,
+              price: (trialPlan.monthlyMinor / 100).toFixed(0),
+            })}
+          </p>
+        )}
 
         <label className="flex flex-col gap-1 text-sm">
           {t("register.fullName")}

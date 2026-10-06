@@ -134,6 +134,11 @@ model Account {
   offerVersion    String?
   privacyVersion  String?
   marketingOptIn  Boolean        @default(false)
+  /// How many masters the owner said worked in the salon when they registered.
+  /// It is what picked the trial tier (trialPlanForStaff in src/lib/plans.ts) —
+  /// kept so the choice stays explainable later, in the onboarding copy and in
+  /// the admin panel. NULL = registered before the question existed.
+  signupStaffCount Int?
   /// Append-only history of every acceptance, including superseded versions.
   legalConsents   LegalConsent[]
   createdAt       DateTime       @default(now()) @db.Timestamptz(3)

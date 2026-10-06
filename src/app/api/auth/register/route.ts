@@ -8,7 +8,7 @@ import { setSession } from "@/lib/auth/session";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { localeFromCookie } from "@/i18n/request-locale";
-import { TRIAL_DAYS } from "@/lib/plans";
+import { TRIAL_DAYS, trialPlanForStaff } from "@/lib/plans";
 import { addDays } from "@/lib/time";
 import { LEGAL_VERSIONS } from "@/lib/legal";
 import { rejectCrossOrigin } from "../_origin";
@@ -33,6 +33,12 @@ const bodySchema = z
     confirmPassword: z.string().min(1).max(200),
     salonName: z.string().min(2).max(120),
     audience: z.enum(["MALE", "FEMALE", "ALL"]).default("ALL"),
+    // How many masters work in the salon. It is what the trial tier is chosen
+    // from (trialPlanForStaff), so the salon can put every master it has into
+    // the calendar from day one. Defaults to 1 rather than being required: a
+    // client from before the question existed still registers, on the smallest
+    // tier, which the owner can change in the admin panel.
+    staffCount: z.number().int().min(1).max(500).default(1),
     fullName: z.string().max(120).optional(),
     // Required acceptance of the user agreement + data-processing consent.
     legalConsent: z.literal(true),
@@ -98,7 +104,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { email, password, salonName, audience, fullName, marketing } = parsed.data;
+  const { email, password, salonName, audience, fullName, marketing, staffCount } = parsed.data;
 
   // No-op unless Turnstile is configured, so an unconfigured deploy keeps
   // accepting signups rather than rejecting everyone.
@@ -126,8 +132,11 @@ export async function POST(req: NextRequest) {
   const passwordHash = await hashPassword(password);
 
   // Every self-serve signup gets a no-card trial with a real end date —
-  // effectivePlan() downgrades to FREE limits the moment it lapses.
+  // effectivePlan() downgrades to FREE limits the moment it lapses. The tier it
+  // runs on is the one that fits the salon's own size, so nobody spends the
+  // trial against a seat limit (or on features a two-chair salon never needs).
   const trialEndsAt = addDays(new Date(), TRIAL_DAYS);
+  const trialPlan = trialPlanForStaff(staffCount);
 
   let userId: string;
   try {
@@ -139,7 +148,8 @@ export async function POST(req: NextRequest) {
           offerVersion: LEGAL_VERSIONS.salonOffer,
           privacyVersion: LEGAL_VERSIONS.salonConsent,
           marketingOptIn: marketing ?? false,
-          subscription: { create: { plan: "BASIC", status: "TRIALING", trialEndsAt } },
+          signupStaffCount: staffCount,
+          subscription: { create: { plan: trialPlan, status: "TRIALING", trialEndsAt } },
           salons: { create: { slug, name: salonName, audience } },
         },
         include: { salons: true },

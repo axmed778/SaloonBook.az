@@ -208,8 +208,31 @@ by hand or from something that runs a few times an hour at most.
 | Salon (popular) | 8 | unlimited | 1 | 600 | 35 AZN/mo | 350 AZN |
 | Pro | unlimited | unlimited | 3 | 1500 | 70 AZN/mo | 700 AZN |
 
-Every account starts with a **14-day free trial** (no card). There is no free tier;
+Every account starts with a **14-day free trial** (no card), on the tier that fits the
+salon's own size: registration asks how many masters work there, and
+`trialPlanForStaff()` matches that count against the same `maxEmployees` the seat check
+enforces (1–2 → Start, 3–8 → Salon, 9+ → Pro). The answer is kept on
+`Account.signupStaffCount`, so the choice stays explainable later. There is no free tier;
 `Plan.FREE` is the internal zero-entitlement floor an account falls to when the trial
 lapses or a payment is missed. Billing is **manual** in MVP: owner pays out-of-band, a
 platform admin activates the plan. `Subscription`/`Payment` tables are ready for a
 future payment provider.
+
+## First run: the mandatory setup gate (`src/lib/onboarding/`)
+
+A salon that cannot be booked online has nothing to show on its dashboard, so the
+dashboard does not open until it can be. On every load, `loadSetupGate()` reads the
+salon's own rows and `buildGate()` names the first missing step of five — phone and
+address, one service, one master, that master's working hours, the booking link
+shared. The gate (`src/components/onboarding/setup-gate.tsx`) puts that one step on
+screen, explains why it matters and takes the answer right there; each save refreshes
+the route, so the server decides what comes next and no step can be skipped by a
+client claiming it is done. It is deliberately non-dismissable (same posture as the
+legal re-consent gate); signing out is the only other way out.
+
+Whoever cannot do all five steps (reception, a master) never sees it — the gate asks
+`settings.write`, `services.write` and `staff.manage`, so a lapsed plan reaches billing
+instead of a step it could not save. A salon whose rows already answer the five steps
+is never gated, which is how every account from before the gate existed goes straight
+in. The optional sixth step (a test booking) stays on the Today checklist
+(`src/lib/guides/checklist.ts`), which picks up where the gate left off.
