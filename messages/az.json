@@ -973,7 +973,7 @@
       "trialWhilePaid": "Ödənişli müddət hələ bitməyib — sınaq verilə bilməz.",
       "tooManyAttempts": "Çox cəhd edildi. 15 dəqiqədən sonra yenidən yoxlayın.",
       "wrongPassword": "Admin şifrəsi yanlışdır.",
-      "deleteFailed": "Silinmədi: salona indicə yeni məlumat əlavə olundu. Yenidən yoxlayın."
+      "deleteFailed": "Salonu silmək alınmadı. Yenidən yoxlayın."
     },
     "deleteAccount": {
       "button": "Salonu tamamilə sil",

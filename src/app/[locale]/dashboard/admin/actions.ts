@@ -721,13 +721,14 @@ export async function deleteAccount(input: unknown): Promise<ActionResult> {
     return { ok: false, error: t("wrongPassword") };
   }
 
-  // Planned again here rather than trusting the preview the dialog showed: a
-  // login or branch added since then must go too.
-  const plan = await planAccountDeletion(d.accountId);
-  if (!plan) return { ok: false, error: t("accountNotFound") };
-
+  // Re-planned inside the delete rather than trusting the preview the dialog
+  // showed: a login or branch added since then must go too.
   try {
-    await deleteAccountCompletely(plan, { actorUserId: adminId, via: "admin" });
+    const deleted = await deleteAccountCompletely(d.accountId, {
+      actorUserId: adminId,
+      via: "admin",
+    });
+    if (!deleted) return { ok: false, error: t("accountNotFound") };
   } catch (e) {
     console.error("[admin] deleteAccount failed", e);
     return { ok: false, error: t("deleteFailed") };

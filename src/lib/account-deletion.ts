@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // Deletes a salon account completely — every branch, its bookings, clients,
@@ -38,8 +39,11 @@ export type AccountDeletionPlan = {
 };
 
 /** What deleting the account would remove. Changes nothing; null if not found. */
-export async function planAccountDeletion(accountId: string): Promise<AccountDeletionPlan | null> {
-  const account = await prisma.account.findUnique({
+export async function planAccountDeletion(
+  accountId: string,
+  db: Prisma.TransactionClient = prisma,
+): Promise<AccountDeletionPlan | null> {
+  const account = await db.account.findUnique({
     where: { id: accountId },
     select: {
       name: true,
@@ -57,11 +61,11 @@ export async function planAccountDeletion(accountId: string): Promise<AccountDel
   // platform admin; otherwise just its membership here is dropped.
   const memberUserIds = [...new Set(account.memberships.map((m) => m.userId))];
   const [elsewhere, admins] = await Promise.all([
-    prisma.membership.findMany({
+    db.membership.findMany({
       where: { userId: { in: memberUserIds }, accountId: { not: accountId } },
       select: { userId: true },
     }),
-    prisma.user.findMany({
+    db.user.findMany({
       where: { id: { in: memberUserIds }, isPlatformAdmin: true },
       select: { id: true },
     }),
@@ -71,11 +75,11 @@ export async function planAccountDeletion(accountId: string): Promise<AccountDel
   const emailOf = new Map(account.memberships.map((m) => [m.userId, m.user.email]));
 
   const [appointments, customers, visitPayments, employees, notifications] = await Promise.all([
-    prisma.appointment.count({ where: bySalon }),
-    prisma.customer.count({ where: bySalon }),
-    prisma.appointmentPayment.count({ where: bySalon }),
-    prisma.employee.count({ where: bySalon }),
-    prisma.notification.count({ where: bySalon }),
+    db.appointment.count({ where: bySalon }),
+    db.customer.count({ where: bySalon }),
+    db.appointmentPayment.count({ where: bySalon }),
+    db.employee.count({ where: bySalon }),
+    db.notification.count({ where: bySalon }),
   ]);
 
   return {
@@ -90,16 +94,30 @@ export async function planAccountDeletion(accountId: string): Promise<AccountDel
   };
 }
 
-/** Deletes everything in the plan in one transaction, and audits it. */
+/**
+ * Deletes the account in one transaction and audits it. Returns what was
+ * removed, or null if there is no such account.
+ *
+ * The plan is made INSIDE the transaction, after locking the account and its
+ * salons: a login, branch or booking added while a preview was on screen would
+ * otherwise be missed — a staff membership deleted without its user leaves a
+ * login nobody can reach and an email that can never be used again. FOR UPDATE
+ * conflicts with the key-share lock every insert referencing these rows takes,
+ * so such inserts wait for (and then fail against) this delete.
+ */
 export async function deleteAccountCompletely(
-  plan: AccountDeletionPlan,
+  accountId: string,
   audit: { actorUserId: string | null; via: string },
-): Promise<void> {
-  const { accountId, userIds } = plan;
-  const bySalon = { salonId: { in: plan.salons.map((s) => s.id) } };
-
-  await prisma.$transaction(
+): Promise<AccountDeletionPlan | null> {
+  return prisma.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Account" WHERE id = ${accountId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "Salon" WHERE "accountId" = ${accountId} FOR UPDATE`;
+      const plan = await planAccountDeletion(accountId, tx);
+      if (!plan) return null;
+      const { userIds } = plan;
+      const bySalon = { salonId: { in: plan.salons.map((s) => s.id) } };
+
       // Children before parents: most FKs here are RESTRICT, not CASCADE.
       await tx.appointmentAddon.deleteMany({ where: bySalon });
       await tx.appointmentPayment.deleteMany({ where: bySalon });
@@ -120,13 +138,9 @@ export async function deleteAccountCompletely(
       await tx.serviceAddon.deleteMany({ where: bySalon });
       // WhatsAppSender cascades from the salon.
       await tx.salon.deleteMany({ where: { accountId } });
-      // The subscription is read inside the transaction, not taken from the
-      // plan: one created since the plan was made would otherwise block the
-      // account delete below.
-      const sub = await tx.subscription.findUnique({ where: { accountId }, select: { id: true } });
-      if (sub) {
-        await tx.payment.deleteMany({ where: { subscriptionId: sub.id } });
-        await tx.subscription.delete({ where: { id: sub.id } });
+      if (plan.subscription) {
+        await tx.payment.deleteMany({ where: { subscriptionId: plan.subscription.id } });
+        await tx.subscription.delete({ where: { id: plan.subscription.id } });
       }
       // LegalConsent cascades from the account.
       await tx.account.delete({ where: { id: accountId } });
@@ -147,6 +161,7 @@ export async function deleteAccountCompletely(
           },
         },
       });
+      return plan;
     },
     { timeout: 60_000 },
   );

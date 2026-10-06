@@ -973,7 +973,7 @@
       "trialWhilePaid": "The paid period hasn't ended — a trial can't be granted.",
       "tooManyAttempts": "Too many attempts. Try again in 15 minutes.",
       "wrongPassword": "Wrong admin password.",
-      "deleteFailed": "Could not delete: the salon just got new data. Try again."
+      "deleteFailed": "Could not delete the salon. Try again."
     },
     "deleteAccount": {
       "button": "Delete salon completely",

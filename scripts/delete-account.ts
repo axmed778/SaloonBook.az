@@ -69,8 +69,16 @@ async function main() {
     return;
   }
 
-  await deleteAccountCompletely(plan, { actorUserId: null, via: "scripts/delete-account.ts" });
-  console.log("\nDeleted. The email(s) and link(s) above can be registered again.");
+  // Re-planned inside the delete, so anything added since the listing above goes too.
+  const deleted = await deleteAccountCompletely(plan.accountId, {
+    actorUserId: null,
+    via: "scripts/delete-account.ts",
+  });
+  console.log(
+    deleted
+      ? `\nDeleted. Freed emails: ${deleted.deletedEmails.join(", ") || "—"}; links can be registered again.`
+      : "\nThe account was already gone.",
+  );
 }
 
 main()
