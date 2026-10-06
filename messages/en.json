@@ -970,7 +970,23 @@
       "senderNotFound": "WhatsApp number not found.",
       "accountNotFound": "Account not found.",
       "paymentNotFound": "Payment not found.",
-      "trialWhilePaid": "The paid period hasn't ended — a trial can't be granted."
+      "trialWhilePaid": "The paid period hasn't ended — a trial can't be granted.",
+      "tooManyAttempts": "Too many attempts. Try again in 15 minutes.",
+      "wrongPassword": "Wrong admin password.",
+      "deleteFailed": "Could not delete: the salon just got new data. Try again."
+    },
+    "deleteAccount": {
+      "button": "Delete salon completely",
+      "title": "Delete salon — {name}",
+      "warning": "The salon, its branches, bookings, clients, payments, logins and subscription will be deleted for good. This cannot be undone.",
+      "branches": "Branches: {list}",
+      "appointments": "Bookings: {count}",
+      "customers": "Clients: {count}",
+      "employees": "Staff: {count}",
+      "logins": "Logins (email freed): {list}",
+      "keptLogins": "Kept (in another salon or admin): {list}",
+      "passwordLabel": "Your admin password",
+      "confirm": "Delete for good"
     }
   },
   "Payments": {

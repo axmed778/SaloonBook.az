@@ -970,7 +970,23 @@
       "senderNotFound": "WhatsApp nömrəsi tapılmadı.",
       "accountNotFound": "Hesab tapılmadı.",
       "paymentNotFound": "Ödəniş tapılmadı.",
-      "trialWhilePaid": "Ödənişli müddət hələ bitməyib — sınaq verilə bilməz."
+      "trialWhilePaid": "Ödənişli müddət hələ bitməyib — sınaq verilə bilməz.",
+      "tooManyAttempts": "Çox cəhd edildi. 15 dəqiqədən sonra yenidən yoxlayın.",
+      "wrongPassword": "Admin şifrəsi yanlışdır.",
+      "deleteFailed": "Silinmədi: salona indicə yeni məlumat əlavə olundu. Yenidən yoxlayın."
+    },
+    "deleteAccount": {
+      "button": "Salonu tamamilə sil",
+      "title": "Salonu sil — {name}",
+      "warning": "Salon, filialları, rezervasiyaları, müştəriləri, ödənişləri, girişləri və abunəliyi həmişəlik silinəcək. Geri qaytarmaq olmaz.",
+      "branches": "Filiallar: {list}",
+      "appointments": "Rezervasiyalar: {count}",
+      "customers": "Müştərilər: {count}",
+      "employees": "İşçilər: {count}",
+      "logins": "Girişlər (e-poçt boşalacaq): {list}",
+      "keptLogins": "Qalacaq (başqa salonda və ya admin): {list}",
+      "passwordLabel": "Admin şifrəniz",
+      "confirm": "Həmişəlik sil"
     }
   },
   "Payments": {
