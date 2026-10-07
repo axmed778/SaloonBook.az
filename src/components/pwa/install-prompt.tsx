@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { dismissInstallPrompt } from "./actions";
+import { isNativeApp } from "./native-push";
 
 // The event Chrome/Android fires so a site can offer its own install UI.
 type BeforeInstallPromptEvent = Event & {
@@ -57,7 +58,8 @@ export function InstallPrompt({
   useEffect(() => {
     if (dismissed) return;
 
-    // Already running as an installed app? Never prompt.
+    // Already running as an installed app (or the App Store app)? Never prompt.
+    if (isNativeApp()) return;
     const nav = window.navigator as Navigator & { standalone?: boolean };
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;

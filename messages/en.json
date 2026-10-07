@@ -87,7 +87,8 @@
     "notifWorking": "Please wait…",
     "notifDenied": "Notifications are blocked in the browser. Allow them in your browser settings.",
     "notifIosInstall": "On iOS, notifications only work once the app is added to the home screen. Follow the “Add to Home Screen” steps above.",
-    "notifError": "Something went wrong. Please try again."
+    "notifError": "Something went wrong. Please try again.",
+    "notifAppDenied": "Notifications are off. Allow them in iPhone Settings → SalonBook → Notifications."
   },
   "Today": {
     "title": "Today",
@@ -812,7 +813,8 @@
       "platformBody": "Messages are sent from SalonBook's shared number.",
       "requestMessage": "Hi! {salon} — we'd like to send WhatsApp messages from our own number.",
       "requestCta": "Connect your number"
-    }
+    },
+    "appNote": "Your plan can't be changed in this app."
   },
   "Admin": {
     "notifications": {

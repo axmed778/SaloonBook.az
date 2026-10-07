@@ -87,7 +87,8 @@
     "notifWorking": "Gözləyin…",
     "notifDenied": "Brauzer bildirişləri bloklayıb. İcazəni brauzer parametrlərindən verin.",
     "notifIosInstall": "iOS-da bildirişlər yalnız tətbiq ana ekrana əlavə edildikdə işləyir. Yuxarıdakı «Ana ekrana əlavə edin» addımlarını izləyin.",
-    "notifError": "Alınmadı. Yenidən cəhd edin."
+    "notifError": "Alınmadı. Yenidən cəhd edin.",
+    "notifAppDenied": "Bildirişlər söndürülüb. iPhone-da Parametrlər → SalonBook → Bildirişlər bölməsindən icazə verin."
   },
   "Today": {
     "title": "Bu gün",
@@ -812,7 +813,8 @@
       "platformBody": "Mesajlar SalonBook-un ümumi nömrəsindən göndərilir.",
       "requestMessage": "Salam! {salon} — WhatsApp mesajlarını öz nömrəmizdən göndərmək istəyirik.",
       "requestCta": "Öz nömrəni qoş"
-    }
+    },
+    "appNote": "Plan bu tətbiqdə dəyişdirilmir."
   },
   "Admin": {
     "notifications": {

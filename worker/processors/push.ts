@@ -1,13 +1,15 @@
 import type { Job } from "bullmq";
 import { prisma } from "../../src/lib/prisma";
 import { sendWebPush } from "../../src/lib/push";
+import { sendApnsPush } from "../../src/lib/apns";
 import { formatBakuDateTime } from "../../src/lib/time";
 import { serviceWithAddons } from "../../src/lib/addons";
 import type { PushJob } from "../../src/lib/queue";
 
 const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
-// Send a Web Push event to every device subscribed for the appointment's salon.
+// Send a push event to every device subscribed for the appointment's salon:
+// Web Push for browsers and installed PWAs, APNs for the App Store app.
 // The message is built here (not at enqueue time) so a cancel/reschedule between
 // enqueue and send is reflected. Owner-facing copy is Azerbaijani.
 export async function processPush(job: Job<PushJob>): Promise<void> {
@@ -58,7 +60,7 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
 
   const subs = await prisma.pushSubscription.findMany({
     where: { salonId: appt.salonId },
-    select: { endpoint: true, p256dh: true, auth: true },
+    select: { platform: true, endpoint: true, p256dh: true, auth: true },
   });
   if (subs.length === 0) return;
 
@@ -73,10 +75,10 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
   const dead: string[] = [];
   await Promise.all(
     subs.map(async (s) => {
-      const res = await sendWebPush(
-        { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth },
-        message,
-      );
+      const res =
+        s.platform === "ios"
+          ? await sendApnsPush(s.endpoint.replace(/^apns:/, ""), message)
+          : await sendWebPush({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth }, message);
       if (!res.ok && res.gone) dead.push(s.endpoint);
     }),
   );
