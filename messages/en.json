@@ -463,7 +463,19 @@
       "slugTooShort": "The link must be at least 2 letters or digits.",
       "slugTaken": "This link is already in use. Choose another.",
       "invalidHours": "Invalid hours.",
-      "invalidLocation": "Invalid coordinates."
+      "invalidLocation": "Invalid coordinates.",
+      "tooManyAttempts": "Too many attempts. Try again in 15 minutes.",
+      "wrongPassword": "Wrong password.",
+      "deleteFailed": "Couldn't delete the account. Please try again."
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "body": "The salon account is deleted completely: every branch, booking, client, payment, staff login and the plan. This can't be undone.",
+      "action": "Delete account",
+      "confirmTitle": "Delete the account for good?",
+      "confirmBody": "Enter your password to confirm.",
+      "password": "Password",
+      "confirm": "Delete for good"
     }
   },
   "Weekdays": {

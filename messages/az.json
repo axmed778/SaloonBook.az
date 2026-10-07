@@ -463,7 +463,19 @@
       "slugTooShort": "Link ən az 2 hərf və ya rəqəmdən ibarət olmalıdır.",
       "slugTaken": "Bu link artıq istifadə olunur. Başqasını seçin.",
       "invalidHours": "Yanlış saatlar.",
-      "invalidLocation": "Yanlış koordinatlar."
+      "invalidLocation": "Yanlış koordinatlar.",
+      "tooManyAttempts": "Çox cəhd edildi. 15 dəqiqə sonra yenidən yoxlayın.",
+      "wrongPassword": "Şifrə yanlışdır.",
+      "deleteFailed": "Hesabı silmək alınmadı. Yenidən cəhd edin."
+    },
+    "deleteAccount": {
+      "title": "Hesabı sil",
+      "body": "Salon hesabı tamamilə silinir: bütün filiallar, görüşlər, müştərilər, ödənişlər, işçilərin girişləri və plan. Bunu geri qaytarmaq mümkün deyil.",
+      "action": "Hesabı sil",
+      "confirmTitle": "Hesab həmişəlik silinsin?",
+      "confirmBody": "Təsdiq etmək üçün şifrənizi daxil edin.",
+      "password": "Şifrə",
+      "confirm": "Həmişəlik sil"
     }
   },
   "Weekdays": {

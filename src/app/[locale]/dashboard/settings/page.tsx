@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requirePagePermission } from "@/lib/auth/guards";
+import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { SettingsManager, type BranchRow } from "./settings-manager";
@@ -74,6 +75,7 @@ export default async function SettingsPage() {
       }}
       appUrl={appUrl}
       vapidPublicKey={vapidPublicKey}
+      canDeleteAccount={!!session.accountId && hasPermission(session, "account.delete")}
       branchSection={
         session.accountId
           ? {
