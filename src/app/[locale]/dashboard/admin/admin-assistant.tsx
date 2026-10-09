@@ -4,7 +4,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { PLAN_LIMITS } from "@/lib/plans";
-import type { ChatTurn, Proposal } from "@/lib/admin-assistant/tools";
+import {
+  ASSISTANT_DEFAULT_MODEL,
+  ASSISTANT_MODELS,
+  type AssistantModel,
+  type ChatTurn,
+  type Proposal,
+} from "@/lib/admin-assistant/tools";
 import { askAssistant } from "./assistant";
 import {
   activateSubscription,
@@ -23,6 +29,20 @@ const PLAN_NAMES: Record<string, string> = {
   BASIC: "Salon",
   PRO: "Pro",
 };
+
+// Per-browser convenience only: the server validates the id on every question.
+const MODEL_KEY = "admin-assistant-model";
+
+function storedModel(): AssistantModel {
+  try {
+    const v = window.localStorage.getItem(MODEL_KEY);
+    return ASSISTANT_MODELS.some((m) => m.id === v)
+      ? (v as AssistantModel)
+      : ASSISTANT_DEFAULT_MODEL;
+  } catch {
+    return ASSISTANT_DEFAULT_MODEL;
+  }
+}
 
 type Turn = ChatTurn & { proposals?: Proposal[] };
 type CardState = {
@@ -54,6 +74,20 @@ export function AdminAssistant() {
   const [cards, setCards] = useState<Record<string, CardState>>({});
   const [pending, startTransition] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
+  const [model, setModel] = useState<AssistantModel>(ASSISTANT_DEFAULT_MODEL);
+
+  useEffect(() => {
+    setModel(storedModel());
+  }, []);
+
+  function pickModel(next: AssistantModel) {
+    setModel(next);
+    try {
+      window.localStorage.setItem(MODEL_KEY, next);
+    } catch {
+      // Private mode or blocked storage: the choice just lasts for this visit.
+    }
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" });
@@ -101,7 +135,7 @@ export function AdminAssistant() {
     setTurns((prev) => [...prev, { role: "user", text: q }]);
     setQuestion("");
     startTransition(async () => {
-      const res = await askAssistant({ history, question: q });
+      const res = await askAssistant({ history, question: q, model });
       if (!res.ok) {
         setError(res.error);
         return;
@@ -277,7 +311,25 @@ export function AdminAssistant() {
               {t("send")}
             </button>
           </form>
-          <p className="mt-2 text-xs text-faint-foreground">{t("footnote")}</p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-faint-foreground">{t("footnote")}</p>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {t("modelLabel")}
+              <select
+                value={model}
+                onChange={(e) => pickModel(e.target.value as AssistantModel)}
+                disabled={pending}
+                title={t("modelHint")}
+                className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground focus:border-rose-500 focus:outline-none"
+              >
+                {ASSISTANT_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       )}
     </section>

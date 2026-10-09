@@ -8,7 +8,7 @@ import { bakuToday } from "@/lib/time";
 import {
   ASSISTANT_MAX_STEPS,
   ASSISTANT_MAX_TOKENS,
-  ASSISTANT_MODEL,
+  MODELS_WITH_FALLBACK,
   ASSISTANT_RATE_LIMIT,
   ASSISTANT_SYSTEM_PROMPT,
   ASSISTANT_TOOLS,
@@ -53,17 +53,22 @@ export async function askAssistant(input: unknown): Promise<AskResult> {
   const client = new Anthropic();
   const messages = buildMessages(parsed.data.history, parsed.data.question);
   const proposals: Proposal[] = [];
+  const model = parsed.data.model;
 
   try {
     for (let step = 0; step < ASSISTANT_MAX_STEPS; step++) {
       const res = await client.beta.messages.create({
-        model: ASSISTANT_MODEL,
+        model,
         max_tokens: ASSISTANT_MAX_TOKENS,
         output_config: { effort: "medium" },
         // A policy decline on the main model is retried on a fallback model in
         // the same call, instead of leaving the admin with no answer.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        ...(MODELS_WITH_FALLBACK.has(model)
+          ? {
+              betas: ["server-side-fallback-2026-07-01"],
+              fallbacks: "default" as const,
+            }
+          : {}),
         tools: ASSISTANT_TOOLS,
         system: [
           {

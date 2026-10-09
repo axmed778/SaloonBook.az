@@ -1017,7 +1017,9 @@
         "busy": "Claude is overloaded right now. Try again shortly.",
         "failed": "Could not get an answer. Please try again.",
         "tooManySteps": "I ran out of steps before finding the answer. Please make the question more specific."
-      }
+      },
+      "modelLabel": "Model",
+      "modelHint": "Opus is the most capable, Sonnet about half the price, Haiku far cheaper but weaker."
     }
   },
   "Payments": {
@@ -1956,7 +1958,7 @@
     "title": "Instagram Direct digest",
     "subtitle": "Direct leads worth messaging today.",
     "generatedAt": "Generated {when}",
-    "empty": "No digest yet. A new one appears every day at 09:50.",
+    "empty": "No digest yet. A new one appears every Monday at 09:50.",
     "noTasks": "Nobody to message today.",
     "progress": "{done} of {total} done",
     "priority": {

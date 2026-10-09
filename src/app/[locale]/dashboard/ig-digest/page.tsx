@@ -9,7 +9,7 @@ import { IgDigestList, type ExcludedLead } from "./ig-digest-list";
 
 export const dynamic = "force-dynamic";
 
-// The founder's daily Instagram Direct digest: the newest IgDigest row, written
+// The founder's weekly Instagram Direct digest: the newest IgDigest row, written
 // every morning at 09:50 Baku by worker/processors/ig-digest.ts. Platform-admin
 // only — these are SalonBook's own leads, not any salon's data.
 

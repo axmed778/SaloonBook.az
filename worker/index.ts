@@ -135,23 +135,23 @@ void (async () => {
   }
 })();
 
-// Direct digest for the founder, weekdays only: 09:50 Baku = 05:50 UTC (Baku
-// keeps no DST, so the offset never moves, and 05:50 UTC falls on the same
-// calendar day in Baku, so "1-5" is Monday to Friday there too). Nothing is lost
-// over the weekend: each run reads the whole IG_DIGEST_WINDOW_DAYS window, so
-// Monday's digest includes Saturday's and Sunday's leads. The upsert replaces the
-// previous every-day pattern in Redis on the next worker boot. Like the token refresh, no run-on-boot: each
-// run is a paid Claude call and a WhatsApp message, and a worker restarting a
-// few times a day would repeat both. A failed day is logged by the job itself
-// and the page keeps showing the previous digest.
+// Direct digest for the founder, once a week: Monday 09:50 Baku = 05:50 UTC
+// (Baku keeps no DST, so the offset never moves, and 05:50 UTC falls on the same
+// calendar day in Baku). The founder asked for weekly on 2026-10-09; before that
+// it ran Monday to Friday. Nothing is lost between runs: each run reads the whole
+// IG_DIGEST_WINDOW_DAYS (30-day) window, so Monday's digest covers the past week.
+// The upsert replaces the previous pattern in Redis on the next worker boot. No
+// run-on-boot: each run is a paid Claude call and a WhatsApp message, and a
+// worker restarting a few times a day would repeat both. A failed run is logged
+// by the job itself and the page keeps showing the previous digest.
 void (async () => {
   try {
     await igQueue.upsertJobScheduler(
       "ig-digest",
-      { pattern: "50 5 * * 1-5" },
+      { pattern: "50 5 * * 1" },
       { name: IG_JOB_NAME, data: { type: "digest" } },
     );
-    console.log("[worker] instagram digest scheduled (Mon-Fri 05:50 UTC = 09:50 Baku)");
+    console.log("[worker] instagram digest scheduled (Mondays 05:50 UTC = 09:50 Baku)");
   } catch (e) {
     console.error("[worker] failed to schedule instagram digest", e);
   }
