@@ -27,11 +27,16 @@ export type AskResult =
   | { ok: true; answer: string; proposals: Proposal[] }
   | { ok: false; error: string };
 
-export async function askAssistant(input: unknown): Promise<AskResult> {
+/** The acting platform admin's user id, or null for anyone else. */
+async function requireAdmin(): Promise<string | null> {
   const session = await getSession();
+  return session?.isAdmin ? session.user.id : null;
+}
+
+export async function askAssistant(input: unknown): Promise<AskResult> {
+  const adminId = await requireAdmin();
   const t = await getTranslations("Admin.assistant.errors");
-  if (!session?.isAdmin) return { ok: false, error: t("unauthorized") };
-  const adminId = session.user.id;
+  if (!adminId) return { ok: false, error: t("unauthorized") };
 
   const parsed = askInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalid") };

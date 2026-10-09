@@ -279,6 +279,9 @@ export const askInputSchema = z.object({
   question: z.string().trim().min(1).max(ASSISTANT_MAX_TEXT),
 });
 
+/** The API requires the conversation to open on a user turn. */
+const OPENING_ROLES: ReadonlySet<ChatTurn["role"]> = new Set(["user"]);
+
 /**
  * The messages for one question: the last ASSISTANT_HISTORY_TURNS turns with
  * empty ones dropped, trimmed so the conversation opens on a user turn (the API
@@ -291,7 +294,7 @@ export function buildMessages(
   const turns = history
     .filter((t) => t.text.trim() !== "")
     .slice(-ASSISTANT_HISTORY_TURNS);
-  const start = turns.findIndex((t) => t.role === "user");
+  const start = turns.findIndex((t) => OPENING_ROLES.has(t.role));
   const kept = start === -1 ? [] : turns.slice(start);
   return [
     ...kept.map((t) => ({
