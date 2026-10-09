@@ -16,6 +16,7 @@ import { maskPhone } from "@/lib/whatsapp-sender";
 import { MAX_NOTIFICATION_ATTEMPTS } from "@/lib/queue";
 import { readWorkerHeartbeat } from "@/lib/worker-heartbeat";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
+import { AdminAssistant } from "./admin-assistant";
 
 export const dynamic = "force-dynamic";
 
@@ -196,6 +197,7 @@ export default async function AdminPage() {
 
   return (
     <>
+      <AdminAssistant />
       <section className="mb-6 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">{t("notifications.title")}</h2>
         {/* Worker liveness first: if it isn't beating, nothing below is being
