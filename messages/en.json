@@ -987,6 +987,37 @@
       "keptLogins": "Kept (in another salon or admin): {list}",
       "passwordLabel": "Your admin password",
       "confirm": "Delete for good"
+    },
+    "assistant": {
+      "title": "Claude assistant",
+      "subtitle": "Ask about salons, payments and trials. It only proposes changes; they run after you confirm.",
+      "empty": "For example: “Which salons' trials end this week?” or “How much did we receive in September?”",
+      "placeholder": "Your question…",
+      "inputLabel": "Question for the assistant",
+      "send": "Ask",
+      "thinking": "Claude is looking at the data…",
+      "confirm": "Confirm",
+      "done": "Done.",
+      "dismissed": "Cancelled.",
+      "doneNote": "[Admin confirmed, done: {what}]",
+      "dismissedNote": "[Admin cancelled the proposal: {what}]",
+      "footnote": "Runs only when you ask. Deleting salons and payments is not available to the assistant.",
+      "proposal": {
+        "activate": "{salon}: {plan} plan for {months} mo., payment {amount} ₼",
+        "trial": "{salon}: {plan} trial for {days} days",
+        "branches": "{salon}: extra branches total {count}",
+        "disableSender": "{salon}: turn off own WhatsApp number"
+      },
+      "errors": {
+        "unauthorized": "Access denied.",
+        "invalid": "Invalid request.",
+        "noKey": "ANTHROPIC_API_KEY is not set on the server.",
+        "rateLimited": "Too many questions in a row. Try again in a few minutes.",
+        "refused": "Claude declined to answer this request.",
+        "busy": "Claude is overloaded right now. Try again shortly.",
+        "failed": "Could not get an answer. Please try again.",
+        "tooManySteps": "I ran out of steps before finding the answer. Please make the question more specific."
+      }
     }
   },
   "Payments": {

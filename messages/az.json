@@ -987,6 +987,37 @@
       "keptLogins": "Qalacaq (başqa salonda və ya admin): {list}",
       "passwordLabel": "Admin şifrəniz",
       "confirm": "Həmişəlik sil"
+    },
+    "assistant": {
+      "title": "Claude köməkçisi",
+      "subtitle": "Salonlar, ödənişlər və sınaq dövrləri haqqında soruşun. Dəyişiklikləri yalnız təklif edir, siz təsdiq etdikdən sonra icra olunur.",
+      "empty": "Məsələn: «Hansı salonların sınaq dövrü bu həftə bitir?» və ya «Sentyabrda nə qədər ödəniş almışıq?»",
+      "placeholder": "Sualınız…",
+      "inputLabel": "Köməkçiyə sual",
+      "send": "Soruş",
+      "thinking": "Claude məlumatlara baxır…",
+      "confirm": "Təsdiq et",
+      "done": "İcra olundu.",
+      "dismissed": "Ləğv edildi.",
+      "doneNote": "[Admin təsdiq etdi, icra olundu: {what}]",
+      "dismissedNote": "[Admin təklifi ləğv etdi: {what}]",
+      "footnote": "Yalnız siz soruşanda işləyir. Salon və ödənişlərin silinməsi köməkçiyə açıq deyil.",
+      "proposal": {
+        "activate": "{salon}: {plan} tarifi {months} ay, ödəniş {amount} ₼",
+        "trial": "{salon}: {plan} sınaq dövrü {days} gün",
+        "branches": "{salon}: əlavə filial cəmi {count}",
+        "disableSender": "{salon}: öz WhatsApp nömrəsini söndür"
+      },
+      "errors": {
+        "unauthorized": "Giriş yoxdur.",
+        "invalid": "Yanlış sorğu.",
+        "noKey": "Serverdə ANTHROPIC_API_KEY təyin edilməyib.",
+        "rateLimited": "Çox sual göndərildi. Bir neçə dəqiqədən sonra yenidən cəhd edin.",
+        "refused": "Claude bu sorğuya cavab verməkdən imtina etdi.",
+        "busy": "Claude hazırda yüklüdür. Bir az sonra cəhd edin.",
+        "failed": "Cavab alınmadı. Yenidən cəhd edin.",
+        "tooManySteps": "Ayrılmış addımlarda cavab tapa bilmədim. Sualı dəqiqləşdirin."
+      }
     }
   },
   "Payments": {
