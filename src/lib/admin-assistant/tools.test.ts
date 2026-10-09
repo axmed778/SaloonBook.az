@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ASSISTANT_DEFAULT_MODEL,
   ASSISTANT_HISTORY_TURNS,
   ASSISTANT_MAX_TEXT,
   ASSISTANT_TOOLS,
+  askInputSchema,
   buildMessages,
   parseProposal,
   proposalKindOf,
@@ -114,5 +116,24 @@ describe("buildMessages", () => {
     );
     expect(msgs).toHaveLength(2);
     expect((msgs[0].content as string).length).toBe(ASSISTANT_MAX_TEXT);
+  });
+});
+
+describe("askInputSchema model", () => {
+  it("defaults to Opus and accepts only the listed models", () => {
+    expect(askInputSchema.parse({ history: [], question: "q" }).model).toBe(
+      ASSISTANT_DEFAULT_MODEL,
+    );
+    expect(
+      askInputSchema.parse({
+        history: [],
+        question: "q",
+        model: "claude-haiku-5-5",
+      }).model,
+    ).toBe("claude-haiku-5-5");
+    expect(
+      askInputSchema.safeParse({ history: [], question: "q", model: "gpt-5" })
+        .success,
+    ).toBe(false);
   });
 });

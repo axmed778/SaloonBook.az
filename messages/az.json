@@ -1017,7 +1017,9 @@
         "busy": "Claude hazırda yüklüdür. Bir az sonra cəhd edin.",
         "failed": "Cavab alınmadı. Yenidən cəhd edin.",
         "tooManySteps": "Ayrılmış addımlarda cavab tapa bilmədim. Sualı dəqiqləşdirin."
-      }
+      },
+      "modelLabel": "Model",
+      "modelHint": "Opus ən ağıllısıdır, Sonnet təxminən iki dəfə ucuzdur, Haiku çox ucuzdur, amma zəifdir."
     }
   },
   "Payments": {

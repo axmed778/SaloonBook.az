@@ -15,7 +15,22 @@ import { z } from "zod";
 // This module is pure (no Prisma, no SDK client) so the schemas and the history
 // rules are unit-testable.
 
-export const ASSISTANT_MODEL = "claude-opus-5-5";
+/**
+ * The models the admin can pick in the panel, most capable first. The server
+ * accepts only these ids, whatever the browser sends.
+ */
+export const ASSISTANT_MODELS = [
+  { id: "claude-opus-5-5", label: "Opus 5.5" },
+  { id: "claude-sonnet-5-5", label: "Sonnet 5.5" },
+  { id: "claude-haiku-5-5", label: "Haiku 5.5" },
+] as const;
+export type AssistantModel = (typeof ASSISTANT_MODELS)[number]["id"];
+export const ASSISTANT_DEFAULT_MODEL: AssistantModel = "claude-opus-5-5";
+/** Server-side refusal fallback ("default" routing) is not offered for Haiku. */
+export const MODELS_WITH_FALLBACK: ReadonlySet<AssistantModel> = new Set([
+  "claude-opus-5-5",
+  "claude-sonnet-5-5",
+]);
 /** Model round trips per question: enough for a few lookups plus the answer. */
 export const ASSISTANT_MAX_STEPS = 8;
 export const ASSISTANT_MAX_TOKENS = 16_000;
@@ -277,6 +292,14 @@ export type ChatTurn = z.infer<typeof chatTurnSchema>;
 export const askInputSchema = z.object({
   history: z.array(chatTurnSchema).max(200),
   question: z.string().trim().min(1).max(ASSISTANT_MAX_TEXT),
+  model: z
+    .enum(
+      ASSISTANT_MODELS.map((m) => m.id) as [
+        AssistantModel,
+        ...AssistantModel[],
+      ],
+    )
+    .default(ASSISTANT_DEFAULT_MODEL),
 });
 
 /** The API requires the conversation to open on a user turn. */
