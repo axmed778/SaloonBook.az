@@ -133,9 +133,9 @@ Variables: same order as `new_booking_alert` ({{1}} customer, {{2}} service,
 
 ---
 
-## 7. `ig_digest_ready` — to the founder (`DIGEST_PHONE`), daily at 09:50 Baku
+## 7. `ig_digest_ready` — to the founder (`DIGEST_PHONE`), Mondays at 09:50 Baku
 
-Internal, not customer-facing: the daily Instagram Direct digest
+Internal, not customer-facing: the weekly Instagram Direct digest
 (`worker/processors/ig-digest.ts`) sends it once the digest is saved. Not a
 Notification row, so it doesn't go through `buildComponents` — its parameters
 come from `digestTemplateComponents` in `src/lib/ig-digest.ts`.

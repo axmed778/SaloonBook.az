@@ -1958,7 +1958,7 @@
     "title": "Instagram Direct digest",
     "subtitle": "Direct leads worth messaging today.",
     "generatedAt": "Generated {when}",
-    "empty": "No digest yet. A new one appears every day at 09:50.",
+    "empty": "No digest yet. A new one appears every Monday at 09:50.",
     "noTasks": "Nobody to message today.",
     "progress": "{done} of {total} done",
     "priority": {
