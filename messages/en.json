@@ -1974,6 +1974,7 @@
     "noDraft": "No draft yet: the playbook scenario needs your decision first — see \"What's going on\".",
     "copy": "Copy",
     "copied": "Copied",
+    "copyNick": "Copy username",
     "done": "Done",
     "exclude": "Exclude",
     "excludeHint": "Hide from the digest until the lead writes again",

@@ -1974,6 +1974,7 @@
     "noDraft": "Hazır mətn yoxdur: playbook ssenarisi üçün sizin qərarınız lazımdır — «Nə baş verir» bölməsinə baxın.",
     "copy": "Kopyala",
     "copied": "Kopyalandı",
+    "copyNick": "Nikneymi kopyala",
     "done": "Edildi",
     "exclude": "Xaric et",
     "excludeHint": "Yenidən yazana qədər xülasədə göstərmə",

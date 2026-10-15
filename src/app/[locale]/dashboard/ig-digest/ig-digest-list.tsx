@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Check, Copy } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import type { IgDigestItem, IgDigestShownPriority } from "@/lib/ig-digest";
 import { ErrorToast, UndoToast } from "../_components/toast";
@@ -191,18 +192,10 @@ function DigestCard({
   onExclude: () => void;
 }) {
   const t = useTranslations("IgDigest");
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(item.draft);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked (insecure origin, denied permission): the draft is
-      // on screen and selectable, so there is nothing better to fall back to.
-    }
-  }
+  const [copied, copy] = useCopy(item.draft);
+  // Bare username, no "@": it pastes as is into Instagram search, a Direct
+  // recipient field or the tracker.
+  const [nickCopied, copyNick] = useCopy(item.username ?? "");
 
   return (
     <li
@@ -237,6 +230,21 @@ function DigestCard({
               >
                 @{item.username}
               </a>
+            )}
+            {item.username && (
+              <button
+                type="button"
+                onClick={() => void copyNick()}
+                title={nickCopied ? t("copied") : t("copyNick")}
+                aria-label={t("copyNick")}
+                className="-ml-1 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                {nickCopied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </button>
             )}
             <span className="ml-auto flex flex-wrap items-center gap-x-2 text-xs">
               {/* Only when it's our move: "waiting 0 days" would just be noise. */}
@@ -302,4 +310,20 @@ function DigestCard({
       </div>
     </li>
   );
+}
+
+/** Copies `text` on call; the flag stays true for 2s so the button can say so. */
+function useCopy(text: string): [boolean, () => Promise<void>] {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked (insecure origin, denied permission): the text is
+      // on screen and selectable, so there is nothing better to fall back to.
+    }
+  }
+  return [copied, copy];
 }
