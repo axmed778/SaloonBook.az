@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { NotifStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { salonForPhoneNumberId } from "@/lib/whatsapp-sender";
+import { describeDeliveryFailure } from "@/lib/whatsapp-status";
 
 export const dynamic = "force-dynamic";
 
@@ -133,10 +134,16 @@ export async function POST(req: NextRequest) {
       const phoneNumberId = c.value?.metadata?.phone_number_id;
       const salonId = phoneNumberId ? await salonForPhoneNumberId(phoneNumberId) : null;
 
-      for (const s of statuses as Array<{ id?: string; status?: string }>) {
+      for (const s of statuses as Array<{ id?: string; status?: string; errors?: unknown }>) {
         if (!s.id || !s.status) continue;
         const target = STATUS_MAP[s.status];
         if (!target) continue;
+        // A "failed" callback carries Meta's reason. Keep it on the row: it is the
+        // only record of why a message Meta accepted never reached the phone.
+        const data =
+          target.to === "FAILED"
+            ? { status: target.to, lastError: describeDeliveryFailure(s.errors) }
+            : { status: target.to };
 
         // Monotonic guard: Meta callbacks can arrive out of order (a late
         // "delivered" after "read"). Only advance forward in the lifecycle
@@ -150,7 +157,7 @@ export async function POST(req: NextRequest) {
             status: { in: target.from },
             ...(salonId ? { salonId } : {}),
           },
-          data: { status: target.to },
+          data,
         });
 
         // If the salon scope matched nothing, the wamid still uniquely
@@ -160,7 +167,7 @@ export async function POST(req: NextRequest) {
         if (salonId && res.count === 0) {
           await prisma.notification.updateMany({
             where: { providerMsgId: s.id, status: { in: target.from } },
-            data: { status: target.to },
+            data,
           });
         }
       }

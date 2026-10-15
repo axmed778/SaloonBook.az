@@ -84,7 +84,18 @@ export async function sweepNotifications(): Promise<void> {
       attempts: { lt: MAX_NOTIFICATION_ATTEMPTS },
       OR: [
         { status: "QUEUED", sendAfter: { lte: new Date(now - DUE_GRACE_MS) } },
-        { status: "FAILED", sendAfter: { lte: new Date(now - FAILED_GRACE_MS) } },
+        // providerMsgId: null — only rows that never got out. A FAILED row WITH a
+        // wamid is one Meta accepted and then reported undeliverable through the
+        // status webhook (not a WhatsApp user, number blocked us, per-user
+        // limit). Sending the identical message again cannot fix that: before
+        // this filter the sweep re-sent each such row every pass until it hit
+        // MAX_NOTIFICATION_ATTEMPTS, 24 sends for one booking, and then showed it
+        // in the admin panel as needing manual help.
+        {
+          status: "FAILED",
+          providerMsgId: null,
+          sendAfter: { lte: new Date(now - FAILED_GRACE_MS) },
+        },
       ],
     },
     // status and attempts drive which enqueue path a row takes — a QUEUED row
