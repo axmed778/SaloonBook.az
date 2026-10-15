@@ -306,8 +306,12 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       }
     }
 
+    // Owner alert in WhatsApp: online bookings only. A DASHBOARD booking was
+    // made by the salon's own staff, so a paid WhatsApp message telling the
+    // owner about it is noise (and the free push below already covers it). At
+    // a 40-master salon that was ~4800 paid messages a month.
     let ownerAlertId: string | null = null;
-    if (salon.phone) {
+    if (salon.phone && isPublic) {
       const ownerAlert = await tx.notification.create({
         data: {
           salonId: input.salonId,
