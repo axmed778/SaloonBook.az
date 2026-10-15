@@ -4,7 +4,7 @@ import {
   bookingClientSetup,
   employeeFitsClient,
   kidsFlags,
-  kidsFlagsFromSelect,
+  kidsFlagsFromCounts,
   presetClientFor,
   serviceFitsClient,
 } from "./kids";
@@ -33,20 +33,13 @@ describe("kidsFlags", () => {
   });
 });
 
-describe("kidsFlagsFromSelect", () => {
-  it("reads the count of kids' services and the one-row adult probe", () => {
-    expect(kidsFlagsFromSelect({ _count: { services: 0 }, services: [{}] })).toEqual({
-      hasKids: false,
-      kidsOnly: false,
-    });
-    expect(kidsFlagsFromSelect({ _count: { services: 2 }, services: [{}] })).toEqual({
-      hasKids: true,
-      kidsOnly: false,
-    });
-    expect(kidsFlagsFromSelect({ _count: { services: 2 }, services: [] })).toEqual({
-      hasKids: true,
-      kidsOnly: true,
-    });
+describe("kidsFlagsFromCounts", () => {
+  it("combines the kids' service count with whether any adult service exists", () => {
+    expect(kidsFlagsFromCounts(0, true)).toEqual({ hasKids: false, kidsOnly: false });
+    // No services that count at all is still not a kids salon.
+    expect(kidsFlagsFromCounts(0, false)).toEqual({ hasKids: false, kidsOnly: false });
+    expect(kidsFlagsFromCounts(2, true)).toEqual({ hasKids: true, kidsOnly: false });
+    expect(kidsFlagsFromCounts(2, false)).toEqual({ hasKids: true, kidsOnly: true });
   });
 });
 

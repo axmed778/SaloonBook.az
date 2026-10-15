@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { publishableSalonWhere } from "@/app/sitemap";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { bakuToday, bakuWeekday, bakuMinutesOfDay } from "@/lib/time";
-import { kidsFlagsFromSelect, salonKidsSelect } from "@/lib/kids";
+import { kidsFlagsFromCounts } from "@/lib/kids";
+import { salonKidsCountSelect, salonsWithAdultServices } from "@/lib/kids-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export async function GET(req: NextRequest) {
       ...(serviceFilters.length > 0 ? { AND: serviceFilters } : {}),
     },
     select: {
+      id: true,
       slug: true,
       name: true,
       address: true,
@@ -89,7 +91,7 @@ export async function GET(req: NextRequest) {
       ratingSum: true,
       businessHours: true,
       // Derived per salon from its active services (nothing stored on Salon).
-      ...salonKidsSelect,
+      ...salonKidsCountSelect,
     },
     // +1 to detect truncation.
     take: HARD_LIMIT + 1,
@@ -97,6 +99,9 @@ export async function GET(req: NextRequest) {
 
   const truncated = rows.length > HARD_LIMIT;
   const limited = truncated ? rows.slice(0, HARD_LIMIT) : rows;
+  const withAdult = await salonsWithAdultServices(
+    limited.filter((s) => s._count.services > 0).map((s) => s.id),
+  );
 
   const salons = limited
     .filter((s) => {
@@ -116,7 +121,7 @@ export async function GET(req: NextRequest) {
       lng: s.longitude as number,
       rating: s.ratingCount > 0 ? Math.round((s.ratingSum / s.ratingCount) * 10) / 10 : null,
       ratingCount: s.ratingCount,
-      ...kidsFlagsFromSelect(s),
+      ...kidsFlagsFromCounts(s._count.services, withAdult.has(s.id)),
     }));
 
   return NextResponse.json(

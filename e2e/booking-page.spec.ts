@@ -38,7 +38,15 @@ test.describe("public booking page", () => {
     const widget = page.locator("section").filter({ hasText: copy.bookingWhoStep }).first();
 
     await widget.getByRole("button", { name: copy.audience.MALE, exact: true }).waitFor();
-    await widget.getByRole("button", { name: copy.audience.KID, exact: true }).click();
+    const kidOption = widget.getByRole("button", { name: copy.audience.KID, exact: true });
+    // prisma/seed.ts skips a demostudio that already exists, so a database seeded
+    // before the kids' service was added has none. Locally that's a stale seed,
+    // not a regression; CI always seeds a fresh database, so there it must fail.
+    test.skip(
+      !process.env.CI && (await kidOption.count()) === 0,
+      "demostudio was seeded before its kids' service existed: drop and reseed it",
+    );
+    await kidOption.click();
 
     // Only the kids' haircut is offered; the adult haircut and manicure are not.
     await expect(widget.getByRole("button", { name: /Uşaq saç kəsimi/ })).toBeVisible();

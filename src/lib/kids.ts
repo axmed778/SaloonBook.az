@@ -15,21 +15,13 @@ export type BookingClient = "MALE" | "FEMALE" | "KID";
 export type KidsFlags = { hasKids: boolean; kidsOnly: boolean };
 
 /**
- * Prisma `select` fragment for the kids flags of a salon, without loading its
- * whole catalog: the count of active kids' services, plus at most one active
- * adult service. Pair with `kidsFlagsFromSelect`. Used by the discovery APIs.
+ * The flags from two facts the discovery APIs read without loading a catalog:
+ * how many active kids' services the salon has, and whether it has any active
+ * adult service (see src/lib/kids-flags.ts).
  */
-export const salonKidsSelect = {
-  _count: { select: { services: { where: { isActive: true, forKids: true } } } },
-  services: { where: { isActive: true, forKids: false }, select: { id: true }, take: 1 },
-} as const;
-
-export function kidsFlagsFromSelect(row: {
-  _count: { services: number };
-  services: unknown[];
-}): KidsFlags {
-  const hasKids = row._count.services > 0;
-  return { hasKids, kidsOnly: hasKids && row.services.length === 0 };
+export function kidsFlagsFromCounts(kidsServices: number, hasAdultService: boolean): KidsFlags {
+  const hasKids = kidsServices > 0;
+  return { hasKids, kidsOnly: hasKids && !hasAdultService };
 }
 
 /** hasKids: at least one active kids' service. kidsOnly: every active service is. */

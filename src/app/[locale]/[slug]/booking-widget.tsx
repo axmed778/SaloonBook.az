@@ -651,14 +651,19 @@ export function BookingWidget({
               </div>
 
               {key === "gender" && (
-                <div
-                  className={
-                    "grid gap-3 " +
-                    (clientSetup.options!.length === 3 ? "grid-cols-3" : "grid-cols-2")
-                  }
-                >
+                // Always two columns: three across a phone leaves "Мужчины" /
+                // "Женщины" no room. With a third option (Kids) it takes its
+                // own full-width row under Men / Women.
+                <div className="grid grid-cols-2 gap-3">
                   {clientSetup.options!.map((g) => (
-                    <button key={g} onClick={() => pickGender(g)} className={optionCls(gender === g)}>
+                    <button
+                      key={g}
+                      onClick={() => pickGender(g)}
+                      className={
+                        optionCls(gender === g) +
+                        (clientSetup.options!.length > 2 && g === "KID" ? " col-span-2" : "")
+                      }
+                    >
                       <span className="font-medium text-foreground">{clientLabel(g)}</span>
                     </button>
                   ))}

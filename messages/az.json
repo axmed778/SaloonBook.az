@@ -376,7 +376,7 @@
       "hasAppointments": "Bu xidmətlə bağlı görüşlər var. Silmək əvəzinə onu deaktiv edin."
     },
     "forKids": "Uşaq xidməti",
-    "forKidsHint": "Yalnız uşaq üçün rezervasiyada göstərilir.",
+    "forKidsHint": "Yalnız uşaq üçün rezervasiyada göstərilir; cins seçimi tətbiq olunmur.",
     "kidsBadge": "Uşaq"
   },
   "Settings": {

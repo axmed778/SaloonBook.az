@@ -376,7 +376,7 @@
       "hasAppointments": "There are appointments linked to this service. Deactivate it instead of deleting."
     },
     "forKids": "Children's service",
-    "forKidsHint": "Shown only when booking for a child.",
+    "forKidsHint": "Shown only when booking for a child; the gender setting does not apply.",
     "kidsBadge": "Kids"
   },
   "Settings": {

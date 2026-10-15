@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { kidsFlagsFromSelect, salonKidsSelect } from "@/lib/kids";
+import { kidsFlagsFromCounts } from "@/lib/kids";
+import { salonKidsCountSelect, salonsWithAdultServices } from "@/lib/kids-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +21,22 @@ export async function GET() {
       longitude: { not: null },
     },
     select: {
+      id: true,
       slug: true,
       name: true,
       address: true,
       audience: true,
       latitude: true,
       longitude: true,
-      ...salonKidsSelect,
+      ...salonKidsCountSelect,
     },
     // Generous cap — this is a small-country directory, not a global one.
     take: 1000,
   });
+
+  const withAdult = await salonsWithAdultServices(
+    rows.filter((s) => s._count.services > 0).map((s) => s.id),
+  );
 
   const salons = rows.map((s) => ({
     slug: s.slug,
@@ -39,7 +45,7 @@ export async function GET() {
     audience: s.audience,
     lat: s.latitude as number,
     lng: s.longitude as number,
-    ...kidsFlagsFromSelect(s),
+    ...kidsFlagsFromCounts(s._count.services, withAdult.has(s.id)),
   }));
 
   return NextResponse.json(
