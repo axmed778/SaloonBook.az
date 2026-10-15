@@ -30,6 +30,8 @@ export type CalendarBlock = {
   id: string;
   // Day view: employeeId. Week view: the appointment's Baku day, "YYYY-MM-DD".
   columnId: string;
+  // The master, in both views — what the staff filter matches on.
+  employeeId: string;
   startMin: number; // real minutes from the start day's Baku midnight (unclamped)
   endMin: number; // includes service buffer; capped at 1440 if it runs to midnight
   title: string; // service name
@@ -86,6 +88,7 @@ export function toCalendarBlock(
   return {
     id: b.id,
     columnId,
+    employeeId: b.employeeId,
     startMin: bakuMinutesOfDayOn(b.startsAt, startYmd),
     endMin: Math.min(bakuMinutesOfDayOn(b.endsAt, startYmd), MINUTES_IN_DAY),
     title: b.serviceName,

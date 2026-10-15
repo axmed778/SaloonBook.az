@@ -15,6 +15,7 @@ import { WeekGrid } from "./week-grid";
 import { AppointmentPopup } from "./appointment-popup";
 import { BookingModal } from "./booking-modal";
 import { ReconcileBar } from "./reconcile-bar";
+import { StaffFilter, useHiddenStaff } from "./staff-filter";
 
 // Calendar shell: toolbar (view toggle, period nav, "new booking"), the day or
 // week grid, and the two overlays (appointment detail, manual-booking form).
@@ -58,6 +59,15 @@ export function Calendar({
   const t = useTranslations("Calendar");
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
   const [booking, setBooking] = useState(false);
+  const [hidden, setHidden] = useHiddenStaff();
+
+  // The filter only narrows what is DRAWN. A master's own login has one column
+  // and never sees it; the reconcile bar below still counts every master's
+  // open bookings, since closing the day is a salon-wide job.
+  const showFilter = columns.length > 1;
+  const visibleColumns = showFilter ? columns.filter((c) => !hidden.has(c.id)) : columns;
+  const visibleBlocks = showFilter ? blocks.filter((b) => !hidden.has(b.employeeId)) : blocks;
+  const nobodyShown = showFilter && visibleColumns.length === 0;
 
   const isWeek = view === "week";
   const prev = isWeek ? shiftYmd(weekStartOf(day), -7) : shiftYmd(day, -1);
@@ -131,6 +141,10 @@ export function Calendar({
             </Link>
           </div>
 
+          {showFilter && (
+            <StaffFilter staff={columns} hidden={hidden} onChange={setHidden} />
+          )}
+
           {/* New booking */}
           {canWrite && (
             <button
@@ -150,18 +164,30 @@ export function Calendar({
 
       {canWrite && <ReconcileBar blocks={blocks} />}
 
-      {isWeek ? (
+      {nobodyShown ? (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-xl border border-border bg-card text-center">
+          <p className="text-sm font-medium text-secondary-foreground">{t("staffFilter.noneTitle")}</p>
+          <p className="mt-1 max-w-xs text-sm text-faint-foreground">{t("staffFilter.noneBody")}</p>
+          <button
+            type="button"
+            onClick={() => setHidden(new Set())}
+            className="mt-3 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-secondary-foreground hover:bg-hover"
+          >
+            {t("staffFilter.showAll")}
+          </button>
+        </div>
+      ) : isWeek ? (
         <WeekGrid
           weekDays={weekDays}
-          blocks={blocks}
+          blocks={visibleBlocks}
           onSelect={setSelected}
           windowStartMin={windowStartMin}
           windowEndMin={windowEndMin}
         />
       ) : (
         <DayGrid
-          columns={columns}
-          blocks={blocks}
+          columns={visibleColumns}
+          blocks={visibleBlocks}
           onSelect={setSelected}
           windowStartMin={windowStartMin}
           windowEndMin={windowEndMin}

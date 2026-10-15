@@ -34,11 +34,14 @@ export function WeekGrid({
   const bodyHeight = ((windowEndMin - windowStartMin) / 60) * ROW_H;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    // Scrolls both ways inside its own box, capped to the viewport, so the time
+    // gutter (sticky left) and the column headers (sticky top) stay in view
+    // while scrolling across many masters or down a long day.
+    <div className="max-h-[calc(100dvh-10rem)] overflow-auto rounded-xl border border-border bg-card">
       <div className="flex min-w-full">
         {/* Time gutter */}
-        <div className="w-14 shrink-0 border-r border-border">
-          <div className="h-12 border-b border-border" />
+        <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-border bg-card">
+          <div className="sticky top-0 z-10 h-12 border-b border-border bg-card" />
           <div className="relative" style={{ height: bodyHeight }}>
             {hours.map((m, i) => (
               <div
@@ -60,30 +63,32 @@ export function WeekGrid({
               key={wd.ymd}
               className="min-w-[120px] flex-1 border-r border-border last:border-r-0"
             >
-              <Link
-                href={`/dashboard/calendar?view=day&day=${wd.ymd}`}
-                className={
-                  "flex h-12 flex-col items-center justify-center border-b border-border px-2 transition hover:bg-hover " +
-                  (wd.isToday ? "bg-rose-500/10" : "")
-                }
-              >
-                <span
+              <div className="sticky top-0 z-[15] bg-card">
+                <Link
+                  href={`/dashboard/calendar?view=day&day=${wd.ymd}`}
                   className={
-                    "text-[11px] uppercase " +
-                    (wd.isToday ? "text-rose-700 dark:text-rose-300" : "text-faint-foreground")
+                    "flex h-12 flex-col items-center justify-center border-b border-border px-2 transition hover:bg-hover " +
+                    (wd.isToday ? "bg-rose-500/10" : "")
                   }
                 >
-                  {wd.weekdayLabel}
-                </span>
-                <span
-                  className={
-                    "text-sm font-medium " +
-                    (wd.isToday ? "text-rose-800 dark:text-rose-200" : "text-foreground")
-                  }
-                >
-                  {wd.dayLabel}
-                </span>
-              </Link>
+                  <span
+                    className={
+                      "text-[11px] uppercase " +
+                      (wd.isToday ? "text-rose-700 dark:text-rose-300" : "text-faint-foreground")
+                    }
+                  >
+                    {wd.weekdayLabel}
+                  </span>
+                  <span
+                    className={
+                      "text-sm font-medium " +
+                      (wd.isToday ? "text-rose-800 dark:text-rose-200" : "text-foreground")
+                    }
+                  >
+                    {wd.dayLabel}
+                  </span>
+                </Link>
+              </div>
               <div className="relative" style={{ height: bodyHeight }}>
                 {hours.map((m, i) => (
                   <div
