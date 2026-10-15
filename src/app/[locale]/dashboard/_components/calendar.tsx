@@ -9,6 +9,7 @@ import {
   type CalendarBlock,
   type CatalogEmployee,
   type WeekDay,
+  visibleWindow,
 } from "./calendar-shared";
 import { DayGrid } from "./day-grid";
 import { WeekGrid } from "./week-grid";
@@ -34,8 +35,6 @@ export function Calendar({
   weekDays,
   blocks,
   catalog,
-  windowStartMin,
-  windowEndMin,
   salonName,
   canWrite,
   canWritePayments,
@@ -48,8 +47,6 @@ export function Calendar({
   weekDays: WeekDay[];
   blocks: CalendarBlock[];
   catalog: CatalogEmployee[];
-  windowStartMin: number;
-  windowEndMin: number;
   salonName: string;
   /** bookings.write: create, move, change status, close the day. Read-only without it. */
   canWrite: boolean;
@@ -60,16 +57,29 @@ export function Calendar({
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
   const [booking, setBooking] = useState(false);
   const [hidden, setHidden] = useHiddenStaff();
+  const isWeek = view === "week";
 
   // The filter only narrows what is DRAWN. A master's own login has one column
   // and never sees it; the reconcile bar below still counts every master's
   // open bookings, since closing the day is a salon-wide job.
-  const showFilter = columns.length > 1;
+  //
+  // The week view's `columns` are active masters only, while its blocks can
+  // belong to a master deactivated since; those join the list (from the
+  // blocks) so their bookings can be filtered too. The day view already
+  // carries them as greyed columns.
+  const staff = [...columns];
+  for (const b of blocks) {
+    if (!staff.some((s) => s.id === b.employeeId)) {
+      staff.push({ id: b.employeeId, name: b.employeeName, position: null, inactive: true });
+    }
+  }
+  const showFilter = staff.length > 1;
   const visibleColumns = showFilter ? columns.filter((c) => !hidden.has(c.id)) : columns;
   const visibleBlocks = showFilter ? blocks.filter((b) => !hidden.has(b.employeeId)) : blocks;
-  const nobodyShown = showFilter && visibleColumns.length === 0;
+  const nobodyShown =
+    showFilter && (isWeek ? staff.every((s) => hidden.has(s.id)) : visibleColumns.length === 0);
+  const win = visibleWindow(visibleBlocks);
 
-  const isWeek = view === "week";
   const prev = isWeek ? shiftYmd(weekStartOf(day), -7) : shiftYmd(day, -1);
   const next = isWeek ? shiftYmd(weekStartOf(day), 7) : shiftYmd(day, 1);
   const atNow = isWeek ? weekStartOf(day) === weekStartOf(today) : day === today;
@@ -142,7 +152,7 @@ export function Calendar({
           </div>
 
           {showFilter && (
-            <StaffFilter staff={columns} hidden={hidden} onChange={setHidden} />
+            <StaffFilter staff={staff} hidden={hidden} onChange={setHidden} />
           )}
 
           {/* New booking */}
@@ -181,16 +191,16 @@ export function Calendar({
           weekDays={weekDays}
           blocks={visibleBlocks}
           onSelect={setSelected}
-          windowStartMin={windowStartMin}
-          windowEndMin={windowEndMin}
+          windowStartMin={win.startMin}
+          windowEndMin={win.endMin}
         />
       ) : (
         <DayGrid
           columns={visibleColumns}
           blocks={visibleBlocks}
           onSelect={setSelected}
-          windowStartMin={windowStartMin}
-          windowEndMin={windowEndMin}
+          windowStartMin={win.startMin}
+          windowEndMin={win.endMin}
         />
       )}
 

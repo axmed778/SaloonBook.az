@@ -24,8 +24,6 @@ import {
 import { Calendar } from "../_components/calendar";
 import {
   CATALOG_SERVICE_SELECT,
-  DAY_START_MIN,
-  DAY_END_MIN,
   toCalendarBlock,
   toCatalogService,
   type CalendarBlock,
@@ -38,7 +36,6 @@ export const dynamic = "force-dynamic";
 
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const MINUTES_IN_DAY = 24 * 60;
 
 function weekDayLabels(ymd: string, df: string): { weekdayLabel: string; dayLabel: string } {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -60,22 +57,6 @@ function weekDayLabels(ymd: string, df: string): { weekdayLabel: string; dayLabe
 function weekStartOf(ymd: string): string {
   const offset = (bakuWeekday(ymd) + 6) % 7;
   return shiftYmd(ymd, -offset);
-}
-
-// Visible time window for the grid: the default 08:00–22:00, widened (snapped to
-// the hour) to include any booking that falls outside it — so late/early
-// appointments stay visible instead of being clamped away.
-function visibleWindow(blocks: CalendarBlock[]): { startMin: number; endMin: number } {
-  let startMin = DAY_START_MIN;
-  let endMin = DAY_END_MIN;
-  for (const b of blocks) {
-    if (b.startMin < startMin) startMin = b.startMin;
-    if (b.endMin > endMin) endMin = b.endMin;
-  }
-  return {
-    startMin: Math.max(0, Math.floor(startMin / 60) * 60),
-    endMin: Math.min(MINUTES_IN_DAY, Math.ceil(endMin / 60) * 60),
-  };
 }
 
 export default async function CalendarPage({
@@ -202,7 +183,6 @@ export default async function CalendarPage({
         return toCalendarBlock(a, ymd, formatBakuDate(ymd, df));
       })
       .filter((b) => b.endMin > b.startMin);
-    const win = visibleWindow(blocks);
 
     return (
       <Calendar
@@ -217,8 +197,6 @@ export default async function CalendarPage({
         salonName={salonName}
         canWrite={canWrite}
         canWritePayments={canWritePayments}
-        windowStartMin={win.startMin}
-        windowEndMin={win.endMin}
       />
     );
   }
@@ -243,7 +221,6 @@ export default async function CalendarPage({
   const blocks = appts
     .map((a) => toCalendarBlock(a, a.employeeId, dateLabel))
     .filter((b) => b.endMin > b.startMin);
-  const win = visibleWindow(blocks);
 
   // Deactivated employees are excluded from the column list, but their existing
   // appointments still occupy the day. Surface those employees as greyed columns
@@ -277,8 +254,6 @@ export default async function CalendarPage({
       salonName={salonName}
       canWrite={canWrite}
       canWritePayments={canWritePayments}
-      windowStartMin={win.startMin}
-      windowEndMin={win.endMin}
     />
   );
 }
