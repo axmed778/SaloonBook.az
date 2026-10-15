@@ -219,8 +219,10 @@ async function main() {
     prisma.employee.create({
       data: { salonId: salon.id, name: "Ayan", position: "Bərbər" },
     }),
+    // Leyla doesn't take children: the kids' haircut below is linked to her too,
+    // so the booking form's "Uşaq" choice must still leave her out.
     prisma.employee.create({
-      data: { salonId: salon.id, name: "Leyla", position: "Manikür ustası" },
+      data: { salonId: salon.id, name: "Leyla", position: "Manikür ustası", worksWithKids: false },
     }),
   ]);
 
@@ -230,12 +232,26 @@ async function main() {
   const manicure = await prisma.service.create({
     data: { salonId: salon.id, name: "Manikür", priceMinor: 2500, durationMin: 60, bufferMin: 10 },
   });
+  // A children's service, so the demo shows the "who is it for" step with
+  // "Uşaq" (and e2e/booking-page.spec.ts can walk it).
+  const kidsHaircut = await prisma.service.create({
+    data: {
+      salonId: salon.id,
+      name: "Uşaq saç kəsimi",
+      priceMinor: 1200,
+      durationMin: 30,
+      bufferMin: 5,
+      forKids: true,
+    },
+  });
 
   // Who can do what.
   await prisma.serviceEmployee.createMany({
     data: [
       { serviceId: haircut.id, employeeId: ayan.id },
       { serviceId: manicure.id, employeeId: leyla.id },
+      { serviceId: kidsHaircut.id, employeeId: ayan.id },
+      { serviceId: kidsHaircut.id, employeeId: leyla.id },
     ],
   });
 
@@ -245,7 +261,7 @@ async function main() {
   );
   await prisma.workingHour.createMany({ data: hours });
 
-  console.log(`seed: created account ${account.id}, salon /${salon.slug}, 2 employees, 2 services.`);
+  console.log(`seed: created account ${account.id}, salon /${salon.slug}, 2 employees, 3 services.`);
 }
 
 main()

@@ -3,7 +3,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { matchesClientGender, type Audience } from "@/lib/audience";
+import { type Audience } from "@/lib/audience";
+import {
+  bookingClientSetup,
+  employeeFitsClient,
+  presetClientFor,
+  serviceFitsClient,
+  type BookingClient,
+} from "@/lib/kids";
 import { addonTotals, serviceWithAddons } from "@/lib/addons";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { hasContact } from "@/lib/serializers/redact-notes";
@@ -43,6 +50,8 @@ type Service = {
   priceMinor: number;
   durationMin: number;
   audience: Audience;
+  /** A children's service: offered only when booking for a child. */
+  forKids: boolean;
 };
 /** An optional extra, offered only with the services in `serviceIds`. */
 type Addon = {
@@ -57,11 +66,11 @@ type Employee = {
   name: string;
   position: string | null;
   audience: Audience;
+  worksWithKids: boolean;
   serviceIds: string[];
 };
 type Day = { ymd: string; label: string };
 type Slot = { startUtc: string; time: string };
-type Gender = "MALE" | "FEMALE";
 
 const azn = (m: number) => {
   const v = m / 100;
@@ -128,7 +137,11 @@ export function BookingWidget({
 }) {
   const t = useTranslations("Booking");
   const tGender = useTranslations("Audience");
-  const needGender = salonAudience === "ALL";
+  // Who the booking is for. Without kids' services this is the old gender step
+  // (Men / Women at a unisex salon, nothing at a gendered one); with them a
+  // "Child" option joins it, and a kids-only salon asks nothing at all.
+  const clientSetup = bookingClientSetup(salonAudience, services);
+  const needGender = clientSetup.options !== null;
   // The add-ons offered with a service. A service without any skips the
   // "addons" step entirely, so a salon that never set one up sees no change.
   const addonsFor = (svcId: string | null) =>
@@ -144,22 +157,30 @@ export function BookingWidget({
   ];
 
   // "Book again" preselect. Only honored when the initial service exists AND the
-  // gender gate can be satisfied consistently: a gendered salon (fixed gender) or
-  // a gendered service pins the gender; an ALL service at an ALL salon can't, so
-  // we fall back to the normal flow. Employee is honored only if it performs the
-  // service. Everything defaults to the original behavior when no props are given.
+  // client gate can be satisfied consistently: a gendered salon (fixed gender), a
+  // gendered service or a kids' service pins the client; an ALL service at an ALL
+  // salon can't, so we fall back to the normal flow. Employee is honored only if
+  // it performs the service and takes that client. Everything defaults to the
+  // original behavior when no props are given.
   const presetService = initialServiceId
     ? (services.find((s) => s.id === initialServiceId) ?? null)
     : null;
-  // A gendered service (audience !== ALL) pins the gender; otherwise none.
-  const svcGender: Gender | null =
-    presetService && presetService.audience !== "ALL" ? presetService.audience : null;
-  const presetGender: Gender | null = !needGender ? (salonAudience as Gender) : svcGender;
-  const canPreset = !!presetService && (!needGender || presetGender !== null);
+  const presetGender: BookingClient | null = presetService
+    ? presetClientFor(salonAudience, presetService)
+    : null;
+  const canPreset =
+    !!presetService &&
+    presetGender !== null &&
+    (needGender ? clientSetup.options!.includes(presetGender) : clientSetup.fixed === presetGender);
   const presetEmployee =
     canPreset && initialEmployeeId
       ? (employees.find(
-          (e) => e.id === initialEmployeeId && e.serviceIds.includes(presetService!.id),
+          (e) =>
+            e.id === initialEmployeeId &&
+            e.serviceIds.includes(presetService!.id) &&
+            // Adults keep the old rule (any master who does the service); a
+            // child additionally needs a master who works with children.
+            (presetGender !== "KID" || e.worksWithKids),
         ) ?? null)
       : null;
   // A preset service that has add-ons opens on them: "book again" should still
@@ -176,8 +197,8 @@ export function BookingWidget({
   // label at the first copy's inputs.
   const fid = useId();
   const [current, setCurrent] = useState(presetStep);
-  const [gender, setGender] = useState<Gender | null>(
-    needGender ? presetGender : (salonAudience as Gender),
+  const [gender, setGender] = useState<BookingClient | null>(
+    needGender ? (canPreset ? presetGender : null) : clientSetup.fixed,
   );
   const [serviceId, setServiceId] = useState<string | null>(
     canPreset ? presetService!.id : null,
@@ -189,6 +210,10 @@ export function BookingWidget({
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(prefillName ?? "");
+  // Booking for a child: the contact (name + phone) stays the parent's, and the
+  // child's name is stored as the appointment's attendee.
+  const [childName, setChildName] = useState("");
+  const forChild = gender === "KID";
   const [phoneDigits, setPhoneDigits] = useState(prefillPhone ?? "");
   const [serviceNote, setServiceNote] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
@@ -234,15 +259,13 @@ export function BookingWidget({
   // A stable dependency for the slots effect: add-ons lengthen the booking.
   const addonKey = chosenAddons.map((a) => a.id).join(",");
 
-  const visibleServices = services.filter(
-    (s) => gender && matchesClientGender(s.audience, gender),
-  );
+  const visibleServices = services.filter((s) => gender && serviceFitsClient(s, gender));
   const visibleEmployees = employees.filter(
     (e) =>
       serviceId &&
       e.serviceIds.includes(serviceId) &&
       gender &&
-      matchesClientGender(e.audience, gender),
+      employeeFitsClient(e, gender),
   );
 
   const activeKey = stepKeys[current];
@@ -253,7 +276,7 @@ export function BookingWidget({
     setError(null);
     setCurrent(i);
   }
-  function pickGender(g: Gender) {
+  function pickGender(g: BookingClient) {
     setGender(g);
     setServiceId(null);
     setEmployeeId(null);
@@ -421,6 +444,7 @@ export function BookingWidget({
     setError(null);
     const digits = phoneDigits.replace(/\D/g, "");
     if (!name.trim()) return setError(t("errors.nameRequired"));
+    if (forChild && !childName.trim()) return setError(t("errors.childNameRequired"));
     if (digits.length !== 9) return setError(t("errors.phoneInvalid"));
     if (!slot || !serviceId || !employeeId) return setError(t("errors.incomplete"));
     if (!dataConsent) return setError(t("errors.consentRequired"));
@@ -442,6 +466,7 @@ export function BookingWidget({
           employeeId,
           startUtc: slot.startUtc,
           name: name.trim(),
+          ...(forChild ? { attendeeName: childName.trim() } : {}),
           phone: "+994" + digits,
           serviceNote: serviceNote.trim() || undefined,
           dataConsent: true,
@@ -558,11 +583,17 @@ export function BookingWidget({
     contact: t("steps.contact"),
   };
 
+  // A gendered salon's only adult option reads "Adult": its gender is a given.
+  function clientLabel(c: BookingClient): string {
+    if (c === "KID") return tGender("KID");
+    return salonAudience === "ALL" ? tGender(c) : tGender("ADULT");
+  }
+
   // Compact summary text for a completed step.
   function summaryValue(key: string): string {
     switch (key) {
       case "gender":
-        return gender === "MALE" ? tGender("MALE") : tGender("FEMALE");
+        return gender ? clientLabel(gender) : "";
       case "service":
         return selectedService
           ? `${selectedService.name} · ${azn(selectedService.priceMinor)} ₼`
@@ -620,12 +651,20 @@ export function BookingWidget({
               </div>
 
               {key === "gender" && (
+                // Always two columns: three across a phone leaves "Мужчины" /
+                // "Женщины" no room. With a third option (Kids) it takes its
+                // own full-width row under Men / Women.
                 <div className="grid grid-cols-2 gap-3">
-                  {(["MALE", "FEMALE"] as Gender[]).map((g) => (
-                    <button key={g} onClick={() => pickGender(g)} className={optionCls(gender === g)}>
-                      <span className="font-medium text-foreground">
-                        {tGender(g)}
-                      </span>
+                  {clientSetup.options!.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => pickGender(g)}
+                      className={
+                        optionCls(gender === g) +
+                        (clientSetup.options!.length > 2 && g === "KID" ? " col-span-2" : "")
+                      }
+                    >
+                      <span className="font-medium text-foreground">{clientLabel(g)}</span>
                     </button>
                   ))}
                 </div>
@@ -640,7 +679,14 @@ export function BookingWidget({
                     <button key={s.id} onClick={() => pickService(s.id)} className={optionCls(serviceId === s.id)}>
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-medium text-foreground">{s.name}</p>
+                          <p className="font-medium text-foreground">
+                            {s.name}
+                            {s.forKids && (
+                              <span className="ml-2 inline-block rounded-full border border-border-strong px-2 py-0.5 align-middle text-[11px] font-medium text-muted-foreground">
+                                {t("kidsBadge")}
+                              </span>
+                            )}
+                          </p>
                           <p className="text-sm text-muted-foreground">{t("minutesShort", { min: s.durationMin })}</p>
                         </div>
                         <span className="shrink-0 font-medium text-foreground">{azn(s.priceMinor)} ₼</span>
@@ -815,7 +861,7 @@ export function BookingWidget({
                       htmlFor={`${fid}-name`}
                       className="mb-1 block text-xs font-medium text-muted-foreground"
                     >
-                      {t("nameLabel")}
+                      {forChild ? t("parentNameLabel") : t("nameLabel")}
                     </label>
                     <input
                       id={`${fid}-name`}
@@ -825,10 +871,30 @@ export function BookingWidget({
                       placeholder={t("namePlaceholder")}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
                     />
+                    {/* For a child the name above is the parent's; the child's
+                        goes in its own field below, so the "someone else's
+                        name" hint would point the wrong way. */}
                     <p id={`${fid}-name-hint`} className="mt-1 text-xs text-faint-foreground">
-                      {t("nameHint")}
+                      {forChild ? t("parentNameHint") : t("nameHint")}
                     </p>
                   </div>
+                  {forChild && (
+                    <div>
+                      <label
+                        htmlFor={`${fid}-child-name`}
+                        className="mb-1 block text-xs font-medium text-muted-foreground"
+                      >
+                        {t("childNameLabel")}
+                      </label>
+                      <input
+                        id={`${fid}-child-name`}
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value.slice(0, 120))}
+                        placeholder={t("childNamePlaceholder")}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label
                       htmlFor={`${fid}-phone`}

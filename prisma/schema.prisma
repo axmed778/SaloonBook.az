@@ -275,6 +275,10 @@ model Employee {
   isActive        Boolean           @default(true)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
   audience        Audience          @default(ALL)
+  // Takes children's bookings (services marked forKids). An age axis, separate
+  // from the gender `audience`. Defaults to true so an existing salon that adds
+  // a kids' service doesn't find every master suddenly hidden from it.
+  worksWithKids   Boolean           @default(true)
   // Compensation (PRO payroll). Two fields express all three models: fixed
   // salary (pct=0), pure commission (salary=0), or hybrid (both). Commission
   // applies to the employee's COMPLETED appointment revenue for the month.
@@ -323,6 +327,12 @@ model Service {
   category     ServiceCategory    @default(OTHER)
   // Which clients this applies to: MALE, FEMALE, or ALL (anyone).
   audience     Audience           @default(ALL)
+  // A children's service (kids' haircut). An age axis, deliberately NOT a value
+  // of Audience: a child is still a boy or a girl, and "KIDS" in the gender enum
+  // would make every audience check ambiguous. A salon "does kids" when it has
+  // an active forKids service, and is a kids-only salon when all of them are —
+  // both derived on read (src/lib/kids.ts), never stored on Salon.
+  forKids      Boolean            @default(false)
   salon        Salon              @relation(fields: [salonId], references: [id])
   employees    ServiceEmployee[]
   addons       ServiceAddonLink[]

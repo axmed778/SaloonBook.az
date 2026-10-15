@@ -173,7 +173,8 @@
       "anyRating": "İstənilən reytinq",
       "ratingPlus": "{n}+",
       "openNow": "İndi açıq",
-      "nearMe": "Yaxınımda"
+      "nearMe": "Yaxınımda",
+      "kids": "Uşaq"
     },
     "category": {
       "HAIR": "Saç",
@@ -183,7 +184,9 @@
       "SPA": "SPA",
       "BARBER": "Kişi bərbəri",
       "OTHER": "Digər"
-    }
+    },
+    "kidsBadge": "Uşaq xidməti",
+    "kidsOnlyBadge": "Uşaq salonu"
   },
   "History": {
     "title": "Ziyarət tarixçəm",
@@ -371,7 +374,10 @@
       "invalidData": "Yanlış məlumat.",
       "notFound": "Xidmət tapılmadı.",
       "hasAppointments": "Bu xidmətlə bağlı görüşlər var. Silmək əvəzinə onu deaktiv edin."
-    }
+    },
+    "forKids": "Uşaq xidməti",
+    "forKidsHint": "Yalnız uşaq üçün rezervasiyada göstərilir; cins seçimi tətbiq olunmur.",
+    "kidsBadge": "Uşaq"
   },
   "Settings": {
     "title": "Tənzimləmələr",
@@ -601,7 +607,9 @@
         "employeeTaken": "Bu işçinin artıq girişi var.",
         "employeeNotFound": "İşçi tapılmadı."
       }
-    }
+    },
+    "worksWithKids": "Uşaqlarla işləyir",
+    "kidsBadge": "Uşaq"
   },
   "Clients": {
     "title": "Müştərilər",
@@ -1516,7 +1524,9 @@
   "Audience": {
     "ALL": "Hamı",
     "MALE": "Kişi",
-    "FEMALE": "Qadın"
+    "FEMALE": "Qadın",
+    "KID": "Uşaq",
+    "ADULT": "Böyük"
   },
   "Auth": {
     "emailLabel": "E-poçt",
@@ -1708,7 +1718,8 @@
       "serviceMismatch": "Seçilmiş usta bu xidməti göstərmir. Yenidən seçin.",
       "salonUnavailable": "Bu salon hal-hazırda onlayn qeydiyyat qəbul etmir. Birbaşa əlaqə saxlayın.",
       "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın.",
-      "addonUnavailable": "Seçdiyiniz əlavə xidmət artıq mövcud deyil. Səhifəni yeniləyib yenidən seçin."
+      "addonUnavailable": "Seçdiyiniz əlavə xidmət artıq mövcud deyil. Səhifəni yeniləyib yenidən seçin.",
+      "childNameRequired": "Uşağın adını daxil edin."
     },
     "success": {
       "title": "Qeydiyyat təsdiqləndi!",
@@ -1717,7 +1728,12 @@
       "copy": "Kopyala",
       "copied": "Kopyalandı ✓",
       "saveLinkNote": "Bu linki saxlayın — görüşünüzü onlayn idarə etmək üçündür."
-    }
+    },
+    "kidsBadge": "uşaq",
+    "parentNameLabel": "Valideynin adı",
+    "parentNameHint": "Telefon və ad sizin, valideynin olsun — təsdiq və xatırlatma bu nömrəyə gələcək.",
+    "childNameLabel": "Uşağın adı",
+    "childNamePlaceholder": "Məs.: Əli"
   },
   "Manage": {
     "eyebrow": "Görüş idarəetməsi",

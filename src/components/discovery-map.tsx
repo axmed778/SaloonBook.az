@@ -2,7 +2,7 @@
 
 // Public discovery map: salons within the current viewport, clustered. Tapping a
 // marker opens a bottom-sheet card with a Book link. Filters (category / open now
-// / min rating) and "near me" (Geolocation, graceful denial) drive re-queries.
+// / min rating / kids) and "near me" (Geolocation, graceful denial) drive re-queries.
 //
 // Leaflet + the markercluster plugin touch `window`, so their runtime is imported
 // lazily inside the effect (never during SSR); only their CSS is a static import.
@@ -26,6 +26,9 @@ type SalonPin = {
   lng: number;
   rating: number | null;
   ratingCount: number;
+  /** Has an active children's service; kidsOnly = every active service is one. */
+  hasKids: boolean;
+  kidsOnly: boolean;
 };
 
 const CATEGORIES = ["HAIR", "NAILS", "BROWS_LASHES", "MAKEUP", "SPA", "BARBER", "OTHER"] as const;
@@ -51,10 +54,11 @@ export function DiscoveryMap() {
   const [category, setCategory] = useState("");
   const [openNow, setOpenNow] = useState(false);
   const [minRating, setMinRating] = useState(0);
+  const [kids, setKids] = useState(false);
 
   // Latest filters, read by the map's moveend handler (which closes over nothing).
-  const filtersRef = useRef({ category, openNow, minRating });
-  filtersRef.current = { category, openNow, minRating };
+  const filtersRef = useRef({ category, openNow, minRating, kids });
+  filtersRef.current = { category, openNow, minRating, kids };
 
   const fetchInView = useCallback(() => {
     const map = mapRef.current;
@@ -67,6 +71,7 @@ export function DiscoveryMap() {
     if (f.category) params.set("category", f.category);
     if (f.openNow) params.set("openNow", "1");
     if (f.minRating > 0) params.set("minRating", String(f.minRating));
+    if (f.kids) params.set("kids", "1");
 
     setStatus("loading");
     fetch(`/api/public/salons/search?${params.toString()}`)
@@ -124,7 +129,7 @@ export function DiscoveryMap() {
   // Re-query when a filter changes.
   useEffect(() => {
     if (mapRef.current) fetchInView();
-  }, [category, openNow, minRating, fetchInView]);
+  }, [category, openNow, minRating, kids, fetchInView]);
 
   // Rebuild markers whenever the pin set changes.
   useEffect(() => {
@@ -198,6 +203,16 @@ export function DiscoveryMap() {
           {t("filters.openNow")}
         </label>
 
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary-foreground">
+          <input
+            type="checkbox"
+            checked={kids}
+            onChange={(e) => setKids(e.target.checked)}
+            className="h-4 w-4 rounded accent-rose-500"
+          />
+          {t("filters.kids")}
+        </label>
+
         <button
           onClick={nearMe}
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
@@ -251,7 +266,16 @@ export function DiscoveryMap() {
           <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-4 shadow-frame">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-foreground">{selected.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 truncate text-base font-semibold text-foreground">
+                    {selected.name}
+                  </p>
+                  {selected.hasKids && (
+                    <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      {selected.kidsOnly ? t("kidsOnlyBadge") : t("kidsBadge")}
+                    </span>
+                  )}
+                </div>
                 {(selected.district || selected.address) && (
                   <p className="mt-0.5 truncate text-sm text-muted-foreground">
                     {selected.district || selected.address}

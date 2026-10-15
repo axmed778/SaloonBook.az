@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { publishableSalonWhere } from "@/app/sitemap";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { bakuToday, bakuWeekday, bakuMinutesOfDay } from "@/lib/time";
+import { kidsFlagsFromCounts } from "@/lib/kids";
+import { salonKidsCountSelect, salonsWithAdultServices } from "@/lib/kids-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,23 @@ export async function GET(req: NextRequest) {
   const minRatingRaw = Number(sp.get("minRating"));
   const minRating =
     Number.isFinite(minRatingRaw) && minRatingRaw > 0 ? Math.min(5, minRatingRaw) : 0;
+  // "Kids": salons with at least one active children's service.
+  const kids = sp.get("kids") === "1" || sp.get("kids") === "true";
+  // One predicate on ONE service: "kids + nails" means a kids' nail service,
+  // not any nail service plus any kids' service. Kept off the spread below so it
+  // can't overwrite publishableSalonWhere's own `services` condition.
+  const serviceFilter =
+    category || kids
+      ? {
+          services: {
+            some: {
+              isActive: true,
+              ...(category ? { category } : {}),
+              ...(kids ? { forKids: true } : {}),
+            },
+          },
+        }
+      : null;
 
   const rows = await prisma.salon.findMany({
     where: {
@@ -66,9 +85,10 @@ export async function GET(req: NextRequest) {
       ...publishableSalonWhere,
       latitude: { gte: bbox.south, lte: bbox.north },
       longitude: { gte: bbox.west, lte: bbox.east },
-      ...(category ? { services: { some: { category, isActive: true } } } : {}),
+      ...(serviceFilter ? { AND: [serviceFilter] } : {}),
     },
     select: {
+      id: true,
       slug: true,
       name: true,
       address: true,
@@ -79,6 +99,8 @@ export async function GET(req: NextRequest) {
       ratingCount: true,
       ratingSum: true,
       businessHours: true,
+      // Derived per salon from its active services (nothing stored on Salon).
+      ...salonKidsCountSelect,
     },
     // +1 to detect truncation.
     take: HARD_LIMIT + 1,
@@ -86,6 +108,9 @@ export async function GET(req: NextRequest) {
 
   const truncated = rows.length > HARD_LIMIT;
   const limited = truncated ? rows.slice(0, HARD_LIMIT) : rows;
+  const withAdult = await salonsWithAdultServices(
+    limited.filter((s) => s._count.services > 0).map((s) => s.id),
+  );
 
   const salons = limited
     .filter((s) => {
@@ -105,6 +130,7 @@ export async function GET(req: NextRequest) {
       lng: s.longitude as number,
       rating: s.ratingCount > 0 ? Math.round((s.ratingSum / s.ratingCount) * 10) / 10 : null,
       ratingCount: s.ratingCount,
+      ...kidsFlagsFromCounts(s._count.services, withAdult.has(s.id)),
     }));
 
   return NextResponse.json(

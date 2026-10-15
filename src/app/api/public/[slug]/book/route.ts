@@ -50,6 +50,14 @@ const bodySchema = z.object({
   phone: z
     .string()
     .regex(/^\+994\d{9}$/, "Phone must be in +994XXXXXXXXX format"),
+  // Who will actually come, when it isn't the contact: the child's name on a
+  // kids' booking. `name` and `phone` stay the parent's (the Customer).
+  attendeeName: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/[\p{L}\p{N}]/u, "Name must contain a letter or number")
+    .optional(),
   // Marketing opt-in. Accepted from the body but NOT believed on its own — see
   // where it is resolved below.
   waOptIn: z.boolean().optional(),
@@ -171,11 +179,23 @@ export async function POST(
       service: { salonId: salon.id, isActive: true },
       employee: { salonId: salon.id, isActive: true },
     },
-    select: { serviceId: true },
+    select: { service: { select: { forKids: true } }, employee: { select: { worksWithKids: true } } },
   });
-  if (!link) {
+  // A kids' service only with a master who takes children — the form never
+  // offers anything else, so this only stops a hand-made request.
+  if (!link || (link.service.forKids && !link.employee.worksWithKids)) {
     return NextResponse.json(
       { error: "This employee can't perform that service", code: "SERVICE_MISMATCH" },
+      { status: 400 },
+    );
+  }
+  // A kids' booking names the child: without it the appointment would carry the
+  // parent's name and the salon's calendar would show the wrong person. The form
+  // always sends it; this catches a hand-made request, or a page left open while
+  // the salon turned the service into a kids' one.
+  if (link.service.forKids && !parsed.data.attendeeName) {
+    return NextResponse.json(
+      { error: "A children's service needs the child's name", code: "INVALID_BODY" },
       { status: 400 },
     );
   }
@@ -213,6 +233,7 @@ export async function POST(
       employeeId: parsed.data.employeeId,
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: marketingOptIn },
+      attendeeName: parsed.data.attendeeName,
       serviceNote: parsed.data.serviceNote,
       consent: { version: LEGAL_VERSIONS.clientConsent },
       source: "PUBLIC",

@@ -20,7 +20,7 @@ import { TimeOffModal, type TimeOffRow } from "../_components/time-off-modal";
 import { generatePassword } from "./password";
 import { TeamLogins, type TeamSection } from "./team-logins";
 
-type Svc = { id: string; name: string; isActive: boolean };
+type Svc = { id: string; name: string; isActive: boolean; forKids: boolean };
 type HourRow = { weekday: number; startMin: number; endMin: number };
 /** The master's own login, or null when the owner has not issued one. */
 export type AccessRow = { email: string };
@@ -31,6 +31,7 @@ export type EmployeeRow = {
   phone: string | null;
   isActive: boolean;
   audience: Audience;
+  worksWithKids: boolean;
   access: AccessRow | null;
   serviceIds: string[];
   hours: HourRow[];
@@ -130,6 +131,7 @@ const emptyForm = {
   phone: "",
   isActive: true,
   audience: "ALL" as Audience,
+  worksWithKids: true,
 };
 
 export function WorkersManager({
@@ -161,6 +163,9 @@ export function WorkersManager({
   const [toast, setToast] = useState<string | null>(null);
 
   const activeServices = services.filter((s) => s.isActive);
+  // The "works with children" switch only means something once the salon has a
+  // kids' service; until then it would be noise on every master's form.
+  const salonHasKids = services.some((s) => s.forKids);
   // Where the "give a master a login" guide points: an active master without
   // one, or — when everyone has one — any active master (to reset it).
   const withoutLogin = employees.filter((e) => e.isActive && !e.access);
@@ -183,6 +188,7 @@ export function WorkersManager({
       phone: e.phone ?? "",
       isActive: e.isActive,
       audience: e.audience,
+      worksWithKids: e.worksWithKids,
     });
     setServiceIds(e.serviceIds);
     setHours(buildHours(e.hours));
@@ -252,6 +258,7 @@ export function WorkersManager({
         phone: form.phone.trim() || null,
         isActive: form.isActive,
         audience: form.audience,
+        worksWithKids: form.worksWithKids,
         serviceIds,
         hours: hoursPayload,
       });
@@ -349,6 +356,17 @@ export function WorkersManager({
               onChange={(a) => setForm({ ...form, audience: a })}
               label={t("worksWith")}
             />
+            {salonHasKids && (
+              <label className="mt-3 flex items-center gap-2 text-sm text-secondary-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.worksWithKids}
+                  onChange={(e) => setForm({ ...form, worksWithKids: e.target.checked })}
+                  className="h-4 w-4 rounded accent-rose-500"
+                />
+                {t("worksWithKids")}
+              </label>
+            )}
           </div>
 
           {/* Services */}
@@ -493,6 +511,11 @@ export function WorkersManager({
                     <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {tAudience(e.audience)}
                     </span>
+                    {salonHasKids && e.worksWithKids && (
+                      <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        {t("kidsBadge")}
+                      </span>
+                    )}
                     {!e.isActive && (
                       <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         {t("inactive")}

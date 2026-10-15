@@ -44,6 +44,7 @@ export default async function WorkersPage() {
         phone: true,
         isActive: true,
         audience: true,
+        worksWithKids: true,
         // The login linked to this employee: the master's own, or a reception or
         // finance login linked for their payout statement.
         membership: { select: { role: true, user: { select: { email: true } } } },
@@ -60,7 +61,7 @@ export default async function WorkersPage() {
     prisma.service.findMany({
       where: { salonId },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, isActive: true },
+      select: { id: true, name: true, isActive: true, forKids: true },
     }),
     showTeam && accountId
       ? prisma.membership.findMany({
@@ -87,6 +88,7 @@ export default async function WorkersPage() {
       phone: e.phone,
       isActive: e.isActive,
       audience: e.audience,
+      worksWithKids: e.worksWithKids,
       // Only the master's own login is this row's "access"; a team login linked
       // to the employee is listed with the team logins instead.
       access:

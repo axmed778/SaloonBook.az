@@ -173,7 +173,8 @@
       "anyRating": "Any rating",
       "ratingPlus": "{n}+",
       "openNow": "Open now",
-      "nearMe": "Near me"
+      "nearMe": "Near me",
+      "kids": "Kids"
     },
     "category": {
       "HAIR": "Hair",
@@ -183,7 +184,9 @@
       "SPA": "Spa",
       "BARBER": "Barber",
       "OTHER": "Other"
-    }
+    },
+    "kidsBadge": "Kids' services",
+    "kidsOnlyBadge": "Kids salon"
   },
   "History": {
     "title": "My visit history",
@@ -371,7 +374,10 @@
       "invalidData": "Invalid data.",
       "notFound": "Service not found.",
       "hasAppointments": "There are appointments linked to this service. Deactivate it instead of deleting."
-    }
+    },
+    "forKids": "Children's service",
+    "forKidsHint": "Shown only when booking for a child; the gender setting does not apply.",
+    "kidsBadge": "Kids"
   },
   "Settings": {
     "title": "Settings",
@@ -601,7 +607,9 @@
         "employeeTaken": "This staff member already has a login.",
         "employeeNotFound": "Staff member not found."
       }
-    }
+    },
+    "worksWithKids": "Works with children",
+    "kidsBadge": "Kids"
   },
   "Clients": {
     "title": "Clients",
@@ -1516,7 +1524,9 @@
   "Audience": {
     "ALL": "Everyone",
     "MALE": "Men",
-    "FEMALE": "Women"
+    "FEMALE": "Women",
+    "KID": "Kids",
+    "ADULT": "Adults"
   },
   "Auth": {
     "emailLabel": "Email",
@@ -1708,7 +1718,8 @@
       "serviceMismatch": "That specialist doesn't offer this service. Please choose again.",
       "salonUnavailable": "This salon isn't taking online bookings right now. Please contact them directly.",
       "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words.",
-      "addonUnavailable": "One of the add-ons you chose is no longer available. Refresh the page and choose again."
+      "addonUnavailable": "One of the add-ons you chose is no longer available. Refresh the page and choose again.",
+      "childNameRequired": "Please enter the child's name."
     },
     "success": {
       "title": "Booking confirmed!",
@@ -1717,7 +1728,12 @@
       "copy": "Copy",
       "copied": "Copied ✓",
       "saveLinkNote": "Save this link — it's for managing your appointment online."
-    }
+    },
+    "kidsBadge": "kids",
+    "parentNameLabel": "Parent's name",
+    "parentNameHint": "Enter your own name and phone: the confirmation and reminder go to this number.",
+    "childNameLabel": "Child's name",
+    "childNamePlaceholder": "e.g. Ali"
   },
   "Manage": {
     "eyebrow": "Appointment management",
