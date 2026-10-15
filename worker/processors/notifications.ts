@@ -56,6 +56,11 @@ export async function processNotification(job: Job<NotificationJob>): Promise<vo
   if (!n) return;
   if (DONE.has(n.status)) return; // idempotent: already sent
   if (n.status === "CANCELLED") return; // cancelled while queued (e.g. by setAppointmentStatus)
+  // Meta accepted this one and later reported it undeliverable (the webhook set
+  // FAILED over a row that already had a wamid). Re-sending the same message to
+  // the same number fails the same way, so it is final. The sweep no longer
+  // revives these; this covers a job that was already queued when it happened.
+  if (n.status === "FAILED" && n.providerMsgId) return;
 
   // Re-check the appointment at send time: a reminder queued at booking time
   // must never fire for an appointment that was since cancelled or no-showed.
