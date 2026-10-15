@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { bakuDayBoundsUtc, bakuToday, bakuYmd } from "@/lib/time";
 import { effectivePlan, subscriptionWindow } from "@/lib/subscription";
-import { MAX_NOTIFICATION_ATTEMPTS } from "@/lib/queue";
+import { DEAD_LETTER_WHERE } from "@/lib/queue";
 import { readWorkerHeartbeat } from "@/lib/worker-heartbeat";
 import {
   accountIdInput,
@@ -225,7 +225,7 @@ async function platformHealth(): Promise<ToolOutcome> {
       _count: { _all: true },
     }),
     prisma.notification.count({
-      where: { status: "FAILED", attempts: { gte: MAX_NOTIFICATION_ATTEMPTS } },
+      where: DEAD_LETTER_WHERE,
     }),
     prisma.subscription.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.account.count(),

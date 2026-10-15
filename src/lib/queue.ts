@@ -1,4 +1,5 @@
 import { Queue } from "bullmq";
+import type { Prisma } from "@prisma/client";
 import { connection } from "./redis";
 // Every custom jobId comes from here. BullMQ rejects an id containing ":" from
 // inside add(), so the shape of an id is a production failure rather than a
@@ -29,6 +30,17 @@ export interface NotificationJob {
  * connection, and a human needs to look. The admin panel counts them.
  */
 export const MAX_NOTIFICATION_ATTEMPTS = 24;
+
+/**
+ * Notifications nothing will retry: rows that used up MAX_NOTIFICATION_ATTEMPTS,
+ * and rows Meta accepted and then reported undeliverable (FAILED with a wamid,
+ * which the sweep never revives). The admin panel and the assistant's health
+ * check both count these, so a terminal failure never reads as "all fine".
+ */
+export const DEAD_LETTER_WHERE: Prisma.NotificationWhereInput = {
+  status: "FAILED",
+  OR: [{ attempts: { gte: MAX_NOTIFICATION_ATTEMPTS } }, { providerMsgId: { not: null } }],
+};
 
 // Web Push (PWA) events. The job carries only the appointment id + event type;
 // the worker resolves the salon's subscriptions and builds the message at send
