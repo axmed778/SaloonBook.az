@@ -189,6 +189,16 @@ export async function POST(
       { status: 400 },
     );
   }
+  // A kids' booking names the child: without it the appointment would carry the
+  // parent's name and the salon's calendar would show the wrong person. The form
+  // always sends it; this catches a hand-made request, or a page left open while
+  // the salon turned the service into a kids' one.
+  if (link.service.forKids && !parsed.data.attendeeName) {
+    return NextResponse.json(
+      { error: "A children's service needs the child's name", code: "INVALID_BODY" },
+      { status: 400 },
+    );
+  }
 
   // 4) Outbound notification hard cap for this phone. PEEK (read-only) before
   // booking so a failed attempt costs no permit; the permit is only CONSUMED

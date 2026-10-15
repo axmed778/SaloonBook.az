@@ -61,12 +61,21 @@ export async function GET(req: NextRequest) {
     Number.isFinite(minRatingRaw) && minRatingRaw > 0 ? Math.min(5, minRatingRaw) : 0;
   // "Kids": salons with at least one active children's service.
   const kids = sp.get("kids") === "1" || sp.get("kids") === "true";
-  // Both service filters target the same relation, so they're combined with AND
-  // rather than spread (a second `services` key would overwrite the first).
-  const serviceFilters = [
-    ...(category ? [{ services: { some: { category, isActive: true } } }] : []),
-    ...(kids ? [{ services: { some: { forKids: true, isActive: true } } }] : []),
-  ];
+  // One predicate on ONE service: "kids + nails" means a kids' nail service,
+  // not any nail service plus any kids' service. Kept off the spread below so it
+  // can't overwrite publishableSalonWhere's own `services` condition.
+  const serviceFilter =
+    category || kids
+      ? {
+          services: {
+            some: {
+              isActive: true,
+              ...(category ? { category } : {}),
+              ...(kids ? { forKids: true } : {}),
+            },
+          },
+        }
+      : null;
 
   const rows = await prisma.salon.findMany({
     where: {
@@ -76,7 +85,7 @@ export async function GET(req: NextRequest) {
       ...publishableSalonWhere,
       latitude: { gte: bbox.south, lte: bbox.north },
       longitude: { gte: bbox.west, lte: bbox.east },
-      ...(serviceFilters.length > 0 ? { AND: serviceFilters } : {}),
+      ...(serviceFilter ? { AND: [serviceFilter] } : {}),
     },
     select: {
       id: true,
