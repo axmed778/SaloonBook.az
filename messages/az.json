@@ -825,7 +825,7 @@
       "queued": "Növbədə",
       "failed": "Alnmadı",
       "dead": "Əl dəstəyi lazımdır",
-      "deadHint": "{count} bildiriş {max} cəhddən sonra da göndərilə bilmədi — avtomatik təkrar dayandırılıb.",
+      "deadHint": "{count} bildiriş çatdırıla bilmədi və avtomatik təkrar olunmayacaq.",
       "healthy": "Göndərilməyən bildiriş yoxdur."
     },
     "title": "Salonlar",

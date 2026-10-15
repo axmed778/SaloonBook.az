@@ -825,7 +825,7 @@
       "queued": "Queued",
       "failed": "Failed",
       "dead": "Needs attention",
-      "deadHint": "{count} notification(s) still undelivered after {max} attempts — automatic retries have stopped.",
+      "deadHint": "{count} notification(s) could not be delivered and will not be retried automatically.",
       "healthy": "Nothing undelivered."
     },
     "title": "Salons",

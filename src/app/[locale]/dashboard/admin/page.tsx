@@ -13,7 +13,7 @@ import { intlLocale } from "@/i18n/format";
 import { effectivePlan } from "@/lib/subscription";
 import { featuresFor, limitsFor } from "@/lib/plans";
 import { maskPhone } from "@/lib/whatsapp-sender";
-import { MAX_NOTIFICATION_ATTEMPTS } from "@/lib/queue";
+import { DEAD_LETTER_WHERE } from "@/lib/queue";
 import { readWorkerHeartbeat } from "@/lib/worker-heartbeat";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 import { AdminAssistant } from "./admin-assistant";
@@ -111,7 +111,7 @@ export default async function AdminPage() {
     // Not time-boxed on purpose: a message nobody will ever retry stays a
     // problem after seven days, so it must not age out of this view.
     prisma.notification.count({
-      where: { status: "FAILED", attempts: { gte: MAX_NOTIFICATION_ATTEMPTS } },
+      where: DEAD_LETTER_WHERE,
     }),
     readWorkerHeartbeat(),
   ]);
@@ -264,10 +264,7 @@ export default async function AdminPage() {
         </dl>
         <p className="mt-3 text-xs text-muted-foreground">
           {deadLetters > 0
-            ? t("notifications.deadHint", {
-                count: deadLetters,
-                max: MAX_NOTIFICATION_ATTEMPTS,
-              })
+            ? t("notifications.deadHint", { count: deadLetters })
             : t("notifications.healthy")}
         </p>
       </section>
