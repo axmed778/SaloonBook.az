@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { kidsFlagsFromSelect, salonKidsSelect } from "@/lib/kids";
 
 export const dynamic = "force-dynamic";
 
 // Public feed for the landing-page discovery map: every ACTIVE salon (branch)
 // that has pinned a location. Only data that is already public on the salon's
-// own booking page is exposed here — name, address, coordinates, audience and
-// the slug that links straight to booking. No auth: discovery is the point.
+// own booking page is exposed here — name, address, coordinates, audience,
+// whether it does kids' services (hasKids / kidsOnly, derived from its active
+// services) and the slug that links straight to booking. No auth: discovery is the point.
 //
 // Each branch is its own Salon row with its own pin + slug, so multi-branch
 // accounts naturally show one marker per bookable location.
@@ -24,6 +26,7 @@ export async function GET() {
       audience: true,
       latitude: true,
       longitude: true,
+      ...salonKidsSelect,
     },
     // Generous cap — this is a small-country directory, not a global one.
     take: 1000,
@@ -36,6 +39,7 @@ export async function GET() {
     audience: s.audience,
     lat: s.latitude as number,
     lng: s.longitude as number,
+    ...kidsFlagsFromSelect(s),
   }));
 
   return NextResponse.json(

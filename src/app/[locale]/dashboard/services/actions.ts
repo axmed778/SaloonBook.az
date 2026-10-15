@@ -23,6 +23,9 @@ const serviceInput = z.object({
   category: z
     .enum(["HAIR", "NAILS", "BROWS_LASHES", "MAKEUP", "SPA", "BARBER", "OTHER"])
     .default("OTHER"),
+  // A children's service: offered on the booking form only when booking for a
+  // child (src/lib/kids.ts). Optional so an older client keeps the stored value.
+  forKids: z.boolean().optional(),
 });
 
 function toMinor(priceAzn: number): number {
@@ -36,7 +39,7 @@ export async function createService(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: t("invalidData") };
   }
-  const { name, priceAzn, durationMin, bufferMin, audience, category } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience, category, forKids } = parsed.data;
   await prisma.service.create({
     data: {
       salonId,
@@ -46,6 +49,7 @@ export async function createService(input: unknown): Promise<ActionResult> {
       bufferMin,
       audience,
       category,
+      forKids: forKids ?? false,
     },
   });
   revalidatePath("/dashboard/services");
@@ -59,10 +63,18 @@ export async function updateService(id: string, input: unknown): Promise<ActionR
   if (!parsed.success) {
     return { ok: false, error: t("invalidData") };
   }
-  const { name, priceAzn, durationMin, bufferMin, audience, category } = parsed.data;
+  const { name, priceAzn, durationMin, bufferMin, audience, category, forKids } = parsed.data;
   const res = await prisma.service.updateMany({
     where: { id, salonId }, // salonId in the filter = tenant guard
-    data: { name, priceMinor: toMinor(priceAzn), durationMin, bufferMin, audience, category },
+    data: {
+      name,
+      priceMinor: toMinor(priceAzn),
+      durationMin,
+      bufferMin,
+      audience,
+      category,
+      ...(forKids !== undefined ? { forKids } : {}),
+    },
   });
   if (res.count === 0) return { ok: false, error: t("notFound") };
   revalidatePath("/dashboard/services");

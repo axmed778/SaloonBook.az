@@ -79,6 +79,10 @@ export interface CreateBookingInput {
    *  Callers must only pass true when the phone's owner actually said so; the
    *  public route requires an OTP-verified session for the same number. */
   customer: { name: string; phone: string; waOptIn?: boolean };
+  /** Who will actually come, when it isn't the contact (a child booked by a
+   *  parent). Stored as the appointment's attendee; defaults to the customer's
+   *  name. The Customer row and every notification stay the contact's. */
+  attendeeName?: string;
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
   /** The customer's wish for the SERVICE. Callers validate it with
@@ -121,6 +125,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   // Sanitize the client-supplied name once: it is stored and later flows into
   // the owner's WhatsApp alert (and, eventually, the dashboard).
   const safeName = sanitizeTemplateParam(input.customer.name);
+  // Sanitized the same way: it reaches the salon's push alerts (worker/processors/push.ts).
+  const safeAttendee =
+    (input.attendeeName && sanitizeTemplateParam(input.attendeeName)) || safeName;
   // The service note is dashboard-only (never a WhatsApp param), so it just
   // needs trimming + a length cap; React escapes it on display.
   const safeNote = input.serviceNote?.trim().slice(0, 500) || null;
@@ -209,8 +216,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           serviceId: service.id,
           customerId: customer.id,
           // The name entered for THIS booking — may differ from the contact's
-          // (Customer) name when one phone books for several people.
-          attendeeName: safeName,
+          // (Customer) name when one phone books for several people, or when a
+          // parent books a child.
+          attendeeName: safeAttendee,
           serviceNote: safeNote,
           consentAt: input.consent ? new Date() : null,
           consentVersion: input.consent?.version ?? null,

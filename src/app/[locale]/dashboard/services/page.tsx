@@ -26,6 +26,7 @@ export default async function ServicesPage() {
         isActive: true,
         audience: true,
         category: true,
+        forKids: true,
       },
     }),
     // Creation order, the same order customers see them in.

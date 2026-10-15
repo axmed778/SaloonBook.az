@@ -45,6 +45,9 @@ const employeeSchema = z
     phone: z.string().trim().max(32).nullish(),
     isActive: z.boolean(),
     audience: z.enum(["MALE", "FEMALE", "ALL"]),
+    // Takes children's bookings. Optional: callers that don't show the switch
+    // (the setup wizard) leave the stored value alone; new rows default to true.
+    worksWithKids: z.boolean().optional(),
     serviceIds: z.array(z.string().uuid()).max(200),
     hours: z.array(hourSchema).max(28),
   })
@@ -109,6 +112,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
             phone: d.phone || null,
             isActive: d.isActive,
             audience: d.audience,
+            ...(d.worksWithKids !== undefined ? { worksWithKids: d.worksWithKids } : {}),
           },
         });
         if (res.count === 0) throw new Error(t("notFound"));
@@ -122,6 +126,7 @@ export async function saveEmployee(input: unknown): Promise<ActionResult> {
             phone: d.phone || null,
             isActive: d.isActive,
             audience: d.audience,
+            ...(d.worksWithKids !== undefined ? { worksWithKids: d.worksWithKids } : {}),
           },
           select: { id: true },
         });

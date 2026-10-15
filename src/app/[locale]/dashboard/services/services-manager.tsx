@@ -25,6 +25,8 @@ export type ServiceRow = {
   isActive: boolean;
   audience: Audience;
   category: ServiceCategory;
+  /** A children's service (see src/lib/kids.ts). */
+  forKids: boolean;
   /** Active add-ons offered with this service (managed in AddonsManager). */
   addonNames: string[];
 };
@@ -55,6 +57,7 @@ const emptyForm = {
   buffer: "10",
   audience: "ALL" as Audience,
   category: "OTHER" as ServiceCategory,
+  forKids: false,
 };
 
 export function ServicesManager({ services }: { services: ServiceRow[] }) {
@@ -87,6 +90,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       buffer: String(s.bufferMin),
       audience: s.audience,
       category: s.category,
+      forKids: s.forKids,
     });
     setError(null);
     setOpen(true);
@@ -106,6 +110,7 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
       bufferMin: parseInt(form.buffer || "0", 10),
       audience: form.audience,
       category: form.category,
+      forKids: form.forKids,
     };
     if (!payload.name) return setError(t("errors.nameRequired"));
     if (payload.priceAzn === null) return setError(t("errors.priceInvalid"));
@@ -219,10 +224,22 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <AudienceSelect
-              value={form.audience}
-              onChange={(a) => setForm({ ...form, audience: a })}
-            />
+            <div>
+              <AudienceSelect
+                value={form.audience}
+                onChange={(a) => setForm({ ...form, audience: a })}
+              />
+              <label className="mt-3 flex items-center gap-2 text-sm text-secondary-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.forKids}
+                  onChange={(e) => setForm({ ...form, forKids: e.target.checked })}
+                  className="h-4 w-4 rounded accent-rose-500"
+                />
+                {t("forKids")}
+              </label>
+              <p className="mt-1 text-xs text-faint-foreground">{t("forKidsHint")}</p>
+            </div>
             <div>
               <label className={labelCls}>{t("category")}</label>
               <select
@@ -286,6 +303,11 @@ export function ServicesManager({ services }: { services: ServiceRow[] }) {
                   <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {tAudience(s.audience)}
                   </span>
+                  {s.forKids && (
+                    <span className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      {t("kidsBadge")}
+                    </span>
+                  )}
                   {!s.isActive && (
                     <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {t("inactive")}

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { publishableSalonWhere } from "@/app/sitemap";
 import { parseBusinessHours } from "@/lib/business-hours";
 import { bakuToday, bakuWeekday, bakuMinutesOfDay } from "@/lib/time";
+import { kidsFlagsFromSelect, salonKidsSelect } from "@/lib/kids";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,14 @@ export async function GET(req: NextRequest) {
   const minRatingRaw = Number(sp.get("minRating"));
   const minRating =
     Number.isFinite(minRatingRaw) && minRatingRaw > 0 ? Math.min(5, minRatingRaw) : 0;
+  // "Kids": salons with at least one active children's service.
+  const kids = sp.get("kids") === "1" || sp.get("kids") === "true";
+  // Both service filters target the same relation, so they're combined with AND
+  // rather than spread (a second `services` key would overwrite the first).
+  const serviceFilters = [
+    ...(category ? [{ services: { some: { category, isActive: true } } }] : []),
+    ...(kids ? [{ services: { some: { forKids: true, isActive: true } } }] : []),
+  ];
 
   const rows = await prisma.salon.findMany({
     where: {
@@ -66,7 +75,7 @@ export async function GET(req: NextRequest) {
       ...publishableSalonWhere,
       latitude: { gte: bbox.south, lte: bbox.north },
       longitude: { gte: bbox.west, lte: bbox.east },
-      ...(category ? { services: { some: { category, isActive: true } } } : {}),
+      ...(serviceFilters.length > 0 ? { AND: serviceFilters } : {}),
     },
     select: {
       slug: true,
@@ -79,6 +88,8 @@ export async function GET(req: NextRequest) {
       ratingCount: true,
       ratingSum: true,
       businessHours: true,
+      // Derived per salon from its active services (nothing stored on Salon).
+      ...salonKidsSelect,
     },
     // +1 to detect truncation.
     take: HARD_LIMIT + 1,
@@ -105,6 +116,7 @@ export async function GET(req: NextRequest) {
       lng: s.longitude as number,
       rating: s.ratingCount > 0 ? Math.round((s.ratingSum / s.ratingCount) * 10) / 10 : null,
       ratingCount: s.ratingCount,
+      ...kidsFlagsFromSelect(s),
     }));
 
   return NextResponse.json(

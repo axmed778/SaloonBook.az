@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 /**
  * What the smoke suite assumes about the database behind $DATABASE_URL.
  *
- * `pnpm db:seed` creates the "demostudio" salon (ACTIVE, two employees, two
- * services, Mon–Sat working hours) — that is the fixture these specs read. A
+ * `pnpm db:seed` creates the "demostudio" salon (ACTIVE, two employees, three
+ * services — one of them a children's service — Mon–Sat working hours) — that is the fixture these specs read. A
  * deployment with a different demo salon can point them elsewhere without
  * touching the specs.
  */
@@ -27,7 +27,8 @@ export function badCredentials() {
 }
 
 type Catalog = {
-  Booking: { eyebrow: string };
+  Booking: { eyebrow: string; steps: { gender: string } };
+  Audience: { MALE: string; FEMALE: string; KID: string };
   Auth: { login: { title: string; submit: string } };
 };
 
@@ -45,6 +46,8 @@ const catalog = JSON.parse(
 // suite, while a genuinely missing element still does.
 export const copy = {
   bookingEyebrow: catalog.Booking.eyebrow,
+  bookingWhoStep: catalog.Booking.steps.gender,
+  audience: catalog.Audience,
   loginTitle: catalog.Auth.login.title,
   loginSubmit: catalog.Auth.login.submit,
 };

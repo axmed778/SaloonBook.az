@@ -155,7 +155,14 @@ export default async function BookingPage({
   const [services, addons, employees, reviewAgg, salonReviews] = await Promise.all([
     prisma.service.findMany({
       where: { salonId: selected.id, isActive: true },
-      select: { id: true, name: true, priceMinor: true, durationMin: true, audience: true },
+      select: {
+        id: true,
+        name: true,
+        priceMinor: true,
+        durationMin: true,
+        audience: true,
+        forKids: true,
+      },
       orderBy: { name: "asc" },
     }),
     // Optional extras, each with the services it is offered with. Creation
@@ -178,6 +185,7 @@ export default async function BookingPage({
         name: true,
         position: true,
         audience: true,
+        worksWithKids: true,
         services: { select: { serviceId: true } },
       },
       orderBy: { name: "asc" },
@@ -240,6 +248,7 @@ export default async function BookingPage({
     priceMinor: s.priceMinor,
     durationMin: s.durationMin,
     audience: s.audience as Audience,
+    forKids: s.forKids,
   }));
   const bookingAddons = addons.map((a) => ({
     id: a.id,
@@ -253,6 +262,7 @@ export default async function BookingPage({
     name: e.name,
     position: e.position,
     audience: e.audience as Audience,
+    worksWithKids: e.worksWithKids,
     serviceIds: e.services.map((se) => se.serviceId),
   }));
 
