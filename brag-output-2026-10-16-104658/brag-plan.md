@@ -335,3 +335,42 @@ platform's thumbnail grabber lands on it; `brag.jpg` is kept alongside for platf
 custom thumbnail upload.
 
 **Audio note:** the mixer lowered the master by 0.8 dB to stay under −1 dBTP. Nothing clipped.
+
+---
+
+## Vertical cut for Stories (`brag-vertical.mp4`)
+
+Same film, reflowed for **1080x1920** — not a crop. `composition-vertical/` is a second Hyperframes
+project with identical timings, identical music offset and identical beat locks; only geometry
+changes. 21.3s, 639 frames, 1.6 MB.
+
+**What was re-laid out:**
+
+- **Scene 2-3.** The landscape cut puts the phone left and the salon identity right. In portrait the
+  identity stacks *above* the phone (eyebrow → DB tile + name → `Açıqdır` → the hero tagline) and the
+  phone takes the lower two thirds.
+- **The widget keeps its 476x956 coordinate system** and is scaled to the portrait phone by a CSS
+  `transform: scale(1.22)` on a wrapper GSAP never touches — so the five tap targets, the step slots
+  and every reading floor carry over unchanged from the landscape cut, and there is no
+  `gsap_css_transform_conflict`.
+- **Scene 4.** Seven day columns in 1080px are 132px wide, where the landscape cut has 226px.
+  `"14:30 Saç kəsimi"` does not fit on one line there and the real component would truncate it, so
+  the blocks are reflowed to three lines — time, service, master. The visible window also tightens
+  to 09:00-17:00, which is what the week grid itself does: it sizes the window to the bookings on
+  screen (the behaviour added in `89d4acd`).
+- **Scene 5b.** `salonbook.az/demostudio` is ~1104px wide at 96px, so it breaks onto two lines
+  (`salonbook.az` / `/demostudio`) at 88px, arriving 0.12s apart.
+
+**Stories safe zones.** The top ~250px and bottom ~250px of a story can be covered by the app's own
+UI (profile row, reply bar). First pass put the `ONLAYN QEYDİYYAT` eyebrow and the corner clock at
+y≈152 and the WhatsApp button chip past y≈1670 — both would have been obscured. The identity block
+now starts at y=272, and the message bubble was lifted 60px in screen-local space so its
+`Dəyiş / Ləğv et` chip ends around y=1655. Nothing that must be read falls outside 260-1670.
+
+**Gate result:** `npx hyperframes check` — **0 errors**, 0 runtime errors, **0 layout issues across
+9 samples**, **91/91 text checks pass WCAG AA**, 0 motion findings. Same 8 structural warnings.
+
+**Poster:** pulled at **11.4s** rather than the landscape cut's 15.2s. In portrait the week grid
+reads smaller and flatter, while the tall phone holding the confirmed booking, the automatic
+WhatsApp message and the `Avtomatik.` stamp fills the frame and carries the whole story. Baked as
+frame 0 the same way; `brag-vertical.jpg` is kept for custom-thumbnail uploads.
