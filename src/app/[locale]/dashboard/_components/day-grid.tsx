@@ -46,11 +46,14 @@ export function DayGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    // Scrolls both ways inside its own box, capped to the viewport, so the time
+    // gutter (sticky left) and the column headers (sticky top) stay in view
+    // while scrolling across many masters or down a long day.
+    <div className="max-h-[calc(100dvh-10rem)] overflow-auto rounded-xl border border-border bg-card">
       <div className="flex min-w-full">
         {/* Time gutter */}
-        <div className="w-14 shrink-0 border-r border-border">
-          <div className="h-12 border-b border-border" />
+        <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-border bg-card">
+          <div className="sticky top-0 z-10 h-12 border-b border-border bg-card" />
           <div className="relative" style={{ height: bodyHeight }}>
             {hours.map((m, i) => (
               <div
@@ -72,7 +75,7 @@ export function DayGrid({
               key={col.id}
               className="min-w-[180px] flex-1 border-r border-border last:border-r-0"
             >
-              <div className="flex h-12 flex-col items-center justify-center border-b border-border px-2">
+              <div className="sticky top-0 z-[15] flex h-12 flex-col items-center justify-center border-b border-border bg-card px-2">
                 <span
                   className={
                     "text-sm font-medium " +

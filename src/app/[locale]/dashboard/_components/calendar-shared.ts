@@ -30,6 +30,8 @@ export type CalendarBlock = {
   id: string;
   // Day view: employeeId. Week view: the appointment's Baku day, "YYYY-MM-DD".
   columnId: string;
+  // The master, in both views — what the staff filter matches on.
+  employeeId: string;
   startMin: number; // real minutes from the start day's Baku midnight (unclamped)
   endMin: number; // includes service buffer; capped at 1440 if it runs to midnight
   title: string; // service name
@@ -67,6 +69,24 @@ export type CalendarBlock = {
 
 const MINUTES_IN_DAY = 24 * 60;
 
+// Visible time window for the grid: the default 08:00–22:00, widened (snapped to
+// the hour) to include any booking that falls outside it — so late/early
+// appointments stay visible instead of being clamped away. Computed from the
+// blocks actually drawn, so a hidden master's 01:00 booking does not stretch
+// the grid.
+export function visibleWindow(blocks: CalendarBlock[]): { startMin: number; endMin: number } {
+  let startMin = DAY_START_MIN;
+  let endMin = DAY_END_MIN;
+  for (const b of blocks) {
+    if (b.startMin < startMin) startMin = b.startMin;
+    if (b.endMin > endMin) endMin = b.endMin;
+  }
+  return {
+    startMin: Math.max(0, Math.floor(startMin / 60) * 60),
+    endMin: Math.min(MINUTES_IN_DAY, Math.ceil(endMin / 60) * 60),
+  };
+}
+
 /**
  * Serialized booking -> calendar block. The ONLY place a block is built, for
  * both the day view (columnId = employeeId) and the week view (columnId = the
@@ -86,6 +106,7 @@ export function toCalendarBlock(
   return {
     id: b.id,
     columnId,
+    employeeId: b.employeeId,
     startMin: bakuMinutesOfDayOn(b.startsAt, startYmd),
     endMin: Math.min(bakuMinutesOfDayOn(b.endsAt, startYmd), MINUTES_IN_DAY),
     title: b.serviceName,

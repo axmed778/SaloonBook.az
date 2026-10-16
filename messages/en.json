@@ -312,6 +312,16 @@
         "phoneInvalid": "Phone must be +994 followed by 9 digits.",
         "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
       }
+    },
+    "staffFilter": {
+      "label": "Staff",
+      "all": "All",
+      "some": "{shown} of {total}",
+      "search": "Find a master",
+      "showAll": "Show all",
+      "hideAll": "Hide all",
+      "noneTitle": "No one selected",
+      "noneBody": "Pick masters in the filter to see their bookings."
     }
   },
   "Dashboard": {

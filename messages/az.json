@@ -312,6 +312,16 @@
         "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır.",
         "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
       }
+    },
+    "staffFilter": {
+      "label": "Ustalar",
+      "all": "Hamısı",
+      "some": "{shown} / {total}",
+      "search": "Usta axtar",
+      "showAll": "Hamısını göstər",
+      "hideAll": "Hamısını gizlət",
+      "noneTitle": "Heç kim seçilməyib",
+      "noneBody": "Qeydləri görmək üçün filtrdə ustaları seçin."
     }
   },
   "Dashboard": {
