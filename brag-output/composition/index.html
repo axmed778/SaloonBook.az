@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="az" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>SalonBook.az — brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* Inter, self-hosted. latin-ext carries the Azerbaijani glyphs the copy needs:
+         ə U+0259, ş U+015F, ğ U+011F, İ U+0130, ç U+00E7, ö/ü, and ₼ U+20BC. */
+      @font-face {
+        font-family: "InterAZ";
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: block;
+        src: url("assets/fonts/inter-latin-ext.woff2") format("woff2");
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+          U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+          U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "InterAZ";
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: block;
+        src: url("assets/fonts/inter-latin.woff2") format("woff2");
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+          U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+          U+FEFF, U+FFFD;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #16161a;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "InterAZ", system-ui, sans-serif;
+        --ink: #16161a;
+        --cream: #f7f3ee;
+        --violet: #6c4df6;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      .bg-ink {
+        position: absolute;
+        inset: 0;
+        background: #16161a;
+      }
+      .bg-cream {
+        position: absolute;
+        inset: 0;
+        background: #f7f3ee;
+      }
+      .gridbg {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(247, 243, 238, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(247, 243, 238, 0.045) 1px, transparent 1px);
+        background-size: 120px 120px;
+      }
+
+      /* ---------- Scene 1 — clutter ---------- */
+      .glow {
+        position: absolute;
+        left: 50%;
+        width: 980px;
+        height: 980px;
+        margin-left: -490px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(108, 77, 246, 0.6),
+          rgba(108, 77, 246, 0) 68%
+        );
+        filter: blur(50px);
+        opacity: 0.2;
+      }
+      #s1-glow {
+        top: 420px;
+      }
+      .slamwrap {
+        position: absolute;
+        left: 0;
+        width: 1080px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .slam {
+        width: 1080px;
+        text-align: center;
+        font-weight: 900;
+        letter-spacing: -0.045em;
+        color: #f7f3ee;
+        line-height: 0.92;
+      }
+      .rule {
+        width: 230px;
+        height: 9px;
+        background: #6c4df6;
+        margin-top: 16px;
+        transform-origin: center;
+      }
+      .junk {
+        position: absolute;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        color: #f7f3ee;
+        white-space: nowrap;
+      }
+
+      /* ---------- Scene 2 — kill line ---------- */
+      .s2bar {
+        position: absolute;
+        left: 0;
+        top: 738px;
+        width: 1080px;
+        height: 444px;
+        background: #6c4df6;
+        transform-origin: center;
+      }
+      .s2text {
+        position: absolute;
+        left: 0;
+        top: 738px;
+        width: 1080px;
+        height: 444px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      .s2line {
+        width: 1080px;
+        text-align: center;
+        font-size: 112px;
+        font-weight: 900;
+        letter-spacing: -0.038em;
+        color: #f7f3ee;
+        line-height: 1.04;
+      }
+
+      /* ---------- Scene 3 — the turn ---------- */
+      .s3text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .s3line {
+        width: 1080px;
+        text-align: center;
+        font-size: 152px;
+        font-weight: 900;
+        letter-spacing: -0.045em;
+        color: #16161a;
+        line-height: 1.0;
+      }
+      .s3line em {
+        font-style: normal;
+        color: #6c4df6;
+      }
+
+      /* ---------- Scenes 4 & 5 — the phone (iPhone 18 Pro Max) ----------
+         Geometry from the published panel spec: 6.9", 2868x1320 → a 2.1727:1 display.
+         The canvas below is 708x1538 (2.1723:1). Titanium rail 12px, black bezel 11px.
+         The Dynamic Island is the 18 Pro's narrower one — reported 35% less wide than the
+         17 Pro's (20.7mm → 13.5mm), i.e. ~18.5% of display width instead of ~28%. */
+      .phone {
+        position: absolute;
+        left: 163px;
+        top: 196px;
+        width: 754px;
+        height: 1584px;
+        border-radius: 112px;
+        background: linear-gradient(
+          140deg,
+          #9a9aa4 0%,
+          #55555e 13%,
+          #303036 36%,
+          #2b2b31 64%,
+          #5c5c66 87%,
+          #a6a6b0 100%
+        );
+        box-shadow:
+          0 52px 104px rgba(22, 22, 26, 0.3),
+          0 14px 32px rgba(22, 22, 26, 0.16);
+      }
+      .bezel {
+        position: absolute;
+        inset: 12px;
+        border-radius: 100px;
+        background: #000;
+      }
+      .screen {
+        position: absolute;
+        inset: 11px;
+        border-radius: 89px;
+        background: #09090b;
+        overflow: hidden;
+        padding: 100px 28px 0;
+        color: #fafafa;
+      }
+      .island {
+        position: absolute;
+        left: 50%;
+        top: 30px;
+        width: 132px;
+        height: 58px;
+        margin-left: -66px;
+        border-radius: 29px;
+        background: #000;
+      }
+      .sbar {
+        position: absolute;
+        left: 44px;
+        right: 44px;
+        top: 44px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 25px;
+        font-weight: 600;
+        color: #fafafa;
+      }
+      .sbar .icons {
+        display: flex;
+        align-items: flex-end;
+        gap: 9px;
+        height: 22px;
+      }
+      .sbar .bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 20px;
+      }
+      .sbar .bars i {
+        display: block;
+        width: 5px;
+        border-radius: 1.5px;
+        background: #fafafa;
+      }
+      .sbar .batt {
+        width: 36px;
+        height: 18px;
+        border: 2px solid rgba(250, 250, 250, 0.55);
+        border-radius: 5px;
+        padding: 2px;
+      }
+      .sbar .batt b {
+        display: block;
+        width: 70%;
+        height: 100%;
+        border-radius: 2px;
+        background: #fafafa;
+      }
+      .homebar {
+        position: absolute;
+        left: 50%;
+        bottom: 22px;
+        width: 232px;
+        height: 9px;
+        margin-left: -116px;
+        border-radius: 5px;
+        background: rgba(250, 250, 250, 0.45);
+      }
+      .shead {
+        height: 112px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .avatar {
+        width: 78px;
+        height: 78px;
+        flex: 0 0 78px;
+        border-radius: 22px;
+        background: #18181b;
+        border: 1px solid #27272a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: 700;
+        color: #8b5cf6;
+        letter-spacing: 0.02em;
+      }
+      .stitle-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .stitle {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #fafafa;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 999px;
+        background: rgba(52, 211, 153, 0.12);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        color: #34d399;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .pill b {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #34d399;
+      }
+      .ssub {
+        margin-top: 8px;
+        font-size: 24px;
+        color: #a1a1aa;
+      }
+      .eyebrow {
+        margin-top: 22px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        color: #a1a1aa;
+      }
+      .eyebrow span {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #8b5cf6;
+      }
+      .row {
+        margin-top: 16px;
+        height: 112px;
+        padding: 0 26px;
+        border-radius: 22px;
+        background: #18181b;
+        border: 1px solid #27272a;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .rlabel {
+        font-size: 22px;
+        color: #a1a1aa;
+      }
+      .rvalue {
+        margin-top: 6px;
+        font-size: 34px;
+        font-weight: 600;
+        color: #fafafa;
+        letter-spacing: -0.01em;
+      }
+      .rchange {
+        font-size: 24px;
+        font-weight: 500;
+        color: #8b5cf6;
+      }
+      .card {
+        margin-top: 20px;
+        padding: 24px;
+        border-radius: 22px;
+        background: #18181b;
+        border: 1px solid #27272a;
+      }
+      .cardhead {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .ctitle {
+        font-size: 34px;
+        font-weight: 700;
+        color: #fafafa;
+      }
+      .cstep {
+        font-size: 22px;
+        color: #a1a1aa;
+      }
+      .slots {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 11px;
+      }
+      .chip {
+        height: 74px;
+        border-radius: 14px;
+        background: #0e0e11;
+        border: 1px solid #27272a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        color: #a1a1aa;
+      }
+      .cta {
+        margin-top: 22px;
+        height: 96px;
+        border-radius: 20px;
+        background: #8b5cf6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        font-weight: 600;
+        color: #fafafa;
+        box-shadow: 0 10px 26px rgba(139, 92, 246, 0.28);
+      }
+      .pfoot {
+        margin-top: 26px;
+        text-align: center;
+        font-size: 20px;
+        color: #8f8f98;
+      }
+      .finger {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76px;
+        height: 76px;
+        margin-left: -38px;
+        margin-top: -38px;
+        border-radius: 50%;
+        background: rgba(22, 22, 26, 0.16);
+        border: 4px solid #6c4df6;
+        box-shadow: 0 6px 18px rgba(22, 22, 26, 0.2);
+      }
+      .timer {
+        position: absolute;
+        left: 163px;
+        top: 96px;
+        width: 754px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-size: 34px;
+        font-weight: 700;
+        color: #16161a;
+        letter-spacing: 0.02em;
+      }
+      .timer i {
+        display: block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #6c4df6;
+      }
+
+      /* ---------- Scene 5 — confirmation ---------- */
+      .okwrap {
+        margin-top: 64px;
+        padding: 52px 28px;
+        border-radius: 24px;
+        background: rgba(52, 211, 153, 0.08);
+        border: 1px solid rgba(52, 211, 153, 0.28);
+        text-align: center;
+      }
+      .okcircle {
+        width: 128px;
+        height: 128px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: rgba(52, 211, 153, 0.16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .oktitle {
+        margin-top: 28px;
+        font-size: 50px;
+        font-weight: 700;
+        color: #fafafa;
+        letter-spacing: -0.02em;
+      }
+      .okmeta {
+        margin-top: 14px;
+        font-size: 29px;
+        color: #a1a1aa;
+        line-height: 1.5;
+      }
+      .bubble {
+        position: absolute;
+        left: 30px;
+        right: 30px;
+        bottom: 34px;
+        padding: 28px;
+        border-radius: 24px;
+        border-top-left-radius: 8px;
+        background: #18181b;
+        border: 1px solid #27272a;
+      }
+      .bhead {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 20px;
+        color: #a1a1aa;
+        letter-spacing: 0.04em;
+      }
+      .bhead i {
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #34d399;
+      }
+      .btext {
+        margin-top: 16px;
+        font-size: 27px;
+        line-height: 1.5;
+        color: #e4e4e7;
+      }
+      .btext b {
+        color: #fafafa;
+        font-weight: 700;
+        box-shadow: inset 0 -12px 0 rgba(139, 92, 246, 0.35);
+      }
+      .bbtn {
+        margin-top: 20px;
+        height: 66px;
+        border-radius: 14px;
+        border: 1px solid #3f3f46;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        color: #8b5cf6;
+        font-weight: 500;
+      }
+      .stamp {
+        position: absolute;
+        left: 0;
+        top: 74px;
+        width: 1080px;
+        text-align: center;
+        font-size: 92px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        color: #6c4df6;
+      }
+
+      /* ---------- Scene 6 — payoff ---------- */
+      #s6-glow {
+        top: 560px;
+      }
+      .s6text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+      }
+      .s6line {
+        width: 1080px;
+        text-align: center;
+        font-size: 164px;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        line-height: 1.0;
+      }
+
+      /* ---------- Scene 7 — end card ---------- */
+      .endwrap {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+      }
+      .endbrow {
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: 0.24em;
+        color: rgba(247, 243, 238, 0.62);
+      }
+      .endrule {
+        margin-top: 34px;
+        width: 260px;
+        height: 7px;
+        background: #6c4df6;
+        transform-origin: center;
+        box-shadow: 0 0 34px rgba(108, 77, 246, 0.45);
+      }
+      .chips {
+        margin-top: 46px;
+        display: flex;
+        gap: 18px;
+      }
+      .echip {
+        padding: 16px 32px;
+        border-radius: 999px;
+        border: 2px solid rgba(247, 243, 238, 0.26);
+        font-size: 33px;
+        font-weight: 600;
+        color: #f7f3ee;
+      }
+      .cta-url {
+        margin-top: 54px;
+        width: 1080px;
+        text-align: center;
+        font-size: 80px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        color: #f7f3ee;
+      }
+      .cta-url em {
+        font-style: normal;
+        color: #6c4df6;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1080"
+      data-height="1920"
+      data-duration="19.47"
+      data-fps="30"
+    >
+      <!-- ========== Scene 1 — Clutter (0 → 4.20) ========== -->
+      <section id="s1" class="clip" data-start="0" data-duration="4.2" data-track-index="0">
+        <div class="bg-ink"></div>
+        <div class="gridbg"></div>
+        <div class="glow" id="s1-glow"></div>
+
+        <div class="junk" data-layout-allow-occlusion id="s1-j1" style="left: 60px; top: 250px; font-size: 62px">İNVENTAR</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j2" style="left: 640px; top: 330px; font-size: 70px">QALIQ</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j3" style="left: 120px; top: 1420px; font-size: 66px">HESABAT</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j4" style="left: 660px; top: 1510px; font-size: 58px">SMENA</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j5" style="left: 40px; top: 1640px; font-size: 74px">BARKOD</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j6" style="left: 430px; top: 1740px; font-size: 60px">
+          TƏCHİZATÇI
+        </div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j7" style="left: 760px; top: 1640px; font-size: 68px">VERGİ</div>
+        <div class="junk" data-layout-allow-occlusion id="s1-j8" style="left: 150px; top: 130px; font-size: 64px">
+          KOMİSSİYA
+        </div>
+
+        <div class="slamwrap" id="s1-g1" style="top: 500px">
+          <div class="slam" id="s1-w1" style="font-size: 200px">KASSA</div>
+          <div class="rule" id="s1-r1"></div>
+        </div>
+        <div class="slamwrap" id="s1-g2" style="top: 790px">
+          <div class="slam" id="s1-w2" style="font-size: 225px">ANBAR</div>
+          <div class="rule" id="s1-r2"></div>
+        </div>
+        <div class="slamwrap" id="s1-g3" style="top: 1090px">
+          <div class="slam" id="s1-w3" style="font-size: 250px">MAAŞ</div>
+          <div class="rule" id="s1-r3"></div>
+        </div>
+      </section>
+
+      <!-- ========== Scene 2 — Kill line (4.20 → 5.78) ========== -->
+      <section id="s2" class="clip" data-start="4.2" data-duration="1.58" data-track-index="1">
+        <div class="bg-ink"></div>
+        <div class="gridbg"></div>
+        <div id="s2-ghost" data-layout-allow-occlusion style="position: absolute; inset: 0; opacity: 0.12">
+          <div class="junk" style="left: 60px; top: 250px; font-size: 62px; opacity: 1">
+            İNVENTAR
+          </div>
+          <div class="junk" style="left: 640px; top: 330px; font-size: 70px; opacity: 1">QALIQ</div>
+          <div class="junk" style="left: 120px; top: 1420px; font-size: 66px; opacity: 1">
+            HESABAT
+          </div>
+          <div class="junk" style="left: 660px; top: 1510px; font-size: 58px; opacity: 1">SMENA</div>
+          <div class="junk" style="left: 40px; top: 1640px; font-size: 74px; opacity: 1">BARKOD</div>
+          <div class="junk" style="left: 430px; top: 1740px; font-size: 60px; opacity: 1">
+            TƏCHİZATÇI
+          </div>
+          <div class="junk" style="left: 760px; top: 1640px; font-size: 68px; opacity: 1">VERGİ</div>
+          <div class="junk" style="left: 150px; top: 130px; font-size: 64px; opacity: 1">
+            KOMİSSİYA
+          </div>
+          <div class="slamwrap" style="top: 500px">
+            <div class="slam" data-layout-allow-occlusion style="font-size: 200px">KASSA</div>
+            <div class="rule"></div>
+          </div>
+          <div class="slamwrap" style="top: 790px">
+            <div class="slam" data-layout-allow-occlusion style="font-size: 225px">ANBAR</div>
+            <div class="rule"></div>
+          </div>
+          <div class="slamwrap" style="top: 1090px">
+            <div class="slam" data-layout-allow-occlusion style="font-size: 250px">MAAŞ</div>
+            <div class="rule"></div>
+          </div>
+        </div>
+        <div class="s2bar" id="s2-bar"></div>
+        <div class="s2text">
+          <div class="s2line" id="s2-l1">Bunlar müştəri</div>
+          <div class="s2line" id="s2-l2">gətirmir.</div>
+        </div>
+      </section>
+
+      <!-- ========== Scene 3 — The turn (5.78 → 7.36) ========== -->
+      <section id="s3" class="clip" data-start="5.78" data-duration="1.58" data-track-index="2">
+        <div class="bg-cream"></div>
+        <div class="s3text">
+          <div class="s3line" id="s3-l1">Bir <em>link</em></div>
+          <div class="s3line" id="s3-l2">kifayətdir.</div>
+        </div>
+      </section>
+
+      <!-- ========== Scene 4 — The 30-second booking (7.36 → 12.62) ========== -->
+      <section id="s4" class="clip" data-start="7.36" data-duration="5.26" data-track-index="3">
+        <div class="bg-cream"></div>
+        <div class="timer" id="s4-timer"><i></i><span id="s4-timer-v">00:00</span></div>
+        <div class="phone" id="s4-phone">
+          <div class="bezel"></div>
+          <div class="screen">
+            <div class="shead">
+              <div class="avatar">DB</div>
+              <div>
+                <div class="stitle-row">
+                  <span class="stitle">Demo Beauty Studio</span>
+                  <span class="pill"><b></b>Açıqdır</span>
+                </div>
+                <div class="ssub">Nümunə salon — test üçün.</div>
+              </div>
+            </div>
+            <div class="eyebrow"><span></span>ONLAYN QEYDİYYAT</div>
+
+            <div class="row" id="s4-row1">
+              <div>
+                <div class="rlabel">Xidmət seçin</div>
+                <div class="rvalue">Saç kəsimi · 20 ₼</div>
+              </div>
+              <div class="rchange">Dəyiş</div>
+            </div>
+            <div class="row" id="s4-row2">
+              <div>
+                <div class="rlabel">Mütəxəssis seçin</div>
+                <div class="rvalue">Ayan</div>
+              </div>
+              <div class="rchange">Dəyiş</div>
+            </div>
+            <div class="row" id="s4-row3">
+              <div>
+                <div class="rlabel">Tarix seçin</div>
+                <div class="rvalue">10 iyl, C.</div>
+              </div>
+              <div class="rchange">Dəyiş</div>
+            </div>
+
+            <div class="card" id="s4-card">
+              <div class="cardhead">
+                <span class="ctitle">Vaxt seçin</span>
+                <span class="cstep">5 / 6</span>
+              </div>
+              <div class="slots" id="s4-slots">
+                <div class="chip">13:00</div>
+                <div class="chip">13:15</div>
+                <div class="chip">13:30</div>
+                <div class="chip">13:45</div>
+                <div class="chip">14:00</div>
+                <div class="chip">14:15</div>
+                <div class="chip" id="s4-pick">14:30</div>
+                <div class="chip">14:45</div>
+                <div class="chip">15:00</div>
+                <div class="chip">15:15</div>
+                <div class="chip">15:30</div>
+                <div class="chip">15:45</div>
+                <div class="chip">16:00</div>
+                <div class="chip">16:15</div>
+                <div class="chip">16:30</div>
+                <div class="chip">16:45</div>
+                <div class="chip">17:00</div>
+                <div class="chip">17:15</div>
+                <div class="chip">17:30</div>
+                <div class="chip">17:45</div>
+              </div>
+            </div>
+
+            <div class="cta" id="s4-cta">Qeydiyyatı təsdiqlə</div>
+            <div class="pfoot">SalonBook.az ilə gücləndirilib</div>
+            <div class="island"></div>
+            <div class="sbar">
+              <span>14:22</span>
+              <span class="icons">
+                <span class="bars"
+                  ><i style="height: 8px"></i><i style="height: 12px"></i
+                  ><i style="height: 16px"></i><i style="height: 20px"></i
+                ></span>
+                <span class="batt"><b></b></span>
+              </span>
+            </div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+        <div class="finger" id="s4-finger"></div>
+      </section>
+
+      <!-- ========== Scene 5 — It confirms itself (12.62 → 15.26) ========== -->
+      <section id="s5" class="clip" data-start="12.62" data-duration="2.64" data-track-index="4">
+        <div class="bg-cream"></div>
+        <div class="stamp" id="s5-stamp">Avtomatik.</div>
+        <div class="phone">
+          <div class="bezel"></div>
+          <div class="screen">
+            <div class="shead">
+              <div class="avatar">DB</div>
+              <div>
+                <div class="stitle-row">
+                  <span class="stitle">Demo Beauty Studio</span>
+                  <span class="pill"><b></b>Açıqdır</span>
+                </div>
+                <div class="ssub">Nümunə salon — test üçün.</div>
+              </div>
+            </div>
+
+            <div class="okwrap" id="s5-ok">
+              <div class="okcircle" id="s5-check">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M4 12.5 L9.5 18 L20 6.5"
+                    stroke="#34d399"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div class="oktitle">Qeydiyyat təsdiqləndi!</div>
+              <div class="okmeta">Saç kəsimi · Ayan — 10 iyl, 14:30</div>
+            </div>
+
+            <div class="bubble" id="s5-bubble">
+              <div class="bhead"><i></i>WhatsApp · indi</div>
+              <div class="btext">
+                Salam! Demo Beauty Studio salonunda Saç kəsimi xidməti üçün
+                <b>qeydiyyatınız təsdiqləndi</b>. 📅 10 iyl, 14:30. Sizi gözləyirik!
+              </div>
+              <div class="bbtn">Dəyiş / Ləğv et</div>
+            </div>
+            <div class="island"></div>
+            <div class="sbar">
+              <span>14:22</span>
+              <span class="icons">
+                <span class="bars"
+                  ><i style="height: 8px"></i><i style="height: 12px"></i
+                  ><i style="height: 16px"></i><i style="height: 20px"></i
+                ></span>
+                <span class="batt"><b></b></span>
+              </span>
+            </div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Scene 6 — Payoff (15.26 → 17.36) ========== -->
+      <section id="s6" class="clip" data-start="15.26" data-duration="2.1" data-track-index="5">
+        <div class="bg-ink"></div>
+        <div class="gridbg"></div>
+        <div class="glow" id="s6-glow"></div>
+        <div class="s6text">
+          <div class="s6line" id="s6-l1" style="color: #f7f3ee">30 saniyə.</div>
+          <div class="s6line" id="s6-l2" style="color: #6c4df6">Sıfır zəng.</div>
+        </div>
+      </section>
+
+      <!-- ========== Scene 7 — End card (17.36 → 19.47) ========== -->
+      <section id="s7" class="clip" data-start="17.36" data-duration="2.11" data-track-index="6">
+        <div class="bg-ink"></div>
+        <div class="gridbg"></div>
+        <div class="endwrap">
+          <!-- the brand mark is a light-background serif lockup; at end-card size on ink it
+               reads as a white rectangle, so the URL itself carries the wordmark here -->
+          <div class="endbrow" id="s7-brow">24/7 ONLAYN QEYDİYYAT</div>
+          <div class="endrule" id="s7-rule"></div>
+          <div class="chips">
+            <div class="echip" id="s7-c1">14 gün pulsuz</div>
+            <div class="echip" id="s7-c2">Kart yox</div>
+          </div>
+          <div class="cta-url" id="s7-url">salonbook.az<em>/demostudio</em></div>
+        </div>
+      </section>
+
+      <!-- ========== Audio ========== -->
+      <audio
+        id="bgm"
+        src="assets/music/bgm.mp3"
+        data-start="0"
+        data-duration="19.47"
+        data-media-start="1.6"
+        data-track-index="20"
+        data-volume="0.85"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0.85},{"t":4.2,"v":0.85},{"t":4.45,"v":0.34},{"t":5.6,"v":0.34},{"t":5.82,"v":0.85},{"t":19.2,"v":0.85},{"t":19.47,"v":0}]}]}'
+      ></audio>
+
+      <audio id="sfx-slam1" src="assets/sfx/slam-a.ogg" data-start="0" data-track-index="21" data-volume="1"></audio>
+      <audio id="sfx-slam2" src="assets/sfx/slam-b.ogg" data-start="1.05" data-track-index="22" data-volume="1"></audio>
+      <audio id="sfx-slam3" src="assets/sfx/slam-c.ogg" data-start="2.1" data-track-index="23" data-volume="1"></audio>
+
+      <audio id="sfx-t1" src="assets/sfx/tick-1.ogg" data-start="3.15" data-track-index="24" data-volume="0.5"></audio>
+      <audio id="sfx-t2" src="assets/sfx/tick-2.ogg" data-start="3.28" data-track-index="25" data-volume="0.54"></audio>
+      <audio id="sfx-t3" src="assets/sfx/tick-3.ogg" data-start="3.41" data-track-index="26" data-volume="0.58"></audio>
+      <audio id="sfx-t4" src="assets/sfx/tick-4.ogg" data-start="3.54" data-track-index="27" data-volume="0.62"></audio>
+      <audio id="sfx-t5" src="assets/sfx/tick-1.ogg" data-start="3.67" data-track-index="28" data-volume="0.66"></audio>
+      <audio id="sfx-t6" src="assets/sfx/tick-2.ogg" data-start="3.8" data-track-index="29" data-volume="0.7"></audio>
+      <audio id="sfx-t7" src="assets/sfx/tick-3.ogg" data-start="3.93" data-track-index="30" data-volume="0.76"></audio>
+      <audio id="sfx-t8" src="assets/sfx/tick-4.ogg" data-start="4.06" data-track-index="31" data-volume="0.82"></audio>
+
+      <audio id="sfx-kill" src="assets/sfx/slam-deep.ogg" data-start="4.2" data-track-index="32" data-volume="1"></audio>
+      <audio id="sfx-invert" src="assets/sfx/invert.ogg" data-start="5.78" data-track-index="33" data-volume="0.7"></audio>
+
+      <audio id="sfx-phone" src="assets/sfx/tick-2.ogg" data-start="7.36" data-track-index="34" data-volume="0.6"></audio>
+      <audio id="sfx-tap1" src="assets/sfx/tap.ogg" data-start="7.9" data-track-index="35" data-volume="0.62"></audio>
+      <audio id="sfx-tap2" src="assets/sfx/tap.ogg" data-start="8.41" data-track-index="36" data-volume="0.62"></audio>
+      <audio id="sfx-tap3" src="assets/sfx/tap.ogg" data-start="8.94" data-track-index="37" data-volume="0.62"></audio>
+      <audio id="sfx-grid" src="assets/sfx/grid-rush.ogg" data-start="9.55" data-track-index="38" data-volume="0.34"></audio>
+      <audio id="sfx-tap4" src="assets/sfx/tap.ogg" data-start="10.52" data-track-index="39" data-volume="0.7"></audio>
+      <audio id="sfx-press" src="assets/sfx/press.ogg" data-start="11.58" data-track-index="40" data-volume="0.8"></audio>
+
+      <audio id="sfx-ok" src="assets/sfx/success.ogg" data-start="12.62" data-track-index="41" data-volume="0.6"></audio>
+      <audio id="sfx-pop" src="assets/sfx/pop.ogg" data-start="13.68" data-track-index="42" data-volume="0.7"></audio>
+
+      <audio id="sfx-pay1" src="assets/sfx/slam-a.ogg" data-start="15.26" data-track-index="43" data-volume="1"></audio>
+      <audio id="sfx-pay2" src="assets/sfx/slam-c.ogg" data-start="16.31" data-track-index="44" data-volume="1"></audio>
+      <audio id="sfx-end" src="assets/sfx/slam-b.ogg" data-start="18.15" data-track-index="45" data-volume="1"></audio>
+    </div>
+
+    <script>
+      var tl = gsap.timeline({ paused: true });
+
+      // ---------- initial states ----------
+      // Immediate gsap.set(), NOT tl.set(..., 0): a zero-duration set at position 0 does not
+      // render while the playhead sits exactly at 0, so frame 0 would show the un-hidden state.
+      gsap.set(["#s1-w1", "#s1-w2", "#s1-w3"], { opacity: 0 });
+      gsap.set(["#s1-r1", "#s1-r2", "#s1-r3"], { scaleX: 0 });
+      gsap.set("#s1 .junk", { opacity: 0 });
+      gsap.set("#s2-bar", { scaleX: 0 });
+      gsap.set(["#s2-l1", "#s2-l2"], { opacity: 0 });
+      gsap.set(["#s3-l1", "#s3-l2"], { opacity: 0 });
+      gsap.set("#s4-phone", { opacity: 0 });
+      gsap.set("#s4-timer", { opacity: 0 });
+      gsap.set(["#s4-row1", "#s4-row2", "#s4-row3"], { opacity: 0 });
+      gsap.set("#s4-card", { opacity: 0 });
+      gsap.set("#s4 .chip", { opacity: 0 });
+      gsap.set("#s4-cta", { opacity: 0 });
+      gsap.set("#s4-finger", { opacity: 0, x: 540, y: 557 });
+      gsap.set(["#s5-ok", "#s5-bubble", "#s5-stamp"], { opacity: 0 });
+      gsap.set(["#s6-l1", "#s6-l2"], { opacity: 0 });
+      gsap.set(["#s7-brow", "#s7-c1", "#s7-c2", "#s7-url"], { opacity: 0 });
+      gsap.set("#s7-rule", { scaleX: 0 });
+
+      // ================= Scene 1 — clutter =================
+      // beat-locked: 0.00s → music strong cue 1.60s (KASSA slam)
+      tl.fromTo("#s1-w1", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.13, ease: "power4.out" }, 0)
+        .to("#s1-r1", { scaleX: 1, duration: 0.2, ease: "power3.out" }, 0.05);
+      // beat-grid: ANBAR at 1.05s (2 beats after KASSA)
+      tl.fromTo("#s1-w2", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.13, ease: "power4.out" }, 1.05)
+        .to("#s1-r2", { scaleX: 1, duration: 0.2, ease: "power3.out" }, 1.1);
+      // beat-locked: 2.10s → music strong cue 3.70s (MAAŞ slam)
+      tl.fromTo("#s1-w3", { scale: 1.32, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.14, ease: "power4.out" }, 2.1)
+        .to("#s1-r3", { scaleX: 1, duration: 0.2, ease: "power3.out" }, 2.15);
+
+      // jargon flood — free-running rush, texture not reading material
+      var junk = [
+        ["#s1-j1", -9, 3.15],
+        ["#s1-j2", 7, 3.28],
+        ["#s1-j3", -5, 3.41],
+        ["#s1-j4", 11, 3.54],
+        ["#s1-j5", -13, 3.67],
+        ["#s1-j6", 6, 3.8],
+        ["#s1-j7", -8, 3.93],
+        ["#s1-j8", 9, 4.06],
+      ];
+      junk.forEach(function (j) {
+        tl.fromTo(
+          j[0],
+          { opacity: 0, scale: 1.25, rotation: j[1] * 1.8 },
+          { opacity: 0.24, scale: 1, rotation: j[1], duration: 0.16, ease: "power3.out" },
+          j[2],
+        );
+      });
+      // (the violet bloom behind the type is driven by the music, not the timeline —
+      //  see the audio-reactive block at the bottom; never tween its opacity here or the
+      //  inline style would override the reactive calc())
+
+      // ================= Scene 2 — kill line =================
+      // beat-locked: 4.20s → music strong cue 5.80s (bar wipe + gate to near-silence)
+      tl.to("#s2-bar", { scaleX: 1, duration: 0.18, ease: "power4.out" }, 4.2);
+      tl.fromTo("#s2-l1", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" }, 4.28)
+        .fromTo("#s2-l2", { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" }, 4.36);
+
+      // ================= Scene 3 — the turn =================
+      tl.fromTo("#s3-l1", { opacity: 0, scale: 1.16 }, { opacity: 1, scale: 1, duration: 0.15, ease: "power4.out" }, 5.8)
+        .fromTo("#s3-l2", { opacity: 0, scale: 1.16 }, { opacity: 1, scale: 1, duration: 0.15, ease: "power4.out" }, 5.88);
+
+      // ================= Scene 4 — the 30-second booking =================
+      // beat-locked: 7.36s → music strong cue 8.96s (phone lands, noise drops away)
+      tl.fromTo("#s4-phone", { opacity: 0, scale: 1.06, y: 26 }, { opacity: 1, scale: 1, y: 0, duration: 0.26, ease: "power3.out" }, 7.36)
+        .fromTo("#s4-timer", { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.2, ease: "power2.out" }, 7.5);
+
+      // the 30-second counter
+      var ticker = { v: 0 };
+      var tickerEl = document.getElementById("s4-timer-v");
+      tl.to(
+        ticker,
+        {
+          v: 30,
+          duration: 4.7,
+          ease: "none",
+          onUpdate: function () {
+            var s = Math.round(ticker.v);
+            tickerEl.textContent = "00:" + (s < 10 ? "0" + s : "" + s);
+          },
+        },
+        7.55,
+      );
+
+      // finger drives the flow; each row fills on contact
+      // beat-grid: row 1 at 7.90s, row 2 at 8.41s, row 3 at 8.94s
+      var steps = [
+        ["#s4-row1", 557, 7.9],
+        ["#s4-row2", 685, 8.41],
+        ["#s4-row3", 813, 8.94],
+      ];
+      tl.to("#s4-finger", { opacity: 1, duration: 0.12 }, 7.74);
+      steps.forEach(function (s, i) {
+        if (i > 0) {
+          tl.to("#s4-finger", { y: s[1], duration: 0.26, ease: "power2.inOut" }, s[2] - 0.3);
+        }
+        tl.fromTo("#s4-finger", { scale: 1 }, { scale: 0.76, duration: 0.07, ease: "power2.out", immediateRender: false }, s[2] - 0.05)
+          .to("#s4-finger", { scale: 1, duration: 0.12, ease: "power2.out" }, s[2] + 0.03);
+        tl.fromTo(s[0], { opacity: 0, x: -26 }, { opacity: 1, x: 0, duration: 0.2, ease: "power3.out" }, s[2]);
+      });
+
+      // slot card opens, chips rush in
+      tl.fromTo("#s4-card", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.2, ease: "power3.out" }, 9.46);
+      tl.fromTo(
+        ".chip",
+        { opacity: 0, scale: 0.86 },
+        { opacity: 1, scale: 1, duration: 0.16, ease: "power2.out", stagger: 0.038 },
+        9.55,
+      );
+
+      // tap the 14:30 slot
+      tl.to("#s4-finger", { x: 617, y: 1097, duration: 0.3, ease: "power2.inOut" }, 10.2)
+        .fromTo("#s4-finger", { scale: 1 }, { scale: 0.76, duration: 0.07, ease: "power2.out", immediateRender: false }, 10.47)
+        .to("#s4-finger", { scale: 1, duration: 0.12, ease: "power2.out" }, 10.55);
+      // tween the selected state instead of toggling a class — a class toggle would not
+      // survive a backwards seek, a colour tween interpolates deterministically at any time
+      tl.fromTo(
+        "#s4-pick",
+        { backgroundColor: "#0e0e11", borderColor: "#27272a", color: "#a1a1aa" },
+        {
+          backgroundColor: "#8b5cf6",
+          borderColor: "#8b5cf6",
+          color: "#fafafa",
+          duration: 0.12,
+          ease: "power2.out",
+          immediateRender: false,
+        },
+        10.52,
+      );
+      tl.fromTo("#s4-pick", { scale: 1 }, { scale: 1.1, duration: 0.1, ease: "power2.out", immediateRender: false }, 10.52)
+        .to("#s4-pick", { scale: 1, duration: 0.16, ease: "power2.out" }, 10.62);
+
+      // confirm
+      tl.fromTo("#s4-cta", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.2, ease: "power3.out", immediateRender: false }, 11.05);
+      tl.to("#s4-finger", { x: 540, y: 1483, duration: 0.3, ease: "power2.inOut" }, 11.24)
+        .fromTo("#s4-finger", { scale: 1 }, { scale: 0.74, duration: 0.07, ease: "power2.out", immediateRender: false }, 11.53)
+        .to("#s4-finger", { scale: 1, duration: 0.12, ease: "power2.out" }, 11.61);
+      tl.fromTo("#s4-cta", { scale: 1 }, { scale: 0.97, duration: 0.08, ease: "power2.out", immediateRender: false }, 11.58)
+        .to("#s4-cta", { scale: 1, duration: 0.16, ease: "power2.out" }, 11.66)
+        .to("#s4-finger", { opacity: 0, duration: 0.16 }, 11.86);
+
+      // ================= Scene 5 — it confirms itself =================
+      tl.fromTo("#s5-ok", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.24, ease: "back.out(1.6)" }, 12.66)
+        .fromTo("#s5-check svg", { scale: 0.5 }, { scale: 1, duration: 0.3, ease: "back.out(2.2)" }, 12.72);
+      // beat-grid: message arrives at 13.68s
+      tl.fromTo("#s5-bubble", { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 13.68);
+      tl.fromTo("#s5-stamp", { opacity: 0, scale: 1.2, rotation: -5 }, { opacity: 1, scale: 1, rotation: -2, duration: 0.18, ease: "power4.out" }, 14.21);
+
+      // ================= Scene 6 — payoff =================
+      // beat-grid: 15.26s
+      tl.fromTo("#s6-l1", { opacity: 0, scale: 1.24 }, { opacity: 1, scale: 1, duration: 0.14, ease: "power4.out" }, 15.26);
+      // beat-locked: 16.31s → music strong cue 17.91s
+      tl.fromTo("#s6-l2", { opacity: 0, scale: 1.24 }, { opacity: 1, scale: 1, duration: 0.14, ease: "power4.out" }, 16.31);
+
+      // ================= Scene 7 — end card =================
+      tl.fromTo("#s7-brow", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.22, ease: "power2.out" }, 17.36)
+        .to("#s7-rule", { scaleX: 1, duration: 0.24, ease: "power3.out" }, 17.6)
+        .fromTo("#s7-c1", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, 17.75)
+        .fromTo("#s7-c2", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.18, ease: "power2.out" }, 17.93)
+        .fromTo("#s7-url", { opacity: 0, scale: 1.14 }, { opacity: 1, scale: 1, duration: 0.16, ease: "power4.out" }, 18.15);
+
+      // Audio-reactive bloom removed on request: driving the violet glow from per-frame bass
+      // made the background visibly flicker, because the bass value jumps frame to frame with no
+      // smoothing. The bloom is now a static value in CSS. Dropping the per-frame tl.call() loop
+      // also re-enables the renderer's static-frame dedup.
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
