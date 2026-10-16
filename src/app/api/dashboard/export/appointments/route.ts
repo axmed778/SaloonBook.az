@@ -23,6 +23,7 @@ import {
   bakuMinutesOfDay,
   minutesToHHMM,
 } from "@/lib/time";
+import { serviceWithAddons } from "@/lib/addons";
 
 export const dynamic = "force-dynamic";
 
@@ -170,7 +171,8 @@ export async function GET(req: NextRequest) {
         t(`source.${a.source}`),
         a.customerName,
         a.customerPhone ?? "",
-        a.serviceName,
+        // "Manikür × 3" for a group booking; the add-ons keep their own column.
+        serviceWithAddons(a.serviceName, [], a.peopleCount),
         a.addonNames.join(", "),
         a.employeeName,
         (a.priceMinor / 100).toFixed(2),

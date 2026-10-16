@@ -76,7 +76,15 @@ export function addonTotals(addons: ReadonlyArray<{ priceMinor: number; duration
  * Everything booked, as one line — "Manikür + Gellak + French + Nail art". For
  * the surfaces with a single "service" slot: WhatsApp template parameters, push
  * notifications, the today list. Screens with room list the add-ons separately.
+ * A group booking (people > 1) reads "Manikür × 3" / "(Manikür + French) × 3":
+ * a multiplier needs no translation in a WhatsApp template parameter.
  */
-export function serviceWithAddons(serviceName: string, addonNames: readonly string[]): string {
-  return [serviceName, ...addonNames].join(" + ");
+export function serviceWithAddons(
+  serviceName: string,
+  addonNames: readonly string[],
+  people = 1,
+): string {
+  const label = [serviceName, ...addonNames].join(" + ");
+  if (people <= 1) return label;
+  return addonNames.length > 0 ? `(${label}) × ${people}` : `${label} × ${people}`;
 }

@@ -45,6 +45,7 @@ function row(overrides: Partial<BookingRow> = {}): BookingRow {
     priceMinor: 2500,
     manageToken: "3f2b9c11-6a4d-4e0b-9c1f-2d7e5a8b4c60",
     attendeeName: null,
+    peopleCount: 1,
     service: { name: "Saç kəsimi" },
     addons: [],
     employee: { name: "Aysel", position: "Usta" },

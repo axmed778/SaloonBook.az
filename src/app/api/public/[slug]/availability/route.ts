@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getAvailableSlots } from "@/lib/availability";
 import { addonTotals, resolveAddons, MAX_ADDONS_PER_BOOKING } from "@/lib/addons";
+import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ const querySchema = z.object({
   // Chosen add-ons, comma-separated. They lengthen the booking, so the slots
   // offered must be the ones the longer booking actually fits.
   addonIds: z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING),
+  // Group booking: the service repeats once per person, so fewer slots fit.
+  people: z.coerce.number().int().min(1).max(MAX_PEOPLE_PER_BOOKING).default(1),
 });
 
 export async function GET(
@@ -39,6 +42,7 @@ export async function GET(
     employeeId: req.nextUrl.searchParams.get("employeeId"),
     date: req.nextUrl.searchParams.get("date"),
     addonIds: (req.nextUrl.searchParams.get("addonIds") ?? "").split(",").filter(Boolean),
+    people: req.nextUrl.searchParams.get("people") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid query", issues: parsed.error.issues }, { status: 400 });
@@ -86,6 +90,7 @@ export async function GET(
     serviceId: parsed.data.serviceId,
     dayYmd: parsed.data.date,
     extraMin: addonTotals(addons).durationMin,
+    people: parsed.data.people,
   });
 
   return NextResponse.json({ date: parsed.data.date, slots });

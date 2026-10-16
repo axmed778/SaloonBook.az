@@ -18,6 +18,7 @@ import {
   serviceWithAddons,
   MAX_ADDONS_PER_BOOKING,
 } from "@/lib/addons";
+import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import {
   createBooking,
   isOverlapError,
@@ -62,11 +63,14 @@ async function assertServiceLink(
 // --- Available slots for the manual-booking form ---------------------------
 
 const addonIdsSchema = z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING).optional();
+// Group booking: the same service for this many people, back to back.
+const peopleSchema = z.number().int().min(1).max(MAX_PEOPLE_PER_BOOKING).optional();
 
 const slotsSchema = z.object({
   employeeId: z.string().uuid(),
   serviceId: z.string().uuid(),
   addonIds: addonIdsSchema,
+  people: peopleSchema,
   day: z.string().regex(YMD_RE),
 });
 
@@ -79,7 +83,7 @@ export async function availableSlots(input: unknown): Promise<SlotsResult> {
   const t = await getTranslations("Actions");
   const parsed = slotsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: t("invalidData") };
-  const { employeeId, serviceId, addonIds, day } = parsed.data;
+  const { employeeId, serviceId, addonIds, people, day } = parsed.data;
 
   // A master may only ever look at their own diary — including through a
   // hand-crafted request carrying a colleague's id.
@@ -99,6 +103,7 @@ export async function availableSlots(input: unknown): Promise<SlotsResult> {
     serviceId,
     dayYmd: day,
     extraMin: addonTotals(addons).durationMin,
+    people,
   });
   return { ok: true, slots };
 }
@@ -109,6 +114,7 @@ const bookingSchema = z.object({
   employeeId: z.string().uuid(),
   serviceId: z.string().uuid(),
   addonIds: addonIdsSchema,
+  people: peopleSchema,
   startUtc: z.string().datetime(), // ISO instant from the availableSlots response
   name: z
     .string()
@@ -156,6 +162,7 @@ export async function createManualBooking(input: unknown): Promise<ActionResult>
       serviceId: d.serviceId,
       addonIds: d.addonIds,
       employeeId: d.employeeId,
+      people: d.people,
       startUtc: new Date(d.startUtc),
       customer: { name: d.name, phone: d.phone },
       serviceNote: d.serviceNote,
@@ -244,6 +251,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
       customer: { select: { phone: true, waOptIn: true } },
       service: { select: { name: true } },
       addons: { select: { name: true }, orderBy: { name: "asc" } },
+      peopleCount: true,
       salon: { select: { name: true } },
     },
   });
@@ -307,6 +315,7 @@ export async function setAppointmentStatus(input: unknown): Promise<ActionResult
           service: serviceWithAddons(
             appt.service.name,
             appt.addons.map((a) => a.name),
+            appt.peopleCount,
           ),
           startsAt: appt.startsAt.toISOString(),
         },
@@ -349,6 +358,7 @@ export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
       employeeId: true,
       serviceId: true,
       addons: { select: { priceMinor: true, durationMin: true } },
+      peopleCount: true,
     },
   });
   if (!appt) return { ok: false, error: t("apptNotFound") };
@@ -358,6 +368,7 @@ export async function rescheduleSlots(input: unknown): Promise<SlotsResult> {
     serviceId: appt.serviceId,
     dayYmd: parsed.data.day,
     extraMin: addonTotals(appt.addons).durationMin,
+    people: appt.peopleCount,
     excludeAppointmentId: parsed.data.id,
   });
   return { ok: true, slots };
@@ -390,6 +401,8 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
         select: { name: true, priceMinor: true, durationMin: true },
         orderBy: { name: "asc" },
       },
+      // A group booking moves as one block of the same length.
+      peopleCount: true,
       customer: { select: { phone: true, waOptIn: true } },
     },
   });
@@ -403,6 +416,7 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
     serviceId: appt.serviceId,
     startUtc,
     extraMin: addonTotals(appt.addons).durationMin,
+    people: appt.peopleCount,
     excludeAppointmentId: parsed.data.id,
   });
   if (!check.ok) {
@@ -437,6 +451,7 @@ export async function rescheduleAppointment(input: unknown): Promise<ActionResul
           service: serviceWithAddons(
             appt.service.name,
             appt.addons.map((a) => a.name),
+            appt.peopleCount,
           ),
           startsAt: startUtc.toISOString(),
         };

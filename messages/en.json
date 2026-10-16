@@ -283,7 +283,8 @@
         "back": "Back",
         "noSlots": "No free slots for this day.",
         "loadError": "Couldn't load times."
-      }
+      },
+      "people": "People"
     },
     "modal": {
       "employee": "Specialist",
@@ -311,7 +312,9 @@
         "enterCustomerName": "Enter the customer's name.",
         "phoneInvalid": "Phone must be +994 followed by 9 digits.",
         "noteContact": "Please don't put a phone number in the note. Describe what you'd like in words."
-      }
+      },
+      "people": "Number of people",
+      "peopleTotal": "{people} people · total {price} ₼ · {min} min, one back-to-back booking"
     },
     "staffFilter": {
       "label": "Staff",
@@ -1743,7 +1746,13 @@
     "parentNameLabel": "Parent's name",
     "parentNameHint": "Enter your own name and phone: the confirmation and reminder go to this number.",
     "childNameLabel": "Child's name",
-    "childNamePlaceholder": "e.g. Ali"
+    "childNamePlaceholder": "e.g. Ali",
+    "peopleLabel": "How many people?",
+    "peopleHint": "For several people: the same service with one specialist, one after another.",
+    "peopleTotal": "Total: {price} ₼ · {min} min",
+    "peopleLess": "Fewer people",
+    "peopleMore": "More people",
+    "peopleCount": "{count, plural, one {# person} other {# people}}"
   },
   "Manage": {
     "eyebrow": "Appointment management",
@@ -1755,7 +1764,8 @@
       "addons": "Add-ons",
       "employee": "Specialist",
       "date": "Date",
-      "price": "Price"
+      "price": "Price",
+      "people": "People"
     },
     "banner": {
       "cancelled": "This appointment has been cancelled.",

@@ -53,7 +53,7 @@ export function toTodayAppointment(
     status: b.status as TodayApptStatus,
     // A past-but-still-CONFIRMED booking needs closing (complete / no-show).
     overdue: b.status === "CONFIRMED" && b.endsAt.getTime() < now,
-    service: serviceWithAddons(b.serviceName, b.addonNames),
+    service: serviceWithAddons(b.serviceName, b.addonNames, b.peopleCount),
     employee: b.employeeName,
     clientName: b.customerName,
     priceLabel: `${azn(b.priceMinor)} ₼`,

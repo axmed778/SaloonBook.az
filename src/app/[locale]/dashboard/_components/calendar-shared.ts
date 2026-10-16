@@ -36,6 +36,7 @@ export type CalendarBlock = {
   endMin: number; // includes service buffer; capped at 1440 if it runs to midnight
   title: string; // service name
   addons: string[]; // add-ons booked on top of the service (may be empty)
+  people: number; // group booking: same service for this many people; 1 normally
   subtitle: string; // customer name
   status: "CONFIRMED" | "COMPLETED" | "NO_SHOW";
   // True when the 48h reconcile sweep auto-closed this (→ COMPLETED) rather than
@@ -111,6 +112,7 @@ export function toCalendarBlock(
     endMin: Math.min(bakuMinutesOfDayOn(b.endsAt, startYmd), MINUTES_IN_DAY),
     title: b.serviceName,
     addons: b.addonNames,
+    people: b.peopleCount,
     subtitle: b.customerName,
     status: b.status as CalendarBlock["status"],
     autoCompleted: b.autoCompleted,

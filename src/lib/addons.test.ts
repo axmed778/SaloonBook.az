@@ -38,6 +38,12 @@ describe("serviceWithAddons", () => {
   it("is just the service when nothing was added", () => {
     expect(serviceWithAddons("Saç kəsimi", [])).toBe("Saç kəsimi");
   });
+
+  it("multiplies a group booking, bracketing the add-ons into one per-person bundle", () => {
+    expect(serviceWithAddons("Manikür", [], 3)).toBe("Manikür × 3");
+    expect(serviceWithAddons("Manikür", ["French"], 3)).toBe("(Manikür + French) × 3");
+    expect(serviceWithAddons("Manikür", ["French"], 1)).toBe("Manikür + French");
+  });
 });
 
 describe("resolveAddons", () => {

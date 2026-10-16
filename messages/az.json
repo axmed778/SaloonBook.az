@@ -283,7 +283,8 @@
         "back": "Geri",
         "noSlots": "Bu gün üçün boş vaxt yoxdur.",
         "loadError": "Vaxtları yükləmək alınmadı."
-      }
+      },
+      "people": "Nəfər sayı"
     },
     "modal": {
       "employee": "Mütəxəssis",
@@ -311,7 +312,9 @@
         "enterCustomerName": "Müştəri adını daxil edin.",
         "phoneInvalid": "Telefon +994 və 9 rəqəmdən ibarət olmalıdır.",
         "noteContact": "Qeyd hissəsində telefon nömrəsi göstərməyin. Zəhmət olmasa, istəyinizi sözlə yazın."
-      }
+      },
+      "people": "Nəfər sayı",
+      "peopleTotal": "{people} nəfər · cəmi {price} ₼ · {min} dəq, ardıcıl bir rezervasiya"
     },
     "staffFilter": {
       "label": "Ustalar",
@@ -1743,7 +1746,13 @@
     "parentNameLabel": "Valideynin adı",
     "parentNameHint": "Telefon və ad sizin, valideynin olsun — təsdiq və xatırlatma bu nömrəyə gələcək.",
     "childNameLabel": "Uşağın adı",
-    "childNamePlaceholder": "Məs.: Əli"
+    "childNamePlaceholder": "Məs.: Əli",
+    "peopleLabel": "Neçə nəfər?",
+    "peopleHint": "Bir neçə nəfər üçün: eyni xidmət, eyni mütəxəssis, ardıcıl.",
+    "peopleTotal": "Cəmi: {price} ₼ · {min} dəq",
+    "peopleLess": "Daha az nəfər",
+    "peopleMore": "Daha çox nəfər",
+    "peopleCount": "{count} nəfər"
   },
   "Manage": {
     "eyebrow": "Görüş idarəetməsi",
@@ -1755,7 +1764,8 @@
       "addons": "Əlavələr",
       "employee": "Mütəxəssis",
       "date": "Tarix",
-      "price": "Qiymət"
+      "price": "Qiymət",
+      "people": "Nəfər sayı"
     },
     "banner": {
       "cancelled": "Bu görüş ləğv edilib.",

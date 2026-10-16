@@ -32,6 +32,8 @@ async function loadByToken(token: string) {
       status: true,
       startsAt: true,
       endsAt: true,
+      // A group booking moves as one block of the same length.
+      peopleCount: true,
       salon: { select: { name: true, phone: true, status: true } },
       service: { select: { name: true } },
       customer: { select: { name: true, phone: true } },
@@ -55,6 +57,7 @@ async function loadByToken(token: string) {
     serviceLabel: serviceWithAddons(
       appt.service.name,
       appt.addons.map((a) => a.name),
+      appt.peopleCount,
     ),
   };
 }
@@ -88,6 +91,7 @@ export async function GET(
     serviceId: appt.serviceId,
     dayYmd: date,
     extraMin: appt.addonMin,
+    people: appt.peopleCount,
     // The appointment's own interval must not block its own reschedule.
     excludeAppointmentId: appt.id,
   });
@@ -212,6 +216,7 @@ export async function POST(
     serviceId: appt.serviceId,
     startUtc,
     extraMin: appt.addonMin,
+    people: appt.peopleCount,
     excludeAppointmentId: appt.id,
   });
   if (!check.ok) {

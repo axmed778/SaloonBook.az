@@ -119,6 +119,7 @@ export function WeekGrid({
                       <p className="truncate text-[11px] font-semibold leading-tight">
                         {minutesToHHMM(b.startMin)} {b.title}
                         {b.addons.length > 0 && ` +${b.addons.length}`}
+                        {b.people > 1 && ` × ${b.people}`}
                       </p>
                       <p className="truncate text-[10px] leading-tight opacity-80">
                         {b.employeeName}

@@ -127,7 +127,7 @@ export function AppointmentPopup({
   const waQuickHref = phone
     ? buildWhatsAppLink(phone, upcoming ? "reminder" : "reviewRequest", {
         salon: salonName,
-        service: serviceWithAddons(block.title, block.addons),
+        service: serviceWithAddons(block.title, block.addons, block.people),
         client: block.subtitle,
         when: `${block.dateLabel}, ${minutesToHHMM(block.startMin)}`,
       })
@@ -206,6 +206,7 @@ export function AppointmentPopup({
           {block.addons.length > 0 && (
             <Row label={t("popup.addons")} value={block.addons.join(", ")} />
           )}
+          {block.people > 1 && <Row label={t("popup.people")} value={String(block.people)} />}
           <Row label={t("popup.price")} value={`${azn(block.priceMinor)} ₼`} />
           <Row label={t("popup.source")} value={t(`source.${block.source}`)} />
         </dl>

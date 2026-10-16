@@ -464,7 +464,8 @@ model Appointment {
   // no-show can still be corrected by hand. See worker/processors/reconcile.ts.
   autoCompleted  Boolean              @default(false)
   // Snapshot at booking time: the service's price plus every chosen add-on's
-  // (itemised in `addons`). Revenue, payroll and the ROI dashboard sum this.
+  // (itemised in `addons`), times peopleCount. Revenue, payroll and the ROI
+  // dashboard sum this.
   priceMinor     Int
   source         BookingSource        @default(PUBLIC)
   // What the customer wants from the SERVICE — "tünd çalar", "allergiya var".
@@ -479,6 +480,10 @@ model Appointment {
   // contact), so when someone books from one number for a family member
   // (self, grandma, …) this holds the attendee's name. Null → use Customer.name.
   attendeeName   String?
+  // How many people this one booking is for: the same service with the same
+  // master, back to back ("3 friends, 1 h each" = one 3 h block). Length and
+  // priceMinor already include it — see createBooking. 1 for a normal booking.
+  peopleCount    Int                  @default(1)
   // Customer's data-processing consent captured on a public self-booking (the
   // required checkbox). Null for staff-entered (DASHBOARD) bookings, where the
   // salon carries the consent obligation. Marketing consent = Customer.waOptIn.

@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useModalA11y } from "@/components/use-modal-a11y";
 import type { Slot } from "@/lib/availability";
 import { addonTotals } from "@/lib/addons";
+import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import { hasContact } from "@/lib/serializers/redact-notes";
 import { availableSlots, createManualBooking } from "../actions";
 import {
@@ -15,8 +16,8 @@ import {
   type CatalogEmployee,
 } from "./calendar-shared";
 
-// Staff-entered ("manual") booking: pick master → service (+ add-ons) → day →
-// free slot, then the customer's name and phone. Slots come from the same
+// Staff-entered ("manual") booking: pick master → service (+ add-ons, number of
+// people) → day → free slot, then the customer's name and phone. Slots come from the same
 // availability engine the public flow uses, so a manual booking can't
 // double-book either.
 
@@ -46,6 +47,9 @@ export function BookingModal({
   const [employeeId, setEmployeeId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [addonIds, setAddonIds] = useState<string[]>([]);
+  // Group booking: the same service for this many people, back to back with
+  // this master — one booking, one block in the calendar.
+  const [people, setPeople] = useState(1);
   const [day, setDay] = useState(defaultDay);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [name, setName] = useState(initialName);
@@ -64,6 +68,10 @@ export function BookingModal({
   const ready = employeeId && serviceId && day;
   // A stable dependency for the slots effect: the add-ons lengthen the booking.
   const addonKey = addonIds.join(",");
+  const totalPriceMinor = selectedService
+    ? (selectedService.priceMinor + extra.priceMinor) * people
+    : 0;
+  const totalMin = selectedService ? (selectedService.durationMin + extra.durationMin) * people : 0;
 
   function toggleAddon(id: string) {
     setAddonIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -85,6 +93,7 @@ export function BookingModal({
       employeeId,
       serviceId,
       addonIds: addonKey ? addonKey.split(",") : [],
+      people,
       day,
     })
       .then((res) => {
@@ -101,7 +110,7 @@ export function BookingModal({
     return () => {
       cancelled = true;
     };
-  }, [employeeId, serviceId, addonKey, day]);
+  }, [employeeId, serviceId, addonKey, people, day]);
 
   function submit() {
     setError(null);
@@ -119,6 +128,7 @@ export function BookingModal({
         employeeId,
         serviceId,
         addonIds,
+        people,
         startUtc: slot.startUtc,
         name: name.trim(),
         phone: "+994" + digits,
@@ -249,12 +259,46 @@ export function BookingModal({
                   </label>
                 ))}
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {t("modal.total", {
-                  price: azn(selectedService.priceMinor + extra.priceMinor),
-                  min: selectedService.durationMin + extra.durationMin,
-                })}
-              </p>
+              {people === 1 && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {t("modal.total", { price: azn(totalPriceMinor), min: totalMin })}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Number of people: the service (and add-ons) once per person, back
+              to back. The slots below fit the whole group. */}
+          {selectedService && (
+            <div>
+              <label className={labelCls} htmlFor={`${fid}-people`}>
+                {t("modal.people")}
+              </label>
+              <select
+                id={`${fid}-people`}
+                className={inputCls + " w-full"}
+                value={people}
+                onChange={(e) => {
+                  setPeople(Number(e.target.value));
+                  setSlot(null);
+                  setError(null);
+                }}
+              >
+                {Array.from({ length: MAX_PEOPLE_PER_BOOKING }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              {people > 1 && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {t("modal.peopleTotal", {
+                    people,
+                    price: azn(totalPriceMinor),
+                    min: totalMin,
+                  })}
+                </p>
+              )}
             </div>
           )}
 
