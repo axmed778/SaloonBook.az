@@ -175,6 +175,7 @@ export function bookingSelectForViewer(
     priceMinor: true,
     manageToken: true,
     attendeeName: true,
+    peopleCount: true,
     service: { select: { name: true } },
     // The add-ons as booked (snapshots). Part of the job, so every viewer reads
     // them; priceMinor above already includes their prices.
@@ -203,6 +204,7 @@ export interface BookingRow {
   priceMinor: number;
   manageToken: string;
   attendeeName: string | null;
+  peopleCount: number;
   service: { name: string };
   addons: { name: string }[];
   employee: { name: string; position: string | null };
@@ -278,6 +280,8 @@ export interface SerializedBooking {
   serviceName: string;
   /** Add-ons booked on top of the service ("French", "Nail art"); may be empty. */
   addonNames: string[];
+  /** People in a group booking (same service, back to back); 1 normally. */
+  peopleCount: number;
   employeeName: string;
   employeePosition: string | null;
   customerId: string;
@@ -324,6 +328,7 @@ export function serializeBookingForViewer(
     manageToken: booking.manageToken,
     serviceName: booking.service.name,
     addonNames: booking.addons.map((a) => a.name),
+    peopleCount: booking.peopleCount,
     employeeName: booking.employee.name,
     employeePosition: booking.employee.position,
     customerId: booking.customer.id,

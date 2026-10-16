@@ -36,6 +36,7 @@ export default async function ManageAppointmentPage({
       status: true,
       startsAt: true,
       priceMinor: true,
+      peopleCount: true,
       salon: { select: { name: true, slug: true } },
       service: { select: { name: true, durationMin: true } },
       addons: { select: { name: true, durationMin: true }, orderBy: { name: "asc" } },
@@ -83,8 +84,10 @@ export default async function ManageAppointmentPage({
           service={appt.service.name}
           addons={appt.addons.map((a) => a.name)}
           durationMin={
-            appt.service.durationMin + appt.addons.reduce((m, a) => m + a.durationMin, 0)
+            (appt.service.durationMin + appt.addons.reduce((m, a) => m + a.durationMin, 0)) *
+            appt.peopleCount
           }
+          people={appt.peopleCount}
           employee={appt.employee.name}
           whenLabel={formatBakuDateTime(appt.startsAt, df)}
           priceMinor={appt.priceMinor}

@@ -22,6 +22,7 @@ export function ManageWidget({
   service,
   addons,
   durationMin,
+  people,
   employee,
   whenLabel,
   priceMinor,
@@ -36,8 +37,10 @@ export function ManageWidget({
   service: string;
   /** Add-ons booked on top of the service; may be empty. */
   addons: string[];
-  /** Service + add-ons, minutes. */
+  /** Service + add-ons, minutes, for the whole group. */
   durationMin: number;
+  /** People in a group booking; 1 for a normal one. */
+  people: number;
   employee: string;
   whenLabel: string;
   priceMinor: number;
@@ -175,6 +178,7 @@ export function ManageWidget({
           <Row label={t("rows.customer")} value={customerName} />
           <Row label={t("rows.service")} value={`${service} · ${t("minutesShort", { min: durationMin })}`} />
           {addons.length > 0 && <Row label={t("rows.addons")} value={addons.join(", ")} />}
+          {people > 1 && <Row label={t("rows.people")} value={String(people)} />}
           <Row label={t("rows.employee")} value={employee} />
           <Row label={t("rows.date")} value={whenLabel} />
           <Row label={t("rows.price")} value={`${azn(priceMinor)} ₼`} />

@@ -22,6 +22,7 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
       attendeeName: true,
       service: { select: { name: true } },
       addons: { select: { name: true }, orderBy: { name: "asc" } },
+      peopleCount: true,
       customer: { select: { name: true } },
     },
   });
@@ -40,6 +41,7 @@ export async function processPush(job: Job<PushJob>): Promise<void> {
   const service = serviceWithAddons(
     appt.service.name,
     appt.addons.map((a) => a.name),
+    appt.peopleCount,
   );
   const detail = `${who} · ${service} · ${when}`;
 

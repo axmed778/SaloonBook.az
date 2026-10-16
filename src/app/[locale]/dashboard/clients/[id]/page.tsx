@@ -100,6 +100,7 @@ export default async function ClientProfilePage({
         createdAt: true,
         service: { select: { name: true } },
         addons: { select: { name: true }, orderBy: { name: "asc" } },
+        peopleCount: true,
         employee: { select: { name: true } },
       },
     }),
@@ -223,6 +224,7 @@ export default async function ClientProfilePage({
     service: serviceWithAddons(
       h.service.name,
       h.addons.map((a) => a.name),
+      h.peopleCount,
     ),
     employee: h.employee.name,
     priceMinor: h.priceMinor,

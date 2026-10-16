@@ -10,6 +10,7 @@ import {
   resolveAddons,
   serviceWithAddons,
 } from "./addons";
+import { MAX_PEOPLE_PER_BOOKING } from "./group-booking";
 
 /**
  * How far ahead a PUBLIC booking may land. Bounds calendar-stuffing abuse via
@@ -83,6 +84,10 @@ export interface CreateBookingInput {
    *  parent). Stored as the appointment's attendee; defaults to the customer's
    *  name. The Customer row and every notification stay the contact's. */
   attendeeName?: string;
+  /** Group booking: how many people get this same service (and add-ons) with
+   *  this master, back to back. Length and price are multiplied by it; the
+   *  buffer stays once. Defaults to 1. */
+  people?: number;
   /** Free-text booking note from the customer (e.g. preferred hair colour).
    *  Stored on the appointment and shown to the salon; never sent over WhatsApp. */
   /** The customer's wish for the SERVICE. Callers validate it with
@@ -121,6 +126,12 @@ export function isOverlapError(e: unknown): boolean {
  */
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResult> {
   const source = input.source ?? "PUBLIC";
+  const people = input.people ?? 1;
+  // Callers validate with Zod; this is the floor for any other caller (the DB
+  // CHECK is the last one).
+  if (!Number.isInteger(people) || people < 1 || people > MAX_PEOPLE_PER_BOOKING) {
+    throw new Error("Invalid people count");
+  }
 
   // Sanitize the client-supplied name once: it is stored and later flows into
   // the owner's WhatsApp alert (and, eventually, the dashboard).
@@ -158,6 +169,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     const serviceLabel = serviceWithAddons(
       service.name,
       addons.map((a) => a.name),
+      people,
     );
 
     // --- Re-validate the requested slot on the write side (parity with the
@@ -170,6 +182,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
       serviceId: service.id,
       startUtc: input.startUtc,
       extraMin: extra.durationMin,
+      people,
     });
     if (!check.ok) {
       if (check.reason === "overlap") throw new SlotTakenError();
@@ -225,7 +238,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
           startsAt: input.startUtc,
           endsAt: endUtc,
           status: "CONFIRMED",
-          priceMinor: service.priceMinor + extra.priceMinor,
+          // Per person (service + add-ons), once for each person in the group.
+          priceMinor: (service.priceMinor + extra.priceMinor) * people,
+          peopleCount: people,
           source,
         },
         select: { id: true, manageToken: true, startsAt: true, endsAt: true },

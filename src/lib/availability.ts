@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { bookingBlockMin } from "./group-booking";
 import {
   bakuWallClockToUtc,
   bakuWeekday,
@@ -31,6 +32,11 @@ export interface AvailabilityQuery {
    * slot must fit service + add-ons + buffer; the buffer stays last.
    */
   extraMin?: number;
+  /**
+   * People in a group booking (src/lib/group-booking.ts): the service and its
+   * add-ons repeat once per person, back to back. Defaults to 1.
+   */
+  people?: number;
   /**
    * Ignore this appointment's own interval (reschedule flows: the slot being
    * moved must not block itself, and its current time should read as free).
@@ -94,6 +100,8 @@ export async function isSlotBookable(
     now?: number;
     /** See AvailabilityQuery.extraMin (add-ons). */
     extraMin?: number;
+    /** See AvailabilityQuery.people (group bookings). */
+    people?: number;
     /** See AvailabilityQuery.excludeAppointmentId (reschedule flows). */
     excludeAppointmentId?: string;
   },
@@ -106,7 +114,12 @@ export async function isSlotBookable(
   });
   if (!service) return { ok: false, reason: "service" };
 
-  const blockMin = service.durationMin + (args.extraMin ?? 0) + service.bufferMin;
+  const blockMin = bookingBlockMin({
+    durationMin: service.durationMin,
+    extraMin: args.extraMin,
+    bufferMin: service.bufferMin,
+    people: args.people,
+  });
   const startMs = args.startUtc.getTime();
   const endMs = startMs + blockMin * 60_000;
   const endUtc = new Date(endMs);
@@ -150,7 +163,7 @@ export async function isSlotBookable(
 /**
  * Computes bookable start times for (employee, service, day).
  *
- * A slot is valid when [start, start + duration + add-ons + buffer) fits
+ * A slot is valid when [start, start + (duration + add-ons) × people + buffer) fits
  * entirely inside one of the employee's working windows for that weekday, does
  * not overlap any time-off or existing CONFIRMED appointment, and is not in the
  * past.
@@ -168,7 +181,12 @@ export async function getAvailableSlots(q: AvailabilityQuery): Promise<Slot[]> {
   });
   if (!service || !service.isActive) return [];
 
-  const blockMin = service.durationMin + (q.extraMin ?? 0) + service.bufferMin;
+  const blockMin = bookingBlockMin({
+    durationMin: service.durationMin,
+    extraMin: q.extraMin,
+    bufferMin: service.bufferMin,
+    people: q.people,
+  });
   const weekday = bakuWeekday(q.dayYmd);
 
   const workingHours = await prisma.workingHour.findMany({

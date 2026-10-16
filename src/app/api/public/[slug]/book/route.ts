@@ -13,6 +13,7 @@ import {
   MAX_BOOKING_AHEAD_DAYS,
 } from "@/lib/booking";
 import { MAX_ADDONS_PER_BOOKING } from "@/lib/addons";
+import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import { rateLimit, peekOutboundQuota, consumeOutboundQuota, clientIp } from "@/lib/ratelimit";
 import { getClientSession } from "@/lib/auth/client-session";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -39,6 +40,9 @@ const bodySchema = z.object({
   // times them from the catalog, so a client cannot name its own price.
   addonIds: z.array(z.string().uuid()).max(MAX_ADDONS_PER_BOOKING).optional(),
   employeeId: z.string().uuid(),
+  // Group booking: the same service for this many people, back to back with
+  // the same master. Priced and timed by createBooking, never by the client.
+  people: z.number().int().min(1).max(MAX_PEOPLE_PER_BOOKING).optional(),
   startUtc: z.string().datetime(), // ISO instant from the availability response
   name: z
     .string()
@@ -231,6 +235,7 @@ export async function POST(
       serviceId: parsed.data.serviceId,
       addonIds: parsed.data.addonIds,
       employeeId: parsed.data.employeeId,
+      people: parsed.data.people,
       startUtc,
       customer: { name: parsed.data.name, phone: parsed.data.phone, waOptIn: marketingOptIn },
       attendeeName: parsed.data.attendeeName,

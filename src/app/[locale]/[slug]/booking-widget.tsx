@@ -12,6 +12,7 @@ import {
   type BookingClient,
 } from "@/lib/kids";
 import { addonTotals, serviceWithAddons } from "@/lib/addons";
+import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import { LEGAL_DOCS } from "@/lib/legal";
 import { hasContact } from "@/lib/serializers/redact-notes";
 
@@ -204,6 +205,9 @@ export function BookingWidget({
     canPreset ? presetService!.id : null,
   );
   const [addonIds, setAddonIds] = useState<string[]>([]);
+  // Group booking: the same service for this many people, back to back with
+  // the same master ("3 friends, 1 h each" = one 3 h booking).
+  const [people, setPeople] = useState(1);
   const [employeeId, setEmployeeId] = useState<string | null>(
     presetEmployee ? presetEmployee.id : null,
   );
@@ -254,8 +258,8 @@ export function BookingWidget({
   const serviceAddons = addonsFor(serviceId);
   const chosenAddons = serviceAddons.filter((a) => addonIds.includes(a.id));
   const extra = addonTotals(chosenAddons);
-  const totalMinor = (selectedService?.priceMinor ?? 0) + extra.priceMinor;
-  const totalMin = (selectedService?.durationMin ?? 0) + extra.durationMin;
+  const totalMinor = ((selectedService?.priceMinor ?? 0) + extra.priceMinor) * people;
+  const totalMin = ((selectedService?.durationMin ?? 0) + extra.durationMin) * people;
   // A stable dependency for the slots effect: add-ons lengthen the booking.
   const addonKey = chosenAddons.map((a) => a.id).join(",");
 
@@ -316,6 +320,12 @@ export function BookingWidget({
     setError(null);
     setCurrent(idx("date"));
   }
+  function changePeople(n: number) {
+    setPeople(Math.min(MAX_PEOPLE_PER_BOOKING, Math.max(1, n)));
+    // A longer (or shorter) booking fits different times.
+    setSlot(null);
+    setError(null);
+  }
   function pickDate(d: string) {
     setDay(d);
     setSlot(null);
@@ -336,8 +346,9 @@ export function BookingWidget({
     setSlots(null);
     setSlotsError(false);
     const addonParam = addonKey ? `&addonIds=${addonKey}` : "";
+    const peopleParam = people > 1 ? `&people=${people}` : "";
     fetch(
-      `/api/public/${slug}/availability?serviceId=${serviceId}&employeeId=${employeeId}&date=${day}${addonParam}`,
+      `/api/public/${slug}/availability?serviceId=${serviceId}&employeeId=${employeeId}&date=${day}${addonParam}${peopleParam}`,
     )
       .then(async (r) => {
         // A non-2xx (e.g. a transient 500) must NOT read as "no free slots" —
@@ -358,7 +369,7 @@ export function BookingWidget({
     return () => {
       cancelled = true;
     };
-  }, [activeKey, serviceId, addonKey, employeeId, day, slug, slotsReload]);
+  }, [activeKey, serviceId, addonKey, people, employeeId, day, slug, slotsReload]);
 
   // Render the Turnstile widget while the contact step is active (only when a
   // site key is configured). Tearing it down on step change keeps the token
@@ -464,6 +475,7 @@ export function BookingWidget({
           serviceId,
           addonIds: chosenAddons.map((a) => a.id),
           employeeId,
+          ...(people > 1 ? { people } : {}),
           startUtc: slot.startUtc,
           name: name.trim(),
           ...(forChild ? { attendeeName: childName.trim() } : {}),
@@ -525,6 +537,7 @@ export function BookingWidget({
               ? serviceWithAddons(
                   selectedService.name,
                   chosenAddons.map((a) => a.name),
+                  people,
                 )
               : ""}{" "}
             · {selectedEmployee?.name}
@@ -605,7 +618,7 @@ export function BookingWidget({
       case "employee":
         return selectedEmployee?.name ?? "";
       case "date":
-        return selectedDay?.label ?? "";
+        return (selectedDay?.label ?? "") + (people > 1 ? ` · ${t("peopleCount", { count: people })}` : "");
       case "time":
         return slot?.time ?? "";
       default:
@@ -774,6 +787,53 @@ export function BookingWidget({
               )}
 
               {key === "date" && (
+                // Group booking lives on the date step: every booking passes it,
+                // and the count must be known before the times are loaded.
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p id={`${fid}-people`} className="text-sm font-medium text-foreground">
+                      {t("peopleLabel")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {people > 1
+                        ? t("peopleTotal", {
+                            price: azn(totalMinor),
+                            min: totalMin,
+                          })
+                        : t("peopleHint")}
+                    </p>
+                  </div>
+                  <div
+                    role="group"
+                    aria-labelledby={`${fid}-people`}
+                    className="flex shrink-0 items-center gap-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => changePeople(people - 1)}
+                      disabled={people <= 1}
+                      aria-label={t("peopleLess")}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition hover:border-border-strong disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <span aria-live="polite" className="w-6 text-center font-semibold text-foreground">
+                      {people}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changePeople(people + 1)}
+                      disabled={people >= MAX_PEOPLE_PER_BOOKING}
+                      aria-label={t("peopleMore")}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-foreground transition hover:border-border-strong disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {key === "date" && (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {days.map((d) => (
                     <button
@@ -845,7 +905,10 @@ export function BookingWidget({
               {key === "contact" && (
                 <div className="space-y-4">
                   <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm">
-                    <p className="font-medium text-foreground">{selectedService?.name}</p>
+                    <p className="font-medium text-foreground">
+                      {selectedService?.name}
+                      {people > 1 && ` × ${people}`}
+                    </p>
                     {chosenAddons.length > 0 && (
                       <p className="text-muted-foreground">
                         + {chosenAddons.map((a) => a.name).join(", ")}
