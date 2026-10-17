@@ -19,7 +19,9 @@ import {
   updateBranch,
   setBranchStatus,
   deleteBranch,
+  deleteOwnAccount,
 } from "./actions";
+import { purgeCachedPrivatePages } from "@/lib/offline-cache";
 import { TimeSelect } from "../_components/time-select";
 import { ConfirmDialog } from "../_components/confirm-dialog";
 import { LocationPicker } from "@/components/location-picker";
@@ -87,11 +89,14 @@ export function SettingsManager({
   appUrl,
   branchSection = null,
   vapidPublicKey = null,
+  canDeleteAccount = false,
 }: {
   salon: SalonData;
   appUrl: string;
   branchSection?: BranchSection | null;
   vapidPublicKey?: string | null;
+  /** The owner: offered the full account delete at the bottom. */
+  canDeleteAccount?: boolean;
 }) {
   const t = useTranslations("Settings");
   const router = useRouter();
@@ -132,7 +137,86 @@ export function SettingsManager({
           )}
         </div>
       </div>
+
+      {canDeleteAccount && <DeleteAccountCard />}
     </div>
+  );
+}
+
+// --- Delete account ----------------------------------------------------------
+
+function DeleteAccountCard() {
+  const t = useTranslations("Settings.deleteAccount");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function close() {
+    if (pending) return;
+    setOpen(false);
+    setPassword("");
+    setError(null);
+  }
+
+  function confirm() {
+    if (password === "") return;
+    setError(null);
+    startTransition(async () => {
+      const res = await deleteOwnAccount({ password });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      // Same cleanup as logging out: no cached dashboard pages left on disk.
+      await purgeCachedPrivatePages();
+      router.push("/login");
+      router.refresh();
+    });
+  }
+
+  return (
+    <section className="rounded-xl border border-rose-500/30 bg-card p-5">
+      <h2 className="text-sm font-semibold text-foreground">{t("title")}</h2>
+      <p className="mt-1 text-sm text-faint-foreground">{t("body")}</p>
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-4 rounded-lg border border-rose-500/50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-500/10 dark:text-rose-400"
+      >
+        {t("action")}
+      </button>
+
+      {open && (
+        <ConfirmDialog
+          title={t("confirmTitle")}
+          confirmLabel={t("confirm")}
+          pending={pending}
+          onClose={close}
+          onConfirm={confirm}
+          body={
+            <div className="space-y-3">
+              <p>{t("body")}</p>
+              <p>{t("confirmBody")}</p>
+              <div>
+                <label htmlFor="delete-account-password" className={labelCls}>
+                  {t("password")}
+                </label>
+                <input
+                  id="delete-account-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              {error && <p className="text-rose-700 dark:text-rose-400">{error}</p>}
+            </div>
+          }
+        />
+      )}
+    </section>
   );
 }
 

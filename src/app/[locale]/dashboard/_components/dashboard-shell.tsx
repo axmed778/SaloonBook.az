@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { isNativeApp, startNativePush } from "@/components/pwa/native-push";
 import { GuideProvider } from "@/components/guides/guide-provider";
 import { HelpButton } from "@/components/guides/help-button";
 import type { GuideEntry } from "@/lib/guides/availability";
@@ -57,6 +58,21 @@ export function DashboardShell({
   // How much of the bottom corner the install prompt covers; the help button
   // moves up by that much instead of landing on the prompt's buttons.
   const [installHeight, setInstallHeight] = useState(0);
+
+  // App Store app only: open the page a tapped notification points at, and
+  // keep this phone's APNs token current.
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    startNativePush()
+      .then((s) => (cancelled ? s() : (stop = s)))
+      .catch((e) => console.error("[push] native setup failed", e));
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, []);
 
   // Restore the desktop collapsed preference after mount (avoids SSR mismatch).
   useEffect(() => {
