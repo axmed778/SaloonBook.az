@@ -235,6 +235,7 @@ describe("dashboard pages", () => {
   // Platform-admin pages check their own flag.
   const EXEMPT = [
     "src/app/[locale]/dashboard/admin/page.tsx",
+    "src/app/[locale]/dashboard/agents/page.tsx",
     "src/app/[locale]/dashboard/ig-digest/page.tsx",
   ];
 

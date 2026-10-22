@@ -772,7 +772,7 @@ export async function createAgent(input: unknown): Promise<ActionResult> {
       meta: { code, name: agent.name },
     },
   });
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/agents");
   return { ok: true };
 }
 
@@ -813,7 +813,7 @@ export async function setAccountAgent(input: unknown): Promise<ActionResult> {
       },
     }),
   ]);
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/agents");
   return { ok: true };
 }
 
@@ -873,6 +873,6 @@ export async function setAgentRewardPaid(input: unknown): Promise<ActionResult> 
       },
     }),
   ]);
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/agents");
   return { ok: true };
 }
