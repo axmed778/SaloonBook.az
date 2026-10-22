@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { requirePermission, type SalonSession } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/ratelimit";
+import { verifyPassword } from "@/lib/auth/password";
+import { clearSession } from "@/lib/auth/session";
+import { deleteAccountCompletely } from "@/lib/account-deletion";
 
 // Server actions for the Settings (Tənzimləmələr) screen. Every one needs
 // settings.write. Each derives the caller's salon from the session and only ever
@@ -428,5 +432,56 @@ export async function deleteBranch(input: unknown): Promise<ActionResult> {
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+// --- Delete the whole account (owner) --------------------------------------
+// The owner wipes their own salon: every branch with its bookings, clients and
+// payments, the subscription and every login of the account (see
+// src/lib/account-deletion.ts, the same delete the platform admin runs). The
+// App Store requires an app that lets people sign up to let them delete the
+// account too. Irreversible, so the owner re-enters their password: a session
+// left open on someone else's phone must not be enough.
+
+const deleteOwnAccountSchema = z.object({ password: z.string().min(1).max(256) });
+
+// Wrong-password tries per user before the action locks for the window.
+const DELETE_PW_LIMIT = { limit: 5, windowSec: 15 * 60 };
+
+export async function deleteOwnAccount(input: unknown): Promise<ActionResult> {
+  const session = await requirePermission("account.delete");
+  const t = await getTranslations("Settings.errors");
+  if (!session.accountId) return { ok: false, error: t("invalidData") };
+  const parsed = deleteOwnAccountSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+
+  const rl = await rateLimit(
+    `account:self-delete:${session.user.id}`,
+    DELETE_PW_LIMIT.limit,
+    DELETE_PW_LIMIT.windowSec,
+  );
+  if (!rl.allowed) return { ok: false, error: t("tooManyAttempts") };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true },
+  });
+  if (!(await verifyPassword(parsed.data.password, user?.passwordHash))) {
+    return { ok: false, error: t("wrongPassword") };
+  }
+
+  try {
+    const deleted = await deleteAccountCompletely(session.accountId, {
+      actorUserId: session.user.id,
+      via: "owner",
+    });
+    if (!deleted) return { ok: false, error: t("deleteFailed") };
+  } catch (e) {
+    console.error("[settings] deleteOwnAccount failed", e);
+    return { ok: false, error: t("deleteFailed") };
+  }
+
+  // The login is gone with the account; drop the cookie too.
+  await clearSession();
   return { ok: true };
 }
