@@ -120,28 +120,51 @@ model PasswordResetToken {
 }
 
 model Account {
-  id              String         @id @default(uuid())
-  name            String
-  status          AccountStatus  @default(ACTIVE)
-  subscription    Subscription?
-  salons          Salon[]
-  memberships     Membership[]
+  id                String         @id @default(uuid())
+  name              String
+  status            AccountStatus  @default(ACTIVE)
+  subscription      Subscription?
+  salons            Salon[]
+  memberships       Membership[]
   // Legal consent captured at salon registration: the user agreement (offer)
   // and the data-processing consent are accepted together; marketing is opt-in.
   // Versions (see src/lib/legal.ts) are stored so a consent stays auditable
   // after the document text changes.
-  legalAcceptedAt DateTime?      @db.Timestamptz(3)
-  offerVersion    String?
-  privacyVersion  String?
-  marketingOptIn  Boolean        @default(false)
+  legalAcceptedAt   DateTime?      @db.Timestamptz(3)
+  offerVersion      String?
+  privacyVersion    String?
+  marketingOptIn    Boolean        @default(false)
   /// How many masters the owner said worked in the salon when they registered.
   /// It is what picked the trial tier (trialPlanForStaff in src/lib/plans.ts) —
   /// kept so the choice stays explainable later, in the onboarding copy and in
   /// the admin panel. NULL = registered before the question existed.
-  signupStaffCount Int?
+  signupStaffCount  Int?
+  /// The sales agent who brought this salon in (referral code at signup, or set
+  /// by hand in the admin panel). The agent earns a one-off reward once the
+  /// salon PAYS — a trial alone earns nothing (src/lib/referral.ts).
+  agentId           String?
+  agent             Agent?         @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  /// When the agent's reward for this salon was paid out, and how much (qəpik).
+  /// NULL = not paid out yet. The amount is frozen here at payout time.
+  agentRewardPaidAt DateTime?      @db.Timestamptz(6)
+  agentRewardMinor  Int?
   /// Append-only history of every acceptance, including superseded versions.
-  legalConsents   LegalConsent[]
-  createdAt       DateTime       @default(now()) @db.Timestamptz(3)
+  legalConsents     LegalConsent[]
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([agentId])
+}
+
+/// A sales agent (friend/freelancer) who brings salons in with a personal
+/// referral code. Platform-level, managed only from the admin panel.
+model Agent {
+  id        String    @id @default(uuid())
+  /// Upper-case, what the salon types at signup or what ?ref= carries.
+  code      String    @unique
+  name      String
+  phone     String?
+  accounts  Account[]
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
 }
 
 model Membership {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, Link } from "@/i18n/navigation";
@@ -27,6 +27,14 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [legalConsent, setLegalConsent] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
+  // Sales agent's referral code: prefilled from an agent's link (?ref=CODE),
+  // or typed by the salon. Read after mount so the static page needs no
+  // search-params bailout.
+  const [agentCode, setAgentCode] = useState("");
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setAgentCode(ref.trim().toUpperCase().slice(0, 20));
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -65,6 +73,7 @@ export default function RegisterPage() {
           confirmPassword,
           legalConsent: true,
           marketing: marketingConsent,
+          agentCode: agentCode.trim() || undefined,
           turnstileToken: turnstile.token ?? undefined,
         }),
       });
@@ -235,6 +244,20 @@ export default function RegisterPage() {
             <li key={rule}>{rule}</li>
           ))}
         </ul>
+
+        <label className="flex flex-col gap-1 text-sm">
+          {t("register.agentCode")}
+          <input
+            type="text"
+            autoCapitalize="characters"
+            autoComplete="off"
+            maxLength={20}
+            value={agentCode}
+            onChange={(e) => setAgentCode(e.target.value.toUpperCase())}
+            placeholder={t("register.agentCodePlaceholder")}
+            className="rounded-lg border border-border bg-card px-3 py-2 uppercase text-foreground placeholder:normal-case placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+          />
+        </label>
 
         <div className="flex flex-col gap-2">
           <label className="flex items-start gap-2 text-xs leading-relaxed text-neutral-500">

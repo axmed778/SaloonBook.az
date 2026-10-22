@@ -13,6 +13,7 @@ import { encryptSecret, hasEncryptionKey } from "@/lib/crypto";
 import { fetchWhatsAppNumberInfo } from "@/lib/whatsapp";
 import { verifyPassword } from "@/lib/auth/password";
 import { rateLimit } from "@/lib/ratelimit";
+import { agentRewardDue, normalizeAgentCode } from "@/lib/referral";
 import {
   deleteAccountCompletely,
   planAccountDeletion,
@@ -734,6 +735,144 @@ export async function deleteAccount(input: unknown): Promise<ActionResult> {
     return { ok: false, error: t("deleteFailed") };
   }
 
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Sales agents (referral codes). An agent earns a one-off reward per salon
+// that pays (src/lib/referral.ts); the admin pays it by hand and marks it here.
+// ---------------------------------------------------------------------------
+
+const agentSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  code: z.string().max(40),
+  phone: z.string().trim().max(40).optional(),
+});
+
+export async function createAgent(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin");
+  if (!adminId) return { ok: false, error: t("errors.unauthorized") };
+  const parsed = agentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("errors.invalidData") };
+  const code = normalizeAgentCode(parsed.data.code);
+  if (!code) return { ok: false, error: t("agents.errCode") };
+  const taken = await prisma.agent.findUnique({ where: { code }, select: { id: true } });
+  if (taken) return { ok: false, error: t("agents.errCodeTaken") };
+
+  const agent = await prisma.agent.create({
+    data: { code, name: parsed.data.name, phone: parsed.data.phone || null },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: adminId,
+      action: "agent.create",
+      target: agent.id,
+      meta: { code, name: agent.name },
+    },
+  });
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+const assignSchema = z.object({
+  accountId: z.string().uuid(),
+  agentId: z.string().uuid().nullable(),
+});
+
+/** Link a salon to an agent by hand (forgot the code at signup), or unlink it. */
+export async function setAccountAgent(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin.errors");
+  if (!adminId) return { ok: false, error: t("unauthorized") };
+  const parsed = assignSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("invalidData") };
+  const { accountId, agentId } = parsed.data;
+
+  const account = await prisma.account.findUnique({
+    where: { id: accountId },
+    select: { agentId: true, agentRewardPaidAt: true },
+  });
+  if (!account) return { ok: false, error: t("accountNotFound") };
+  // A paid-out reward belongs to the agent it was paid to: moving the salon
+  // would show that payout under the new agent. Undo the payout first.
+  if (account.agentRewardPaidAt && account.agentId !== agentId) {
+    return { ok: false, error: (await getTranslations("Admin.agents"))("errReassignPaid") };
+  }
+
+  await prisma.$transaction([
+    prisma.account.update({ where: { id: accountId }, data: { agentId } }),
+    prisma.auditLog.create({
+      data: {
+        accountId,
+        actorUserId: adminId,
+        action: "agent.assign",
+        target: accountId,
+        meta: { from: account.agentId, to: agentId },
+      },
+    }),
+  ]);
+  revalidatePath("/dashboard/admin");
+  return { ok: true };
+}
+
+const rewardSchema = z.object({
+  accountId: z.string().uuid(),
+  paid: z.boolean(),
+});
+
+/**
+ * Mark the agent's reward for one salon as paid out (freezing the amount owed
+ * right now), or undo that mark. Refuses while the salon hasn't paid.
+ */
+export async function setAgentRewardPaid(input: unknown): Promise<ActionResult> {
+  const adminId = await requireAdmin();
+  const t = await getTranslations("Admin");
+  if (!adminId) return { ok: false, error: t("errors.unauthorized") };
+  const parsed = rewardSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: t("errors.invalidData") };
+  const { accountId, paid } = parsed.data;
+
+  const account = await prisma.account.findUnique({
+    where: { id: accountId },
+    select: {
+      agentId: true,
+      // Only plan payments count: a branch-slot charge during a trial is not
+      // the salon paying for SalonBook.
+      subscription: {
+        select: {
+          plan: true,
+          payments: { where: { purpose: "plan" }, select: { amountMinor: true } },
+        },
+      },
+    },
+  });
+  if (!account?.agentId) return { ok: false, error: t("errors.accountNotFound") };
+
+  let rewardMinor: number | null = null;
+  if (paid) {
+    const sub = account.subscription;
+    const paidMinor = (sub?.payments ?? []).reduce((sum, p) => sum + p.amountMinor, 0);
+    rewardMinor = sub ? agentRewardDue({ plan: sub.plan, paidMinor }) : 0;
+    if (rewardMinor <= 0) return { ok: false, error: t("agents.errNotPaid") };
+  }
+
+  await prisma.$transaction([
+    prisma.account.update({
+      where: { id: accountId },
+      data: { agentRewardPaidAt: paid ? new Date() : null, agentRewardMinor: rewardMinor },
+    }),
+    prisma.auditLog.create({
+      data: {
+        accountId,
+        actorUserId: adminId,
+        action: paid ? "agent.reward.paid" : "agent.reward.undo",
+        target: account.agentId,
+        meta: { rewardMinor },
+      },
+    }),
+  ]);
   revalidatePath("/dashboard/admin");
   return { ok: true };
 }
