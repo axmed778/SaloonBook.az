@@ -1041,6 +1041,40 @@
       },
       "modelLabel": "Model",
       "modelHint": "Opus ən ağıllısıdır, Sonnet təxminən iki dəfə ucuzdur, Haiku çox ucuzdur, amma zəifdir."
+    },
+    "agents": {
+      "title": "Agentlər",
+      "subtitle": "Hər agent ödəniş edən salon üçün bir dəfə mükafat alır: Start 5 ₼, Salon 10 ₼, Pro 20 ₼. Sınaq müddəti sayılmır.",
+      "name": "Ad",
+      "code": "Kod",
+      "phone": "Telefon",
+      "add": "Agent əlavə et",
+      "link": "Qeydiyyat linki",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "noAgents": "Hələ agent yoxdur.",
+      "noSalons": "Hələ salon yoxdur.",
+      "salons": "Salonlar: {total}, ödəyən: {paid}",
+      "due": "Ödənilməli: {amount} ₼",
+      "paidOut": "Ödənilib: {amount} ₼",
+      "colSalon": "Salon",
+      "colStatus": "Status",
+      "colPaid": "Salon ödəyib",
+      "colReward": "Mükafat",
+      "statusTrial": "Sınaq",
+      "statusPaid": "Ödəyib",
+      "statusNotPaid": "Ödəməyib",
+      "markPaid": "Agentə ödədim",
+      "unmarkPaid": "Ləğv et",
+      "paidOn": "{amount} ₼ ödənilib, {date}",
+      "assignTitle": "Salonu agentə bağla",
+      "assignAccount": "Salon",
+      "assignAgent": "Agent",
+      "assignNone": "— agent yoxdur —",
+      "assign": "Yadda saxla",
+      "errCode": "Kod 3–20 hərf və ya rəqəmdir.",
+      "errCodeTaken": "Bu kod artıq var.",
+      "errNotPaid": "Salon hələ ödəməyib — mükafat yoxdur."
     }
   },
   "Payments": {
@@ -1578,7 +1612,8 @@
       "invalidData": "Yanlış məlumat.",
       "resetLinkInvalid": "Link etibarsızdır və ya vaxtı keçib. Yenidən bərpa tələb edin.",
       "captchaFailed": "Yoxlama alınmadı. Zəhmət olmasa, yenidən cəhd edin.",
-      "accountSuspended": "Bu hesab dayandırılıb. Zəhmət olmasa, SalonBook dəstəyi ilə əlaqə saxlayın."
+      "accountSuspended": "Bu hesab dayandırılıb. Zəhmət olmasa, SalonBook dəstəyi ilə əlaqə saxlayın.",
+      "agentCodeUnknown": "Belə agent kodu tapılmadı. Kodu yoxlayın və ya sahəni boş qoyun."
     },
     "email": {
       "resetSubject": "SalonBook.az — şifrənin bərpası",
@@ -1625,7 +1660,9 @@
       "failed": "Qeydiyyat alınmadı.",
       "legalConsent": "<offer>İstifadəçi razılaşması (oferta)</offer> və <privacy>fərdi məlumatların emalına dair Razılıq</privacy> ilə tanış oldum və razıyam.",
       "marketingConsent": "Yeniliklər və xüsusi təkliflər barədə bildirişlər almağa razıyam (könüllü).",
-      "consentRequired": "Davam etmək üçün şərtlərlə razılaşmalısınız."
+      "consentRequired": "Davam etmək üçün şərtlərlə razılaşmalısınız.",
+      "agentCode": "Agent kodu (varsa)",
+      "agentCodePlaceholder": "Məsələn, DAVUD"
     },
     "forgot": {
       "title": "Şifrənin bərpası",

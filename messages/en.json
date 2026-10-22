@@ -1041,6 +1041,40 @@
       },
       "modelLabel": "Model",
       "modelHint": "Opus is the most capable, Sonnet about half the price, Haiku far cheaper but weaker."
+    },
+    "agents": {
+      "title": "Agents",
+      "subtitle": "An agent earns a one-off reward per salon that PAYS: Start 5 ₼, Salon 10 ₼, Pro 20 ₼. A trial does not count.",
+      "name": "Name",
+      "code": "Code",
+      "phone": "Phone",
+      "add": "Add agent",
+      "link": "Sign-up link",
+      "copy": "Copy",
+      "copied": "Copied",
+      "noAgents": "No agents yet.",
+      "noSalons": "No salons yet.",
+      "salons": "Salons: {total}, paying: {paid}",
+      "due": "Owed: {amount} ₼",
+      "paidOut": "Paid out: {amount} ₼",
+      "colSalon": "Salon",
+      "colStatus": "Status",
+      "colPaid": "Salon paid",
+      "colReward": "Reward",
+      "statusTrial": "Trial",
+      "statusPaid": "Paid",
+      "statusNotPaid": "Not paid",
+      "markPaid": "I paid the agent",
+      "unmarkPaid": "Undo",
+      "paidOn": "Paid {amount} ₼ on {date}",
+      "assignTitle": "Link a salon to an agent",
+      "assignAccount": "Salon",
+      "assignAgent": "Agent",
+      "assignNone": "— no agent —",
+      "assign": "Save",
+      "errCode": "Code: 3–20 Latin letters or digits.",
+      "errCodeTaken": "This code already exists.",
+      "errNotPaid": "The salon has not paid yet — no reward."
     }
   },
   "Payments": {
@@ -1578,7 +1612,8 @@
       "invalidData": "Invalid data.",
       "resetLinkInvalid": "The link is invalid or expired. Request a new reset.",
       "captchaFailed": "Verification failed. Please try again.",
-      "accountSuspended": "This account has been suspended. Please contact SalonBook support."
+      "accountSuspended": "This account has been suspended. Please contact SalonBook support.",
+      "agentCodeUnknown": "No agent has this code. Check it or leave the field empty."
     },
     "email": {
       "resetSubject": "SalonBook.az — password reset",
@@ -1625,7 +1660,9 @@
       "failed": "Sign-up failed.",
       "legalConsent": "I have read and agree to the <offer>User Agreement (offer)</offer> and the <privacy>Personal Data Processing Consent</privacy>.",
       "marketingConsent": "I agree to receive news and special offers (optional).",
-      "consentRequired": "You must accept the terms to continue."
+      "consentRequired": "You must accept the terms to continue.",
+      "agentCode": "Agent code (if any)",
+      "agentCodePlaceholder": "e.g. DAVUD"
     },
     "forgot": {
       "title": "Reset password",

@@ -17,6 +17,8 @@ import { DEAD_LETTER_WHERE } from "@/lib/queue";
 import { readWorkerHeartbeat } from "@/lib/worker-heartbeat";
 import { AdminAccounts, type AccountRow } from "./admin-accounts";
 import { AdminAssistant } from "./admin-assistant";
+import { AdminAgents, type AgentRow } from "./admin-agents";
+import { agentRewardDue } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -39,13 +41,16 @@ export default async function AdminPage() {
   // sweep now revives FAILED rows, so what still matters is what it has GIVEN UP
   // on (attempts past the cap): those are dead letters that need a human.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60_000);
-  const [accounts, usage, paidBySub, notifByStatus, deadLetters, worker] = await Promise.all([
+  const [accounts, usage, paidBySub, notifByStatus, deadLetters, worker, agents] = await Promise.all([
     prisma.account.findMany({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
         name: true,
         createdAt: true,
+        agentId: true,
+        agentRewardPaidAt: true,
+        agentRewardMinor: true,
         subscription: {
           select: {
             id: true,
@@ -114,6 +119,10 @@ export default async function AdminPage() {
       where: DEAD_LETTER_WHERE,
     }),
     readWorkerHeartbeat(),
+    prisma.agent.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, code: true, name: true, phone: true },
+    }),
   ]);
 
   const notifCount = (status: string) =>
@@ -195,6 +204,35 @@ export default async function AdminPage() {
     };
   });
 
+  // Sales agents: each one's salons, whether each salon has paid, and the
+  // one-off reward owed or already paid out (src/lib/referral.ts).
+  const agentRows: AgentRow[] = agents.map((agent) => {
+    const salons = accounts
+      .filter((a) => a.agentId === agent.id)
+      .map((a) => {
+        const sub = a.subscription;
+        const paidMinor = sub ? (paidBySubId.get(sub.id)?._sum.amountMinor ?? 0) : 0;
+        return {
+          accountId: a.id,
+          salonName: a.salons[0]?.name ?? a.name,
+          status: sub?.status ?? null,
+          plan: sub?.plan ?? "FREE",
+          paidMinor,
+          dueMinor: sub ? agentRewardDue({ plan: sub.plan, paidMinor }) : 0,
+          paidOutMinor: a.agentRewardPaidAt ? (a.agentRewardMinor ?? 0) : null,
+          paidOutLabel: a.agentRewardPaidAt
+            ? formatBakuDate(bakuYmd(a.agentRewardPaidAt), df)
+            : null,
+        };
+      });
+    return { ...agent, salons };
+  });
+  const agentAccounts = accounts.map((a) => ({
+    accountId: a.id,
+    label: `${a.salons[0]?.name ?? a.name}`,
+    agentId: a.agentId,
+  }));
+
   return (
     <>
       <AdminAssistant />
@@ -269,6 +307,7 @@ export default async function AdminPage() {
         </p>
       </section>
       <AdminAccounts rows={rows} />
+      <AdminAgents agents={agentRows} accounts={agentAccounts} />
     </>
   );
 }

@@ -11,6 +11,7 @@ import { localeFromCookie } from "@/i18n/request-locale";
 import { TRIAL_DAYS, trialPlanForStaff } from "@/lib/plans";
 import { addDays } from "@/lib/time";
 import { LEGAL_VERSIONS } from "@/lib/legal";
+import { normalizeAgentCode } from "@/lib/referral";
 import { rejectCrossOrigin } from "../_origin";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,9 @@ const bodySchema = z
     legalConsent: z.literal(true),
     // Optional marketing opt-in.
     marketing: z.boolean().optional(),
+    // Sales agent's referral code (typed, or prefilled from ?ref=). Optional;
+    // an unknown code is rejected so a typo doesn't silently lose the credit.
+    agentCode: z.string().max(40).optional(),
     // CAPTCHA token from the form. Required only when TURNSTILE_SECRET_KEY is
     // configured (see src/lib/turnstile.ts).
     turnstileToken: z.string().max(2048).optional(),
@@ -119,6 +123,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: t("api.passwordWeak"), issues }, { status: 400 });
   }
 
+  let agentId: string | null = null;
+  if (parsed.data.agentCode?.trim()) {
+    const code = normalizeAgentCode(parsed.data.agentCode);
+    const agent = code
+      ? await prisma.agent.findUnique({ where: { code }, select: { id: true } })
+      : null;
+    if (!agent) {
+      return NextResponse.json({ error: t("api.agentCodeUnknown") }, { status: 400 });
+    }
+    agentId = agent.id;
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -149,6 +165,7 @@ export async function POST(req: NextRequest) {
           privacyVersion: LEGAL_VERSIONS.salonConsent,
           marketingOptIn: marketing ?? false,
           signupStaffCount: staffCount,
+          agentId,
           subscription: { create: { plan: trialPlan, status: "TRIALING", trialEndsAt } },
           salons: { create: { slug, name: salonName, audience } },
         },

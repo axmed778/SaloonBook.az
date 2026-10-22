@@ -53,8 +53,9 @@ BEGIN
   -- — never touches them. Least privilege by revocation instead of by policy.
   -- IgDigest quotes the same leads and conversations, so it goes with them.
   -- UserGuideState and GuideEvent (in-app help) are per user, not per salon,
-  -- and are only ever read on the owner connection: same treatment.
-  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage', 'IgDigest', 'UserGuideState', 'GuideEvent']) LOOP
+  -- and are only ever read on the owner connection: same treatment. Agent
+  -- (sales agents' names and phones) is admin-only, same again.
+  FOR t IN SELECT unnest(ARRAY['IgToken', 'IgThread', 'IgMessage', 'IgDigest', 'UserGuideState', 'GuideEvent', 'Agent']) LOOP
     IF EXISTS (
       SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relname = t
