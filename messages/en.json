@@ -61,7 +61,8 @@
     "manageBranches": "Manage branches",
     "timeOff": "Time off",
     "igDigest": "Instagram digest",
-    "billing": "Plan"
+    "billing": "Plan",
+    "agents": "Agents"
   },
   "StaffBlocked": {
     "title": "Access closed",

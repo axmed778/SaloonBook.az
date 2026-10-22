@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { createAgent, setAccountAgent, setAgentRewardPaid } from "./actions";
+import { createAgent, setAccountAgent, setAgentRewardPaid } from "../admin/actions";
 
 export type AgentRow = {
   id: string;
@@ -38,7 +38,7 @@ const azn = (minor: number) => (minor / 100).toFixed(0);
 
 // Platform-admin view of the sales agents: who brought which salon, whether
 // that salon has paid, and the one-off reward owed / already paid out.
-export function AdminAgents({
+export function AgentsPanel({
   agents,
   accounts,
 }: {
@@ -72,7 +72,7 @@ export function AdminAgents({
   const linkFor = (code: string) => `${origin}/register?ref=${code}`;
 
   return (
-    <section className="mt-8 rounded-xl border border-border bg-card p-4">
+    <section className="rounded-xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-foreground">{t("title")}</h2>
       <p className="mt-1 text-xs text-muted-foreground">{t("subtitle")}</p>
 
