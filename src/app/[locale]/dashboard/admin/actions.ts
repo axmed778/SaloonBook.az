@@ -792,9 +792,14 @@ export async function setAccountAgent(input: unknown): Promise<ActionResult> {
 
   const account = await prisma.account.findUnique({
     where: { id: accountId },
-    select: { agentId: true },
+    select: { agentId: true, agentRewardPaidAt: true },
   });
   if (!account) return { ok: false, error: t("accountNotFound") };
+  // A paid-out reward belongs to the agent it was paid to: moving the salon
+  // would show that payout under the new agent. Undo the payout first.
+  if (account.agentRewardPaidAt && account.agentId !== agentId) {
+    return { ok: false, error: (await getTranslations("Admin.agents"))("errReassignPaid") };
+  }
 
   await prisma.$transaction([
     prisma.account.update({ where: { id: accountId }, data: { agentId } }),
@@ -833,7 +838,14 @@ export async function setAgentRewardPaid(input: unknown): Promise<ActionResult> 
     where: { id: accountId },
     select: {
       agentId: true,
-      subscription: { select: { plan: true, payments: { select: { amountMinor: true } } } },
+      // Only plan payments count: a branch-slot charge during a trial is not
+      // the salon paying for SalonBook.
+      subscription: {
+        select: {
+          plan: true,
+          payments: { where: { purpose: "plan" }, select: { amountMinor: true } },
+        },
+      },
     },
   });
   if (!account?.agentId) return { ok: false, error: t("errors.accountNotFound") };

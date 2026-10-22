@@ -1074,7 +1074,8 @@
       "assign": "Yadda saxla",
       "errCode": "Kod 3–20 hərf və ya rəqəmdir.",
       "errCodeTaken": "Bu kod artıq var.",
-      "errNotPaid": "Salon hələ ödəməyib — mükafat yoxdur."
+      "errNotPaid": "Salon hələ ödəməyib — mükafat yoxdur.",
+      "errReassignPaid": "Agentə ödəniş artıq qeyd olunub. Salonu başqa agentə keçirmək üçün əvvəlcə ödənişi ləğv edin."
     }
   },
   "Payments": {

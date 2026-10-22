@@ -41,7 +41,7 @@ export default async function AdminPage() {
   // sweep now revives FAILED rows, so what still matters is what it has GIVEN UP
   // on (attempts past the cap): those are dead letters that need a human.
   const since = new Date(Date.now() - 7 * 24 * 60 * 60_000);
-  const [accounts, usage, paidBySub, notifByStatus, deadLetters, worker, agents] = await Promise.all([
+  const [accounts, usage, paidBySub, notifByStatus, deadLetters, worker, planPaidBySub, agents] = await Promise.all([
     prisma.account.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -119,6 +119,12 @@ export default async function AdminPage() {
       where: DEAD_LETTER_WHERE,
     }),
     readWorkerHeartbeat(),
+    // Plan payments only: what makes a referred salon count as paying.
+    prisma.payment.groupBy({
+      by: ["subscriptionId"],
+      where: { purpose: "plan" },
+      _sum: { amountMinor: true },
+    }),
     prisma.agent.findMany({
       orderBy: { createdAt: "asc" },
       select: { id: true, code: true, name: true, phone: true },
@@ -206,12 +212,15 @@ export default async function AdminPage() {
 
   // Sales agents: each one's salons, whether each salon has paid, and the
   // one-off reward owed or already paid out (src/lib/referral.ts).
+  const planPaidBySubId = new Map(
+    planPaidBySub.map((p) => [p.subscriptionId, p._sum.amountMinor ?? 0]),
+  );
   const agentRows: AgentRow[] = agents.map((agent) => {
     const salons = accounts
       .filter((a) => a.agentId === agent.id)
       .map((a) => {
         const sub = a.subscription;
-        const paidMinor = sub ? (paidBySubId.get(sub.id)?._sum.amountMinor ?? 0) : 0;
+        const paidMinor = sub ? (planPaidBySubId.get(sub.id) ?? 0) : 0;
         return {
           accountId: a.id,
           salonName: a.salons[0]?.name ?? a.name,

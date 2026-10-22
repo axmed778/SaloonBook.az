@@ -1074,7 +1074,8 @@
       "assign": "Save",
       "errCode": "Code: 3–20 Latin letters or digits.",
       "errCodeTaken": "This code already exists.",
-      "errNotPaid": "The salon has not paid yet — no reward."
+      "errNotPaid": "The salon has not paid yet — no reward.",
+      "errReassignPaid": "The agent payout is already marked. Undo it before moving the salon to another agent."
     }
   },
   "Payments": {
