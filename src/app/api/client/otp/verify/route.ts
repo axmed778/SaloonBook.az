@@ -5,13 +5,14 @@ import { verifyOtp } from "@/lib/auth/otp";
 import { prisma } from "@/lib/prisma";
 import { setClientSession } from "@/lib/auth/client-session";
 import { LEGAL_VERSIONS } from "@/lib/legal";
+import { AZ_PHONE_RE } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
 // Verify an OTP. On success: create the Client (first time — recording consent)
 // or sign in an existing one, then issue the client session cookie.
 const schema = z.object({
-  phone: z.string().regex(/^\+994\d{9}$/),
+  phone: z.string().regex(AZ_PHONE_RE),
   code: z.string().regex(/^\d{6}$/),
 });
 

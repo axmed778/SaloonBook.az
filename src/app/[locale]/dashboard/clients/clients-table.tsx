@@ -6,6 +6,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { createCustomer } from "./actions";
 import { useModalA11y } from "@/components/use-modal-a11y";
+import { azLocalDigits } from "@/lib/phone";
 
 export type SortKey = "name" | "last" | "visits" | "spent";
 
@@ -148,7 +149,7 @@ function AddClientDialog({ onClose }: { onClose: () => void }) {
                 id={`${fid}-phone`}
                 inputMode="numeric"
                 value={digits}
-                onChange={(e) => setDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                onChange={(e) => setDigits(azLocalDigits(e.target.value))}
                 placeholder="501234567"
                 className={inputCls}
               />

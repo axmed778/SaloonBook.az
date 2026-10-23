@@ -14,6 +14,7 @@ import {
 import { addonTotals, serviceWithAddons } from "@/lib/addons";
 import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { azLocalDigits } from "@/lib/phone";
 import { hasContact } from "@/lib/serializers/redact-notes";
 
 // Cloudflare Turnstile: only wired when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set
@@ -970,7 +971,7 @@ export function BookingWidget({
                       <input
                         id={`${fid}-phone`}
                         value={phoneDigits}
-                        onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                        onChange={(e) => setPhoneDigits(azLocalDigits(e.target.value))}
                         inputMode="numeric"
                         placeholder="501234567"
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"

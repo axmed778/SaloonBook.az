@@ -9,6 +9,7 @@ import { BookingModal } from "@/app/[locale]/dashboard/_components/booking-modal
 import type { CatalogEmployee } from "@/app/[locale]/dashboard/_components/calendar-shared";
 import { setAppointmentStatus } from "@/app/[locale]/dashboard/actions";
 import { useModalA11y } from "@/components/use-modal-a11y";
+import { azLocalDigits } from "@/lib/phone";
 import {
   updateCustomer,
   addCustomerNote,
@@ -561,7 +562,7 @@ function EditCustomerModal({
               value={phoneDigits}
               inputMode="numeric"
               maxLength={9}
-              onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+              onChange={(e) => setPhoneDigits(azLocalDigits(e.target.value))}
             />
           </div>
         </div>

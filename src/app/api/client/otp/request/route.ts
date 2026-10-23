@@ -4,6 +4,7 @@ import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { createOtp } from "@/lib/auth/otp";
 import { sendOtp } from "@/lib/otp-sender";
+import { AZ_PHONE_RE } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 // to proceed — it's recorded on the Client at verify time. Returns only the
 // channel used; the code itself never leaves createOtp -> sendOtp.
 const schema = z.object({
-  phone: z.string().regex(/^\+994\d{9}$/),
+  phone: z.string().regex(AZ_PHONE_RE),
   consent: z.literal(true),
   sms: z.boolean().optional(), // user tapped "send via SMS instead"
   turnstileToken: z.string().max(2048).optional(),
