@@ -19,6 +19,7 @@ import {
   MAX_ADDONS_PER_BOOKING,
 } from "@/lib/addons";
 import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
+import { AZ_PHONE_RE } from "@/lib/phone";
 import {
   createBooking,
   isOverlapError,
@@ -124,7 +125,7 @@ const bookingSchema = z.object({
     .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
   phone: z
     .string()
-    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+    .regex(AZ_PHONE_RE, "Telefon +994XXXXXXXXX formatında olmalıdır."),
   serviceNote: z.string().max(500).optional(),
 });
 

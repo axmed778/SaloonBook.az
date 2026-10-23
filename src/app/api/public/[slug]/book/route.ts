@@ -18,6 +18,7 @@ import { rateLimit, peekOutboundQuota, consumeOutboundQuota, clientIp } from "@/
 import { getClientSession } from "@/lib/auth/client-session";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { LEGAL_VERSIONS } from "@/lib/legal";
+import { AZ_PHONE_RE } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ const bodySchema = z.object({
     .regex(/[\p{L}\p{N}]/u, "Name must contain a letter or number"),
   phone: z
     .string()
-    .regex(/^\+994\d{9}$/, "Phone must be in +994XXXXXXXXX format"),
+    .regex(AZ_PHONE_RE, "Phone must be in +994XXXXXXXXX format"),
   // Who will actually come, when it isn't the contact: the child's name on a
   // kids' booking. `name` and `phone` stay the parent's (the Customer).
   attendeeName: z
