@@ -561,7 +561,6 @@ function EditCustomerModal({
               className={inputCls + " w-full"}
               value={phoneDigits}
               inputMode="numeric"
-              maxLength={9}
               onChange={(e) => setPhoneDigits(azLocalDigits(e.target.value))}
             />
           </div>
