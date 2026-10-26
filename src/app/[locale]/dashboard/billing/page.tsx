@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requirePagePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +8,7 @@ import { effectivePlan } from "@/lib/subscription";
 import { maskPhone } from "@/lib/whatsapp-sender";
 import { intlLocale } from "@/i18n/format";
 import { azn } from "@/app/[locale]/dashboard/_components/calendar-shared";
+import { isNativeAppUserAgent } from "@/lib/native-app";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +129,11 @@ export default async function BillingPage() {
     statusLine = { text: t("status.freeDowngraded"), tone: "rose" };
   }
 
+  // Inside the App Store app the page shows the plan status only: App Store
+  // rules forbid buttons or prices that lead to paying outside Apple's in-app
+  // purchase, and SalonBook plans are paid by hand over WhatsApp.
+  const inApp = isNativeAppUserAgent((await headers()).get("user-agent"));
+
   const statusToneCls: Record<"emerald" | "amber" | "rose", string> = {
     emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200",
     amber: "border-amber-500/40 bg-amber-500/5 text-amber-800 dark:text-amber-200",
@@ -140,7 +147,7 @@ export default async function BillingPage() {
         <div>
           <h1 className="text-lg font-semibold text-foreground">{t("title")}</h1>
           <p className="mt-0.5 text-sm text-faint-foreground">
-            {t("subtitle")}
+            {inApp ? t("appNote") : t("subtitle")}
           </p>
         </div>
 
@@ -151,60 +158,67 @@ export default async function BillingPage() {
         )}
       </div>
 
-      <div data-tour="billing.plans" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {PLANS.map((p) => (
-          <div
-            key={p.key}
-            className={
-              "flex flex-col justify-between rounded-xl border bg-card p-5 " +
-              (p.highlighted ? "border-rose-500/40" : "border-border")
-            }
-          >
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-semibold text-foreground">{p.name}</h2>
-                {p.highlighted && (
-                  <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300">
-                    {t("recommended")}
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-xs text-faint-foreground">{p.tagline}</p>
-              <p className="mt-3">
-                <span className="text-3xl font-semibold text-foreground">{azn(p.priceMinor)} ₼</span>
-                <span className="text-sm text-faint-foreground"> {t("perMonth")}</span>
-              </p>
-              <ul className="mt-4 space-y-2">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-secondary-foreground">
-                    <svg
-                      className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-400"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <a
-              href={waLink(t("waActivate", { salon: salonName, plan: p.name }))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
+      {!inApp && (
+        <div data-tour="billing.plans" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PLANS.map((p) => (
+            <div
+              key={p.key}
+              className={
+                "flex flex-col justify-between rounded-xl border bg-card p-5 " +
+                (p.highlighted ? "border-rose-500/40" : "border-border")
+              }
             >
-              <WhatsAppIcon className="h-4 w-4" />
-              {t("choosePlan", { plan: p.name })}
-            </a>
-          </div>
-        ))}
-      </div>
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-base font-semibold text-foreground">{p.name}</h2>
+                  {p.highlighted && (
+                    <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+                      {t("recommended")}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-xs text-faint-foreground">{p.tagline}</p>
+                <p className="mt-3">
+                  <span className="text-3xl font-semibold text-foreground">
+                    {azn(p.priceMinor)} ₼
+                  </span>
+                  <span className="text-sm text-faint-foreground"> {t("perMonth")}</span>
+                </p>
+                <ul className="mt-4 space-y-2">
+                  {p.features.map((f) => (
+                    <li
+                      key={f}
+                      className="flex items-start gap-2 text-sm text-secondary-foreground"
+                    >
+                      <svg
+                        className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <a
+                href={waLink(t("waActivate", { salon: salonName, plan: p.name }))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                {t("choosePlan", { plan: p.name })}
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
 
       <section className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center justify-between gap-2">
@@ -261,23 +275,23 @@ export default async function BillingPage() {
         )}
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5">
-        <div>
-          <p className="font-medium text-foreground">{t("questionsTitle")}</p>
-          <p className="mt-0.5 text-sm text-faint-foreground">
-            {t("questionsBody")}
-          </p>
+      {!inApp && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-5">
+          <div>
+            <p className="font-medium text-foreground">{t("questionsTitle")}</p>
+            <p className="mt-0.5 text-sm text-faint-foreground">{t("questionsBody")}</p>
+          </div>
+          <a
+            href={waLink(t("waQuestion", { salon: salonName }))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#0b141a] transition hover:brightness-95"
+          >
+            <WhatsAppIcon className="h-5 w-5" />
+            {t("writeOnWhatsapp")}
+          </a>
         </div>
-        <a
-          href={waLink(t("waQuestion", { salon: salonName }))}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#0b141a] transition hover:brightness-95"
-        >
-          <WhatsAppIcon className="h-5 w-5" />
-          {t("writeOnWhatsapp")}
-        </a>
-      </div>
+      )}
     </div>
   );
 }

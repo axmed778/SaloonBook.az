@@ -85,6 +85,7 @@ export const PERMISSIONS = [
   "roles.assign", // ADMIN and FINANCE logins
   "settings.write", // salon profile, booking link, hours, branches
   "billing.manage", // subscription, and accepting revised terms for the account
+  "account.delete", // wipe the whole salon account, every branch and login
   "analytics.view",
   "exports.data", // bookings and clients CSV
   "payroll.manage", // the Pro payroll screen, until payout statements replace it

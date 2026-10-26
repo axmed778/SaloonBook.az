@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { disableNativePush, enableNativePush, isNativeApp, nativePushState } from "./native-push";
 
 // Push subscription lifecycle states.
 type State =
@@ -10,6 +11,7 @@ type State =
   | "iosInstall" // iOS Safari: push works ONLY once the PWA is installed
   | "notConfigured" // server has no VAPID key (e.g. local dev) — hide the card
   | "denied" // the user blocked notifications in the browser
+  | "appDenied" // App Store app: notifications are off in iOS Settings
   | "off"
   | "on"
   | "working";
@@ -41,7 +43,8 @@ function detectIosNonStandalone(): boolean {
 /**
  * Enable/disable Web Push for the signed-in owner/staff on this device.
  * Gated per platform: iOS only supports push inside an installed PWA, so there we
- * explain the requirement instead of offering a button that can't work.
+ * explain the requirement instead of offering a button that can't work. In the
+ * App Store app the same card drives APNs instead (see native-push.ts).
  */
 export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string | null }) {
   const t = useTranslations("Pwa");
@@ -51,6 +54,16 @@ export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      if (isNativeApp()) {
+        try {
+          const s = await nativePushState();
+          if (!cancelled) setState(s === "denied" ? "appDenied" : s);
+        } catch {
+          if (!cancelled) setState("off");
+        }
+        return;
+      }
+
       const supported =
         "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
@@ -85,6 +98,19 @@ export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string 
   }, [vapidPublicKey]);
 
   async function enable() {
+    if (isNativeApp()) {
+      setError(null);
+      setState("working");
+      try {
+        const s = await enableNativePush();
+        setState(s === "denied" ? "appDenied" : s);
+      } catch (e) {
+        console.error("[push] native enable failed", e);
+        setError(t("notifError"));
+        setState("off");
+      }
+      return;
+    }
     if (!vapidPublicKey) return;
     setError(null);
     setState("working");
@@ -121,6 +147,11 @@ export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string 
     setError(null);
     setState("working");
     try {
+      if (isNativeApp()) {
+        await disableNativePush();
+        setState("off");
+        return;
+      }
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
@@ -172,6 +203,11 @@ export function NotificationToggle({ vapidPublicKey }: { vapidPublicKey: string 
           {state === "denied" && (
             <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
               {t("notifDenied")}
+            </p>
+          )}
+          {state === "appDenied" && (
+            <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              {t("notifAppDenied")}
             </p>
           )}
           {error && <p className="mt-2 text-sm text-rose-700 dark:text-rose-400">{error}</p>}
