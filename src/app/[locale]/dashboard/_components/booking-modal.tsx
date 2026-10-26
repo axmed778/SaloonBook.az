@@ -7,6 +7,7 @@ import { useModalA11y } from "@/components/use-modal-a11y";
 import type { Slot } from "@/lib/availability";
 import { addonTotals } from "@/lib/addons";
 import { MAX_PEOPLE_PER_BOOKING } from "@/lib/group-booking";
+import { azLocalDigits } from "@/lib/phone";
 import { hasContact } from "@/lib/serializers/redact-notes";
 import { availableSlots, createManualBooking } from "../actions";
 import {
@@ -388,8 +389,7 @@ export function BookingModal({
                 className={inputCls + " w-full"}
                 value={phoneDigits}
                 inputMode="numeric"
-                maxLength={9}
-                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                onChange={(e) => setPhoneDigits(azLocalDigits(e.target.value))}
                 placeholder="501234567"
               />
             </div>

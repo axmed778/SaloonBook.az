@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { LEGAL_DOCS } from "@/lib/legal";
+import { azLocalDigits } from "@/lib/phone";
 import { TurnstileBox, useTurnstile } from "../../_lib/turnstile-widget";
 
 type Step = "phone" | "code";
@@ -142,7 +143,7 @@ export function SignInForm() {
                 autoComplete="tel-national"
                 placeholder={t("phonePlaceholder")}
                 value={local}
-                onChange={(e) => setLocal(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                onChange={(e) => setLocal(azLocalDigits(e.target.value))}
                 className={inputCls}
               />
             </div>

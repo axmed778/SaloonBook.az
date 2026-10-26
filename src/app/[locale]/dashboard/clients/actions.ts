@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 import { bakuPeriodYm } from "@/lib/time";
+import { AZ_PHONE_RE } from "@/lib/phone";
 import { deleteCustomerReviews } from "../../_lib/salon-rating";
 
 // Server actions for the Clients CRM. Same tenancy rules as every dashboard
@@ -33,7 +34,7 @@ const customerSchema = z.object({
     .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
   phone: z
     .string()
-    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+    .regex(AZ_PHONE_RE, "Telefon +994XXXXXXXXX formatında olmalıdır."),
 });
 
 export async function updateCustomer(input: unknown): Promise<ActionResult> {
@@ -75,7 +76,7 @@ const newCustomerSchema = z.object({
     .regex(/[\p{L}\p{N}]/u, "Ad hərf və ya rəqəm daxil etməlidir."),
   phone: z
     .string()
-    .regex(/^\+994\d{9}$/, "Telefon +994XXXXXXXXX formatında olmalıdır."),
+    .regex(AZ_PHONE_RE, "Telefon +994XXXXXXXXX formatında olmalıdır."),
   // Owner-entered opt-in: the salon confirms the client agreed to WhatsApp
   // messages. Defaults off — no consent, no messages (see booking waOptIn gate).
   waOptIn: z.boolean().optional(),
